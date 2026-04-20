@@ -37,12 +37,10 @@
 
 在 Vercel 部署时，请配置以下环境变量：
 
-| 变量名 | 描述 | 示例 |
-| :--- | :--- | :--- |
-| `API_KEY` | 自定义 API 密钥（用于安全访问） | `my_secret_key_123` |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 项目 URL | `https://xyz.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase Anon Key | `eyJhb...` |
-| `BASE_URL` | 你的 Vercel 部署域名 (必须以 https:// 开头) | `https://your-app.vercel.app` |
+| `API_KEY` | 自定义 API 密钥 | `353283903Cm1015cm!` |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase 项目 URL | `需填写` |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase Anon Key | `需填写` |
+| `BASE_URL` | 你的域名 | `https://cost.ykn.cm` |
 
 ---
 
@@ -65,7 +63,7 @@
 在浏览器访问以下 URL（替换为你自己的信息）：
 
 ```text
-https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=<YOUR_BASE_URL>/api/telegram
+https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=https://cost.ykn.cm/api/telegram
 ```
 
 *   `<YOUR_BOT_TOKEN>`: 第二步获取的 Bot Token。
