@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+type TransactionTypeFilter = 'all' | 'income' | 'expense';
+
 // Reuse Transaction Interface
 interface Transaction {
   id: string;
@@ -87,17 +89,25 @@ function SearchAndFilterBar({
   onSearchChange,
   selectedType,
   onTypeChange,
+  categories,
+  selectedCategory,
+  onCategoryChange,
 }: {
   searchTerm: string;
   onSearchChange: (value: string) => void;
-  selectedType: 'all' | 'income' | 'expense';
-  onTypeChange: (value: 'all' | 'income' | 'expense') => void;
+  selectedType: TransactionTypeFilter;
+  onTypeChange: (value: TransactionTypeFilter) => void;
+  categories: string[];
+  selectedCategory: string;
+  onCategoryChange: (value: string) => void;
 }) {
-  const filters: Array<{ label: string; value: 'all' | 'income' | 'expense' }> = [
+  const filters: Array<{ label: string; value: TransactionTypeFilter }> = [
     { label: '全部', value: 'all' },
     { label: '收入', value: 'income' },
     { label: '支出', value: 'expense' },
   ];
+
+  const categoryFilters = ['全部分类', ...categories];
 
   return (
     <div className="px-5 mb-5 space-y-3">
@@ -143,6 +153,27 @@ function SearchAndFilterBar({
           );
         })}
       </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {categoryFilters.map((category) => {
+          const value = category === '全部分类' ? '' : category;
+          const isActive = selectedCategory === value;
+
+          return (
+            <button
+              key={category}
+              type="button"
+              onClick={() => onCategoryChange(value)}
+              className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors whitespace-nowrap ${isActive
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'bg-white text-gray-600 border-gray-200'
+                }`}
+            >
+              {category}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -157,7 +188,8 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedType, setSelectedType] = useState<'all' | 'income' | 'expense'>('all');
+  const [selectedType, setSelectedType] = useState<TransactionTypeFilter>('all');
+  const [selectedCategory, setSelectedCategory] = useState('');
 
   const fetchTransactions = useCallback(async (key: string) => {
     setLoading(true);
@@ -194,30 +226,29 @@ export default function Home() {
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0);
   const balance = totalIncome - totalExpense;
   const normalizedSearch = searchTerm.trim().toLowerCase();
+  const categories = Array.from(
+    new Set(
+      transactions
+        .map((t) => t.category?.trim())
+        .filter((category): category is string => Boolean(category))
+    )
+  );
 
   const filteredTransactions = transactions.filter((t) => {
     const matchesType = selectedType === 'all' || t.type === selectedType;
+    const matchesCategory = !selectedCategory || t.category === selectedCategory;
     const matchesSearch = !normalizedSearch
       || t.note?.toLowerCase().includes(normalizedSearch)
       || t.category?.toLowerCase().includes(normalizedSearch);
 
-    return matchesType && matchesSearch;
+    return matchesType && matchesCategory && matchesSearch;
   });
 
   return (
     <main className="max-w-xl mx-auto min-h-[100dvh] relative pb-6 antialiased">
       {/* Minimal Header */}
-      <header className="flex items-center justify-between px-6 pt-safe pb-2">
+      <header className="px-6 pt-safe pb-2">
         <h1 className="text-[1.35rem] font-semibold tracking-tight text-black pt-4">鱼蛋小账本</h1>
-        <button 
-          onClick={() => {
-            localStorage.removeItem('api_key');
-            setApiKey(null);
-          }}
-          className="text-[1.05rem] font-medium text-[#007AFF] active:opacity-50 transition-opacity pt-4"
-        >
-          Disconnect
-        </button>
       </header>
 
       {/* Balance Section */}
@@ -228,6 +259,9 @@ export default function Home() {
         onSearchChange={setSearchTerm}
         selectedType={selectedType}
         onTypeChange={setSelectedType}
+        categories={categories}
+        selectedCategory={selectedCategory}
+        onCategoryChange={setSelectedCategory}
       />
 
       {/* Transaction List */}
