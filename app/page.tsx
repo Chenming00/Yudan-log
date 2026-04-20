@@ -89,18 +89,18 @@ export default function Home() {
 
   return (
     <main className="container app-shell animate-fade-in">
-      <section className="hero glass">
+      <section className="hero">
         <header className="hero-header">
           <div className="hero-brand-wrap">
             <Image src="/logo.svg" alt="Logo" className="hero-logo" width={48} height={48} priority />
             <div className="hero-copy">
-              <p className="eyebrow">openclaw Finance</p>
+              <p className="hero-subtitle" style={{color: 'var(--primary)', fontWeight: 600, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em'}}>openclaw Finance</p>
               <h1 className="brand hero-title">Dashboard</h1>
               <p className="hero-subtitle">Multi-device overview with advanced filtering and search.</p>
             </div>
           </div>
           <button
-            className="btn glass hero-action"
+            className="btn btn-ghost hero-action"
             onClick={() => {
               localStorage.removeItem('api_key');
               setApiKey(null);
@@ -111,25 +111,25 @@ export default function Home() {
         </header>
 
         <div className="grid grid-cols-3 stats-grid dashboard-metrics">
-          <div className="glass card stat-card stat-card-primary">
+          <div className="card stat-card stat-card-primary">
             <p className="stat-label">
               {typeFilter === 'all' && categoryFilter === 'all' && !searchTerm ? 'Total Balance' : 'Filtered Balance'}
             </p>
             <h2 className="stat-value">¥{balance.toLocaleString()}</h2>
           </div>
-          <div className="glass card stat-card">
+          <div className="card stat-card">
             <p className="stat-label">Income (Filtered)</p>
             <h2 className="stat-value amount-income">+¥{totalIncome.toLocaleString()}</h2>
           </div>
-          <div className="glass card stat-card">
+          <div className="card stat-card">
             <p className="stat-label">Expenses (Filtered)</p>
             <h2 className="stat-value amount-expense">-¥{totalExpense.toLocaleString()}</h2>
           </div>
         </div>
       </section>
 
-      <section className="glass card transactions-panel">
-        <div className="transactions-header" style={{ borderBottom: 'none', paddingBottom: '0.5rem' }}>
+      <section className="card transactions-panel">
+        <div className="transactions-header">
           <div>
             <h3 className="section-title">Transactions</h3>
             <p className="section-subtitle">Use filters to analyze your data easily.</p>
@@ -175,8 +175,8 @@ export default function Home() {
         </div>
 
         {availableCategories.length > 0 && (
-          <div className="filters-toolbar" style={{ paddingTop: 0, marginTop: '-0.5rem' }}>
-            <div className="filters-row categories-scroll">
+          <div className="filters-toolbar-bottom">
+            <div className="categories-scroll">
               <button 
                 className={`pill-btn ${categoryFilter === 'all' ? 'pill-active' : ''}`}
                 onClick={() => setCategoryFilter('all')}
@@ -195,8 +195,6 @@ export default function Home() {
             </div>
           </div>
         )}
-
-        <div style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.05)' }}></div>
 
         {error && <div className="status-message status-error">{error}</div>}
 
