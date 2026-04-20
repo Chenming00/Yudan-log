@@ -1,8 +1,8 @@
 'use client';
 
-import Image from 'next/image';
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
+// Reuse Transaction Interface
 interface Transaction {
   id: string;
   amount: number;
@@ -13,13 +13,87 @@ interface Transaction {
   created_at: string;
 }
 
-const SearchIcon = ({ className = "" }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-    <circle cx="11" cy="11" r="8" />
-    <path d="m21 21-4.3-4.3" />
-  </svg>
-);
+// Subcomponents
+function BalanceHeader({ balance, income, expense }: { balance: number, income: number, expense: number }) {
+  return (
+    <div className="pt-8 pb-10 px-6">
+      <p className="text-center text-[0.85rem] font-medium text-gray-500 mb-1 tracking-wide">Total Balance</p>
+      <h1 className="text-center text-5xl leading-tight font-semibold text-black tracking-tight mb-8">
+        ¥{balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </h1>
+      <div className="flex items-center justify-center space-x-10 text-sm font-medium">
+        <div className="flex flex-col items-center">
+          <span className="text-gray-400 text-xs mb-1 uppercase tracking-wider font-semibold">Income</span>
+          <span className="text-emerald-500 text-base font-semibold">+¥{income.toLocaleString()}</span>
+        </div>
+        <div className="h-8 w-[1px] bg-gray-200"></div>
+        <div className="flex flex-col items-center">
+          <span className="text-gray-400 text-xs mb-1 uppercase tracking-wider font-semibold">Expense</span>
+          <span className="text-red-500 text-base font-semibold">-¥{expense.toLocaleString()}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
+function TransactionItem({ t }: { t: Transaction }) {
+  const isIncome = t.type === 'income';
+  const displayDate = new Date(t.transaction_time || t.created_at).toLocaleDateString([], {
+    month: 'short',
+    day: 'numeric'
+  });
+
+  return (
+    <div className="flex items-center justify-between py-3.5 px-5 mx-1">
+      <div className="flex flex-col">
+        <span className="font-medium text-gray-900 text-base leading-snug">{t.note || 'Untitled'}</span>
+        <span className="text-[0.8rem] text-gray-400 font-medium mt-0.5">
+          {displayDate} {t.category ? `• ${t.category}` : ''}
+        </span>
+      </div>
+      <div className={`font-semibold text-base ${isIncome ? 'text-emerald-500' : 'text-gray-900'}`}>
+        {isIncome ? '+' : '-'}¥{Number(t.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </div>
+    </div>
+  );
+}
+
+function TransactionList({ transactions, loading, error }: { transactions: Transaction[], loading: boolean, error: string | null }) {
+  if (loading) {
+    return <div className="p-8 text-center text-sm text-gray-400 font-medium">Loading transactions...</div>;
+  }
+  
+  if (error) {
+    return <div className="p-8 text-center text-sm text-red-500 font-medium">{error}</div>;
+  }
+
+  if (transactions.length === 0) {
+    return <div className="p-8 text-center text-sm text-gray-400 font-medium">No transactions yet. Try sending a message to your Bot!</div>;
+  }
+
+  return (
+    <div className="bg-white rounded-2xl mx-5 mb-28 shadow-[0_2px_10px_rgba(0,0,0,0.02)] overflow-hidden">
+      <div className="divide-y divide-gray-100">
+        {transactions.map(t => (
+          <TransactionItem key={t.id} t={t} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function FloatingAddButton() {
+  return (
+    <button className="fixed bottom-8 right-6 w-14 h-14 bg-[#007AFF] rounded-full flex items-center justify-center shadow-[0_4px_14px_rgba(0,122,255,0.3)] active:scale-90 transition-transform z-50">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    </button>
+  );
+}
+
+// Main Page
 export default function Home() {
   const [apiKey, setApiKey] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
@@ -28,11 +102,6 @@ export default function Home() {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Filters State
-  const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'income' | 'expense'>('all');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
 
   const fetchTransactions = useCallback(async (key: string) => {
     setLoading(true);
@@ -65,192 +134,34 @@ export default function Home() {
     return () => window.clearTimeout(timer);
   }, [apiKey, fetchTransactions]);
 
-  // Derived state for filtering
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter(t => {
-      const noteStr = t.note || '';
-      const matchesSearch = noteStr.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesType = typeFilter === 'all' || t.type === typeFilter;
-      const matchesCategory = categoryFilter === 'all' || t.category === categoryFilter;
-      return matchesSearch && matchesType && matchesCategory;
-    });
-  }, [transactions, searchTerm, typeFilter, categoryFilter]);
-
-  // Derived categories from ALL fetched transactions
-  const availableCategories = useMemo(() => {
-    const cats = new Set(transactions.map(t => t.category));
-    return Array.from(cats).filter(Boolean);
-  }, [transactions]);
-
-  // Stats - dynamically update based on filtered data
-  const totalIncome = filteredTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + Number(t.amount), 0);
-  const totalExpense = filteredTransactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0);
+  const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + Number(t.amount), 0);
+  const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0);
   const balance = totalIncome - totalExpense;
 
   return (
-    <main className="container app-shell animate-fade-in">
-      <section className="hero">
-        <header className="hero-header">
-          <div className="hero-brand-wrap">
-            <Image src="/logo.svg" alt="Logo" className="hero-logo" width={48} height={48} priority />
-            <div className="hero-copy">
-              <h1 className="brand hero-title">鱼蛋小账本</h1>
-            </div>
-          </div>
-          <button
-            className="btn btn-ghost hero-action"
-            onClick={() => {
-              localStorage.removeItem('api_key');
-              setApiKey(null);
-            }}
-          >
-            Disconnect
-          </button>
-        </header>
+    <main className="max-w-xl mx-auto min-h-[100dvh] relative pb-6 antialiased">
+      {/* Minimal Header */}
+      <header className="flex items-center justify-between px-6 pt-safe pb-2">
+        <h1 className="text-[1.35rem] font-semibold tracking-tight text-black pt-4">鱼蛋小账本</h1>
+        <button 
+          onClick={() => {
+            localStorage.removeItem('api_key');
+            setApiKey(null);
+          }}
+          className="text-[1.05rem] font-medium text-[#007AFF] active:opacity-50 transition-opacity pt-4"
+        >
+          Disconnect
+        </button>
+      </header>
 
-        <div className="grid grid-cols-3 stats-grid dashboard-metrics">
-          <div className="card stat-card stat-card-primary">
-            <p className="stat-label">
-              {typeFilter === 'all' && categoryFilter === 'all' && !searchTerm ? 'Total Balance' : 'Filtered Balance'}
-            </p>
-            <h2 className="stat-value">¥{balance.toLocaleString()}</h2>
-          </div>
-          <div className="card stat-card">
-            <p className="stat-label">Income (Filtered)</p>
-            <h2 className="stat-value amount-income">+¥{totalIncome.toLocaleString()}</h2>
-          </div>
-          <div className="card stat-card">
-            <p className="stat-label">Expenses (Filtered)</p>
-            <h2 className="stat-value amount-expense">-¥{totalExpense.toLocaleString()}</h2>
-          </div>
-        </div>
-      </section>
+      {/* Balance Section */}
+      <BalanceHeader balance={balance} income={totalIncome} expense={totalExpense} />
 
-      <section className="card transactions-panel">
-        <div className="transactions-header">
-          <div>
-            <h3 className="section-title">Transactions</h3>
-            <p className="section-subtitle">Use filters to analyze your data easily.</p>
-          </div>
-          <button className="btn btn-ghost refresh-btn" onClick={() => fetchTransactions(apiKey || '')}>
-            {loading ? 'Refreshing...' : 'Refresh'}
-          </button>
-        </div>
+      {/* Transaction List */}
+      <TransactionList transactions={transactions} loading={loading} error={error} />
 
-        {/* Filters Toolbar */}
-        <div className="filters-toolbar">
-          <div className="search-wrapper">
-            <SearchIcon className="search-icon" />
-            <input 
-              type="text" 
-              placeholder="Search by note..." 
-              className="search-input"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <div className="filters-row">
-            <button 
-              className={`pill-btn ${typeFilter === 'all' ? 'pill-active' : ''}`}
-              onClick={() => setTypeFilter('all')}
-            >
-              All Types
-            </button>
-            <button 
-              className={`pill-btn ${typeFilter === 'income' ? 'pill-active pill-income' : ''}`}
-              onClick={() => setTypeFilter('income')}
-            >
-              Income
-            </button>
-            <button 
-              className={`pill-btn ${typeFilter === 'expense' ? 'pill-active pill-expense' : ''}`}
-              onClick={() => setTypeFilter('expense')}
-            >
-              Expense
-            </button>
-          </div>
-        </div>
-
-        {availableCategories.length > 0 && (
-          <div className="filters-toolbar-bottom">
-            <div className="categories-scroll">
-              <button 
-                className={`pill-btn ${categoryFilter === 'all' ? 'pill-active' : ''}`}
-                onClick={() => setCategoryFilter('all')}
-              >
-                All Categories
-              </button>
-              {availableCategories.map(cat => (
-                <button 
-                  key={cat}
-                  className={`pill-btn ${categoryFilter === cat ? 'pill-active' : ''}`}
-                  onClick={() => setCategoryFilter(cat)}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {error && <div className="status-message status-error">{error}</div>}
-
-        <div className="transactions-list">
-          {transactions.length === 0 && !loading && !error && (
-            <div className="status-message status-empty">
-              No transactions yet. Try sending a message to your Bot!
-            </div>
-          )}
-
-          {transactions.length > 0 && filteredTransactions.length === 0 && !loading && !error && (
-            <div className="status-message status-empty">
-              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ margin: '0 auto 1rem', opacity: 0.5, display: 'block' }}>
-                <circle cx="11" cy="11" r="8"></circle>
-                <path d="m21 21-4.3-4.3"></path>
-              </svg>
-              No transactions match your current filters.
-            </div>
-          )}
-
-          {filteredTransactions.map((t) => (
-            <article key={t.id} className="transaction-item">
-              <div className="transaction-main">
-                <div className={`transaction-icon ${t.type === 'income' ? 'is-income' : 'is-expense'}`}>
-                  {t.type === 'income' ? '↑' : '↓'}
-                </div>
-
-                <div className="transaction-copy">
-                  <div className="transaction-topline">
-                    <p className="transaction-note">{t.note}</p>
-                    <p className={t.type === 'income' ? 'transaction-amount amount-income' : 'transaction-amount amount-expense'}>
-                      {t.type === 'income' ? '+' : '-'}¥{Number(t.amount).toLocaleString()}
-                    </p>
-                  </div>
-
-                  <div className="transaction-meta-row">
-                    <p className="transaction-meta">
-                      {new Date(t.transaction_time || t.created_at).toLocaleString([], {
-                        year: 'numeric',
-                        month: 'numeric',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                    {t.category && (
-                      <>
-                        <span className="transaction-dot" aria-hidden="true" />
-                        <p className="transaction-meta">{t.category}</p>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+      {/* Floating Action Button */}
+      <FloatingAddButton />
     </main>
   );
 }
