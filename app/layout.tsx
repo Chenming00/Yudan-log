@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "openclaw Finance",
+  title: "鱼蛋小账本",
   description: "Minimal Personal Finance System",
   icons: {
     icon: "/favicon.svg",

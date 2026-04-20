@@ -94,9 +94,7 @@ export default function Home() {
           <div className="hero-brand-wrap">
             <Image src="/logo.svg" alt="Logo" className="hero-logo" width={48} height={48} priority />
             <div className="hero-copy">
-              <p className="hero-subtitle" style={{color: 'var(--primary)', fontWeight: 600, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em'}}>openclaw Finance</p>
-              <h1 className="brand hero-title">Dashboard</h1>
-              <p className="hero-subtitle">Multi-device overview with advanced filtering and search.</p>
+              <h1 className="brand hero-title">鱼蛋小账本</h1>
             </div>
           </div>
           <button
