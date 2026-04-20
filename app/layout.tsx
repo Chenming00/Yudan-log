@@ -16,7 +16,8 @@ export const metadata: Metadata = {
   title: "鱼蛋小账本",
   description: "Minimal Personal Finance System",
   icons: {
-    icon: "/favicon.svg",
+    icon: "/logo.png",
+    apple: "/apple-icon.png",
   },
 };
 
