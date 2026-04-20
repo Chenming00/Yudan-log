@@ -68,9 +68,12 @@ export default function Home() {
   return (
     <div className="container animate-fade-in">
       <header style={{ marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1 className="brand" style={{ fontSize: '1.75rem' }}>Personal Finance</h1>
-          <p style={{ color: 'var(--muted-foreground)' }}>Overview of your recent activities</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <img src="/logo.svg" alt="Logo" style={{ width: '48px', height: '48px', borderRadius: '12px' }} />
+          <div>
+            <h1 className="brand" style={{ fontSize: '1.75rem' }}>openclaw Finance</h1>
+            <p style={{ color: 'var(--muted-foreground)' }}>Overview of your recent activities</p>
+          </div>
         </div>
         <button className="btn glass" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }} onClick={() => {
           localStorage.removeItem('api_key');
@@ -96,7 +99,7 @@ export default function Home() {
       <div className="glass card" style={{ padding: '0' }}>
         <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', display: 'flex', justifyContent: 'space-between' }}>
           <h3 style={{ fontSize: '1.125rem' }}>Recent Transactions</h3>
-          <button className="btn" style={{ background: 'transparent', color: 'var(--primary)', padding: '0' }} onClick={() => fetchTransactions(apiKey)}>
+          <button className="btn" style={{ background: 'transparent', color: 'var(--primary)', padding: '0' }} onClick={() => fetchTransactions(apiKey || '')}>
             {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
