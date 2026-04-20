@@ -9,6 +9,7 @@ interface Transaction {
   note: string;
   category: string;
   type: 'expense' | 'income';
+  transaction_time?: string;
   created_at: string;
 }
 
@@ -232,7 +233,15 @@ export default function Home() {
                   </div>
 
                   <div className="transaction-meta-row">
-                    <p className="transaction-meta">{new Date(t.created_at).toLocaleDateString()}</p>
+                    <p className="transaction-meta">
+                      {new Date(t.transaction_time || t.created_at).toLocaleString([], {
+                        year: 'numeric',
+                        month: 'numeric',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
                     {t.category && (
                       <>
                         <span className="transaction-dot" aria-hidden="true" />

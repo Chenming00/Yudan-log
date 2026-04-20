@@ -5,6 +5,7 @@ CREATE TABLE transactions (
   category TEXT,
   note TEXT,
   type TEXT CHECK (type IN ('expense', 'income')) NOT NULL,
+  transaction_time TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 

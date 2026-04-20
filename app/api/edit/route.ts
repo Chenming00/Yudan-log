@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { id, amount, category, note, type } = await req.json();
+    const { id, amount, category, note, type, transaction_time } = await req.json();
 
     if (!id) {
       return NextResponse.json({ error: 'Missing transaction ID' }, { status: 400 });
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await supabase
       .from('transactions')
-      .update({ amount, category, note, type })
+      .update({ amount, category, note, type, transaction_time })
       .eq('id', id)
       .select()
       .single();

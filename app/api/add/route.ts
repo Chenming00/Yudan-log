@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { amount, category, note, type } = await req.json();
+    const { amount, category, note, type, transaction_time } = await req.json();
 
     if (!amount || !type) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await supabase
       .from('transactions')
-      .insert([{ amount, category, note, type }])
+      .insert([{ amount, category, note, type, transaction_time }])
       .select()
       .single();
 
