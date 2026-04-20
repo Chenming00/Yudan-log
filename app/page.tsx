@@ -51,8 +51,9 @@ export default function Home() {
     const savedKey = localStorage.getItem('api_key');
     if (savedKey) {
       setApiKey(savedKey);
-      fetchTransactions(savedKey);
     }
+    // Always fetch, since list is now public
+    fetchTransactions(savedKey || '');
   }, [fetchTransactions]);
 
   const handleLogin = (e: React.FormEvent) => {
@@ -60,31 +61,9 @@ export default function Home() {
     if (inputKey.trim()) {
       localStorage.setItem('api_key', inputKey);
       setApiKey(inputKey);
-      fetchTransactions(inputKey);
+      fetchTransactions(''); // Key is no longer strictly needed for list, but we can pass it if we want
     }
   };
-
-  if (!apiKey) {
-    return (
-      <div className="container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
-        <div className="glass card animate-fade-in" style={{ width: '100%', maxWidth: '400px', textAlign: 'center' }}>
-          <h1 className="brand" style={{ fontSize: '2rem', marginBottom: '1rem' }}>Hermes Finance</h1>
-          <p style={{ color: 'var(--muted-foreground)', marginBottom: '2rem' }}>Enter your API Key to view dashboard</p>
-          <form onSubmit={handleLogin} className="grid" style={{ gap: '1rem' }}>
-            <input 
-              type="password" 
-              className="input" 
-              placeholder="Authorization Key" 
-              value={inputKey} 
-              onChange={(e) => setInputKey(e.target.value)}
-              required
-            />
-            <button type="submit" className="btn btn-primary">Connect System</button>
-          </form>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="container animate-fade-in">

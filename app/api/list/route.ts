@@ -3,10 +3,6 @@ import { supabase } from '@/lib/supabase';
 import { validateAuth } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
-  if (!validateAuth(req)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
     const { data, error } = await supabase
       .from('transactions')
