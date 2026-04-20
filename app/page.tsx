@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useEffect, useCallback } from 'react';
 
 interface Transaction {
@@ -12,8 +13,13 @@ interface Transaction {
 }
 
 export default function Home() {
-  const [apiKey, setApiKey] = useState<string | null>(null);
-  const [inputKey, setInputKey] = useState('');
+  const [apiKey, setApiKey] = useState<string | null>(() => {
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    return localStorage.getItem('api_key');
+  });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +46,7 @@ export default function Home() {
           setApiKey(null);
         }
       }
-    } catch (err) {
+    } catch {
       setError('Network error');
     } finally {
       setLoading(false);
@@ -48,102 +54,99 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const savedKey = localStorage.getItem('api_key');
-    if (savedKey) {
-      setApiKey(savedKey);
-    }
-    // Always fetch, since list is now public
-    fetchTransactions(savedKey || '');
-  }, [fetchTransactions]);
+    const timer = window.setTimeout(() => {
+      void fetchTransactions(apiKey || '');
+    }, 0);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (inputKey.trim()) {
-      localStorage.setItem('api_key', inputKey);
-      setApiKey(inputKey);
-      fetchTransactions(''); // Key is no longer strictly needed for list, but we can pass it if we want
-    }
-  };
+    return () => window.clearTimeout(timer);
+  }, [apiKey, fetchTransactions]);
 
   return (
-    <div className="container animate-fade-in">
-      <header style={{ marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <img src="/logo.svg" alt="Logo" style={{ width: '48px', height: '48px', borderRadius: '12px' }} />
-          <div>
-            <h1 className="brand" style={{ fontSize: '1.75rem' }}>openclaw Finance</h1>
-            <p style={{ color: 'var(--muted-foreground)' }}>Overview of your recent activities</p>
+    <main className="container app-shell animate-fade-in">
+      <section className="hero glass">
+        <header className="hero-header">
+          <div className="hero-brand-wrap">
+            <Image src="/logo.svg" alt="Logo" className="hero-logo" width={48} height={48} priority />
+            <div className="hero-copy">
+              <p className="eyebrow">openclaw Finance</p>
+              <h1 className="brand hero-title">Your money, clearer at a glance</h1>
+              <p className="hero-subtitle">A compact overview of recent income, spending, and account balance.</p>
+            </div>
+          </div>
+
+          <button
+            className="btn glass hero-action"
+            onClick={() => {
+              localStorage.removeItem('api_key');
+              setApiKey(null);
+            }}
+          >
+            Disconnect
+          </button>
+        </header>
+
+        <div className="grid grid-cols-3 stats-grid">
+          <div className="glass card stat-card stat-card-primary">
+            <p className="stat-label">Current Balance</p>
+            <h2 className="stat-value">¥{balance.toLocaleString()}</h2>
+          </div>
+          <div className="glass card stat-card">
+            <p className="stat-label">Total Income</p>
+            <h2 className="stat-value amount-income">+¥{totalIncome.toLocaleString()}</h2>
+          </div>
+          <div className="glass card stat-card">
+            <p className="stat-label">Total Expenses</p>
+            <h2 className="stat-value amount-expense">-¥{totalExpense.toLocaleString()}</h2>
           </div>
         </div>
-        <button className="btn glass" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }} onClick={() => {
-          localStorage.removeItem('api_key');
-          setApiKey(null);
-        }}>Disconnect</button>
-      </header>
+      </section>
 
-      <div className="grid grid-cols-3" style={{ marginBottom: '3rem' }}>
-        <div className="glass card">
-          <p style={{ color: 'var(--muted-foreground)', fontSize: '0.875rem' }}>Current Balance</p>
-          <h2 style={{ fontSize: '1.5rem', marginTop: '0.5rem' }}>¥{balance.toLocaleString()}</h2>
-        </div>
-        <div className="glass card">
-          <p style={{ color: 'var(--muted-foreground)', fontSize: '0.875rem' }}>Total Income</p>
-          <h2 className="amount-income" style={{ fontSize: '1.5rem', marginTop: '0.5rem' }}>+¥{totalIncome.toLocaleString()}</h2>
-        </div>
-        <div className="glass card">
-          <p style={{ color: 'var(--muted-foreground)', fontSize: '0.875rem' }}>Total Expenses</p>
-          <h2 className="amount-expense" style={{ fontSize: '1.5rem', marginTop: '0.5rem' }}>-¥{totalExpense.toLocaleString()}</h2>
-        </div>
-      </div>
-
-      <div className="glass card" style={{ padding: '0' }}>
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(255, 255, 255, 0.05)', display: 'flex', justifyContent: 'space-between' }}>
-          <h3 style={{ fontSize: '1.125rem' }}>Recent Transactions</h3>
-          <button className="btn" style={{ background: 'transparent', color: 'var(--primary)', padding: '0' }} onClick={() => fetchTransactions(apiKey || '')}>
+      <section className="glass card transactions-panel">
+        <div className="transactions-header">
+          <div>
+            <h3 className="section-title">Recent Transactions</h3>
+            <p className="section-subtitle">Designed for quick checking on your phone.</p>
+          </div>
+          <button className="btn btn-ghost refresh-btn" onClick={() => fetchTransactions(apiKey || '')}>
             {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
-        
-        {error && <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--rose)' }}>{error}</div>}
-        
-        <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+
+        {error && <div className="status-message status-error">{error}</div>}
+
+        <div className="transactions-list">
           {transactions.length === 0 && !loading && !error && (
-            <div style={{ padding: '4rem 2rem', textAlign: 'center', color: 'var(--muted-foreground)' }}>
+            <div className="status-message status-empty">
               No transactions yet. Try sending a message to your Bot!
             </div>
           )}
-          
+
           {transactions.map((t) => (
-            <div key={t.id} className="transaction-item">
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                <div style={{ 
-                  width: '40px', 
-                  height: '40px', 
-                  borderRadius: '50%', 
-                  background: t.type === 'income' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(244, 63, 94, 0.1)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.25rem'
-                }}>
+            <article key={t.id} className="transaction-item">
+              <div className="transaction-main">
+                <div className={`transaction-icon ${t.type === 'income' ? 'is-income' : 'is-expense'}`}>
                   {t.type === 'income' ? '↑' : '↓'}
                 </div>
-                <div>
-                  <p style={{ fontWeight: 500 }}>{t.note}</p>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--muted-foreground)' }}>
-                    {new Date(t.created_at).toLocaleDateString()} · {t.category}
-                  </p>
+
+                <div className="transaction-copy">
+                  <div className="transaction-topline">
+                    <p className="transaction-note">{t.note}</p>
+                    <p className={t.type === 'income' ? 'transaction-amount amount-income' : 'transaction-amount amount-expense'}>
+                      {t.type === 'income' ? '+' : '-'}¥{Number(t.amount).toLocaleString()}
+                    </p>
+                  </div>
+
+                  <div className="transaction-meta-row">
+                    <p className="transaction-meta">{new Date(t.created_at).toLocaleDateString()}</p>
+                    <span className="transaction-dot" aria-hidden="true" />
+                    <p className="transaction-meta">{t.category}</p>
+                  </div>
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <p className={t.type === 'income' ? 'amount-income' : 'amount-expense'} style={{ fontWeight: 600 }}>
-                  {t.type === 'income' ? '+' : '-'}¥{Number(t.amount).toLocaleString()}
-                </p>
-              </div>
-            </div>
+            </article>
           ))}
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }
