@@ -61,7 +61,7 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
 
   if (data.length === 0) {
     return (
-    <Card className="rounded-2xl shadow-sm border-stone-200">
+    <Card className="rounded-2xl shadow-sm border-0">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
       </CardHeader>
@@ -73,7 +73,7 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
   }
 
   return (
-    <Card className="rounded-2xl shadow-sm border-stone-200">
+    <Card className="rounded-2xl shadow-sm border-0">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
       </CardHeader>

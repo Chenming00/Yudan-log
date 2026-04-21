@@ -29,16 +29,16 @@ export function BlogListClient({ posts }: { posts: BlogPost[] }) {
   }, [posts, search, selectedTag]);
 
   return (
-    <div className="page-padding mx-auto mt-4 max-w-4xl space-y-4">
+    <div className="mt-4 space-y-4">
       <div className="space-y-3">
-        <div className="flex items-center gap-3 bg-stone-50 rounded-xl border border-stone-200/70 px-4 py-2.5">
-          <Search className="h-4 w-4 text-stone-400 shrink-0" />
+        <div className="flex items-center gap-3 bg-muted rounded-xl border-0 px-4 py-2.5">
+          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <input
             type="text"
             placeholder="搜索标题、摘要或标签"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-transparent text-sm outline-none placeholder:text-stone-400 text-stone-700"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground text-foreground"
           />
         </div>
 
@@ -47,7 +47,7 @@ export function BlogListClient({ posts }: { posts: BlogPost[] }) {
             <button
               onClick={() => setSelectedTag('')}
               className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${
-                !selectedTag ? 'bg-stone-800 border-stone-800 text-white' : 'bg-stone-50 border-stone-200 text-stone-500'
+                !selectedTag ? 'bg-primary border-primary text-primary-foreground' : 'bg-muted border-border text-muted-foreground'
               }`}
             >
               全部标签
@@ -57,7 +57,7 @@ export function BlogListClient({ posts }: { posts: BlogPost[] }) {
                 key={tag}
                 onClick={() => setSelectedTag(tag)}
                 className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${
-                  selectedTag === tag ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-stone-50 border-stone-200 text-stone-500'
+                  selectedTag === tag ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-muted border-border text-muted-foreground'
                 }`}
               >
                 #{tag}
@@ -66,10 +66,10 @@ export function BlogListClient({ posts }: { posts: BlogPost[] }) {
           </div>
         )}
 
-        <div className="flex items-center justify-between text-xs text-stone-400">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span>共 {filteredPosts.length} 篇日志</span>
           {(search || selectedTag) && (
-            <button className="text-stone-500" onClick={() => { setSearch(''); setSelectedTag(''); }}>
+            <button className="text-foreground" onClick={() => { setSearch(''); setSelectedTag(''); }}>
               清空筛选
             </button>
           )}
@@ -77,8 +77,8 @@ export function BlogListClient({ posts }: { posts: BlogPost[] }) {
       </div>
 
       {filteredPosts.length === 0 ? (
-        <Card className="border-stone-200/70 shadow-none">
-          <CardContent className="text-center py-12 text-stone-400 text-sm">
+        <Card className="rounded-2xl shadow-sm border-0">
+          <CardContent className="text-center py-12 text-muted-foreground text-sm">
             <p className="text-3xl mb-3">📝</p>
             没找到匹配的日志，试试换个关键词或标签。
           </CardContent>
@@ -86,28 +86,28 @@ export function BlogListClient({ posts }: { posts: BlogPost[] }) {
       ) : (
         filteredPosts.map((post) => (
           <Link key={post.slug} href={`/blog/${post.slug}`}>
-            <Card className="mb-3 border-stone-200/70 shadow-none transition-all hover:bg-stone-50 active:bg-stone-100 cursor-pointer">
-              <CardContent className="flex items-start gap-3 px-4 py-4 sm:px-5">
+            <Card className="mb-3 rounded-2xl shadow-sm border-0 transition-all hover:bg-accent active:bg-accent/80 cursor-pointer">
+              <CardContent className="flex items-start gap-3 p-4 sm:p-5">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-xs text-stone-400 mb-1.5">
-                    <Calendar className="h-3 w-3 text-stone-300" />
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1.5">
+                    <Calendar className="h-3 w-3 text-muted-foreground/50" />
                     <span>{post.date}</span>
                     <span>·</span>
                     <span>{post.readingTime} 分钟阅读</span>
                   </div>
-                  <h2 className="font-medium text-base text-stone-800">{post.title}</h2>
-                  <p className="mt-2 text-sm text-stone-500 line-clamp-2">{post.summary}</p>
+                  <h2 className="font-medium text-base text-foreground">{post.title}</h2>
+                  <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{post.summary}</p>
                   {post.tags.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {post.tags.map((tag) => (
-                        <span key={tag} className="rounded-full bg-stone-100 px-2.5 py-1 text-[11px] text-stone-500">
+                        <span key={tag} className="rounded-full bg-muted px-2.5 py-1 text-[11px] text-muted-foreground">
                           #{tag}
                         </span>
                       ))}
                     </div>
                   )}
                 </div>
-                <ChevronRight className="h-4 w-4 text-stone-300 flex-shrink-0 mt-1" />
+                <ChevronRight className="h-4 w-4 text-muted-foreground/50 flex-shrink-0 mt-1" />
               </CardContent>
             </Card>
           </Link>

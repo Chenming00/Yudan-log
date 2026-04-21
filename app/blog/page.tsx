@@ -21,18 +21,18 @@ export default function BlogPage() {
   const posts = getAllPosts();
 
   return (
-    <main className="page-shell pb-6 lg:pb-10">
-      <header className="page-padding flex items-center gap-3 pt-safe pb-2">
-        <Link href="/" className="pt-4 text-stone-500 hover:text-stone-700 transition-colors">
+    <div className="min-h-screen px-4 py-6">
+      <header className="flex items-center gap-3 pt-safe pb-2">
+        <Link href="/" className="pt-4 text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="pt-4">
-          <h1 className="text-lg font-semibold tracking-tight text-stone-800">🌱 成长 Log</h1>
-          <p className="text-xs text-stone-400">共 {posts.length} 篇日志</p>
+          <h1 className="text-lg font-semibold tracking-tight text-foreground">🌱 成长 Log</h1>
+          <p className="text-xs text-muted-foreground">共 {posts.length} 篇日志</p>
         </div>
       </header>
 
       <BlogListClient posts={posts} />
-    </main>
+    </div>
   );
 }

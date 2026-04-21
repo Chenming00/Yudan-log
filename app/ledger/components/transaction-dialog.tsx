@@ -137,7 +137,7 @@ export function TransactionDialog({
   return (
     <>
       {actionError && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-destructive/10 border border-destructive text-destructive text-sm px-4 py-2 rounded-xl shadow-sm">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[10000] bg-destructive/10 border border-destructive text-destructive text-sm px-4 py-2 rounded-xl shadow-sm">
           {actionError}
         </div>
       )}

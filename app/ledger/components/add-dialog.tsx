@@ -100,7 +100,7 @@ export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProp
         </DialogHeader>
         <div className="space-y-3 pt-2">
           {/* 类型切换 */}
-          <div className="flex gap-1 bg-stone-100 rounded-lg p-1">
+          <div className="flex gap-1 bg-muted rounded-lg p-1">
             {(['expense', 'income'] as const).map((type) => (
               <button
                 key={type}

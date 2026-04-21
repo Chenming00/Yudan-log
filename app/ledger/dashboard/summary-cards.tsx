@@ -45,7 +45,7 @@ export function SummaryCards({ currentMonth, lastMonth }: SummaryCardsProps) {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-      <Card className="group relative overflow-hidden rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border-rose-200 bg-gradient-to-br from-white to-rose-50">
+      <Card className="group relative overflow-hidden rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border-0 bg-gradient-to-br from-card to-rose-50/50">
         <CardContent className="p-5">
           <div className="flex items-start justify-between mb-3">
             <span className="text-xs font-medium text-muted-foreground tracking-wide uppercase">本月支出</span>
@@ -56,13 +56,13 @@ export function SummaryCards({ currentMonth, lastMonth }: SummaryCardsProps) {
           </div>
         </CardContent>
       </Card>
-      <Card className="group relative overflow-hidden rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border-stone-200 bg-gradient-to-br from-white to-stone-50">
+      <Card className="group relative overflow-hidden rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border-0 bg-gradient-to-br from-card to-muted/50">
         <CardContent className="p-5">
           <div className="flex items-start justify-between mb-3">
             <span className="text-xs font-medium text-muted-foreground tracking-wide uppercase">上月支出</span>
             <div className="text-xs font-medium text-muted-foreground">对比基准</div>
           </div>
-          <div className="text-2xl font-semibold text-stone-600">
+          <div className="text-2xl font-semibold text-muted-foreground">
             ¥{lastMonth.expense.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
         </CardContent>

@@ -99,9 +99,9 @@ export default function LedgerPage() {
   }, [transactions]);
 
   return (
-    <main className="page-shell relative pb-6 lg:pb-10">
+    <div className="min-h-screen px-4 py-6">
       {/* 头部 */}
-      <header className="page-padding flex items-center justify-between pt-safe pb-2">
+      <header className="flex items-center justify-between pt-safe pb-2">
         <div className="flex items-center gap-3">
           <Link
             href="/"
@@ -123,18 +123,18 @@ export default function LedgerPage() {
       </header>
 
       {/* 主要内容区 */}
-      <div className="page-padding mx-auto max-w-4xl">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="bg-stone-100 rounded-xl p-1 mb-6 border border-stone-200">
+      <div className="mt-4 space-y-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="bg-muted rounded-xl p-1 mb-6 border-0">
             <TabsTrigger
               value="overview"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-rose-500 rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-rose-500 rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
             >
               概览
             </TabsTrigger>
             <TabsTrigger
               value="detail"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-rose-500 rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-rose-500 rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
             >
               明细
             </TabsTrigger>
@@ -169,7 +169,7 @@ export default function LedgerPage() {
         </Tabs>
 
         {/* 新增按钮（固定在页面中间靠右） */}
-        <div className="fixed right-6 top-1/2 -translate-y-1/2">
+        <div className="fixed right-6 top-1/2 -translate-y-1/2 z-30">
           <button
             onClick={() => {
               if (!canManageTransactions) {
@@ -226,6 +226,6 @@ export default function LedgerPage() {
           }
         }}
       />
-    </main>
+    </div>
   );
 }

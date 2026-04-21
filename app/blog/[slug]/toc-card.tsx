@@ -10,7 +10,7 @@ export function TocCard({ headings }: { headings: BlogHeading[] }) {
   if (headings.length === 0) return null;
 
   return (
-    <div className="mb-6 rounded-2xl bg-stone-50 border border-stone-200/70 p-4">
+    <div className="mb-6 rounded-2xl bg-muted/50 border-0 p-4">
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
@@ -18,8 +18,8 @@ export function TocCard({ headings }: { headings: BlogHeading[] }) {
         aria-expanded={isOpen}
         aria-controls="blog-toc-content"
       >
-        <p className="text-xs font-medium tracking-wide text-stone-400">文章目录</p>
-        <ChevronDown className={`h-4 w-4 text-stone-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <p className="text-xs font-medium tracking-wide text-muted-foreground">文章目录</p>
+        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
@@ -28,7 +28,7 @@ export function TocCard({ headings }: { headings: BlogHeading[] }) {
             <a
               key={heading.id}
               href={`#${heading.id}`}
-              className="block text-sm text-stone-600 hover:text-stone-900 transition-colors"
+              className="block text-sm text-muted-foreground hover:text-foreground transition-colors"
               style={{ paddingLeft: `${(heading.level - 2) * 12}px` }}
               onClick={() => setIsOpen(false)}
             >

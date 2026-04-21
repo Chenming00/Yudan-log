@@ -52,7 +52,7 @@
 }
 
 @utility page-shell {
-  @apply mx-auto min-h-full w-full max-w-screen-xl bg-stone-100 antialiased;
+  @apply min-h-full w-full bg-background antialiased;
 }
 
 @utility page-padding {

@@ -63,7 +63,7 @@ function TransactionItem({ transaction, onClick }: TransactionItemProps) {
   return (
     <div
       onClick={onClick}
-      className="flex items-center gap-3 py-3 px-2 rounded-xl hover:bg-stone-50 cursor-pointer transition-colors"
+      className="flex items-center gap-3 py-3 px-2 rounded-xl hover:bg-accent cursor-pointer transition-colors"
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -143,7 +143,7 @@ export function DetailList({ transactions, onSelect }: DetailListProps) {
 
   if (transactions.length === 0) {
     return (
-          <Card className="rounded-2xl shadow-sm border-stone-200">
+      <Card className="rounded-2xl shadow-sm border-0">
         <CardContent className="p-8">
           <p className="text-center text-muted-foreground text-sm">暂无交易记录</p>
         </CardContent>
@@ -164,13 +164,13 @@ export function DetailList({ transactions, onSelect }: DetailListProps) {
         return (
           <Card
             key={groupKey}
-            className="rounded-2xl shadow-sm overflow-hidden border-stone-200"
+            className="rounded-2xl shadow-sm overflow-hidden border-0"
           >
             <CardContent className="p-0">
               {/* 组头 */}
               <div
                 onClick={() => toggleGroup(groupKey)}
-                className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-stone-50 to-stone-100 cursor-pointer hover:from-stone-100 hover:to-stone-200 transition-colors"
+                className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-muted to-muted/50 cursor-pointer hover:from-accent hover:to-accent/50 transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-foreground">{groupKey}</span>
