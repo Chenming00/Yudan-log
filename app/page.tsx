@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, Search, Settings } from 'lucide-react';
 
 type TransactionTypeFilter = 'all' | 'income' | 'expense';
 
@@ -89,19 +89,98 @@ function TransactionDetail({ transaction, open, onOpenChange }: { transaction: T
           </span>
         </DialogHeader>
         <div className="space-y-3 pt-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-stone-400">备注</span>
-            <span className="text-stone-700 font-medium">{transaction.note || '无'}</span>
-          </div>
+          <DetailRow label="备注" value={transaction.note || '无'} multiline />
           <Separator className="bg-stone-100" />
-          <div className="flex justify-between text-sm">
-            <span className="text-stone-400">分类</span>
-            <span className="text-stone-700 font-medium">{transaction.category || '未分类'}</span>
-          </div>
+          <DetailRow label="分类" value={transaction.category || '未分类'} />
           <Separator className="bg-stone-100" />
-          <div className="flex justify-between text-sm">
-            <span className="text-stone-400">时间</span>
-            <span className="text-stone-700 font-medium">{dateStr}</span>
+          <DetailRow label="时间" value={dateStr} />
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DetailRow({ label, value, multiline = false }: { label: string; value: string; multiline?: boolean }) {
+  if (multiline) {
+    return (
+      <div className="flex flex-col gap-1 text-sm">
+        <span className="text-stone-400 text-xs">{label}</span>
+        <span className="text-stone-700 font-medium whitespace-pre-wrap break-words leading-relaxed">
+          {value}
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex justify-between items-start gap-4 text-sm">
+      <span className="text-stone-400 shrink-0">{label}</span>
+      <span className="text-stone-700 font-medium text-right break-words min-w-0">{value}</span>
+    </div>
+  );
+}
+
+function SettingsDialog({
+  open,
+  onOpenChange,
+  currentKey,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  currentKey: string | null;
+  onSave: (key: string) => void;
+}) {
+  const [value, setValue] = useState('');
+
+  useEffect(() => {
+    if (open) setValue(currentKey || '');
+  }, [open, currentKey]);
+
+  const handleSave = () => {
+    const trimmed = value.trim();
+    onSave(trimmed);
+    onOpenChange(false);
+  };
+
+  const handleClear = () => {
+    setValue('');
+    onSave('');
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="text-center">设置 API Key</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div className="flex flex-col gap-2">
+            <label className="text-xs text-stone-400">API Key</label>
+            <input
+              type="password"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="输入你的 API Key"
+              className="w-full bg-stone-50 border border-stone-200/70 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-stone-400 text-stone-700 placeholder:text-stone-400"
+            />
+            <p className="text-xs text-stone-400 leading-relaxed">
+              API Key 将保存在浏览器本地，仅在当前设备可用。
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={handleClear}
+              className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
+            >
+              清除
+            </button>
+            <button
+              onClick={handleSave}
+              className="flex-1 py-2.5 text-sm rounded-xl font-medium bg-stone-800 text-stone-50 hover:bg-stone-700 transition-colors"
+            >
+              保存
+            </button>
           </div>
         </div>
       </DialogContent>
@@ -234,6 +313,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const fetchTransactions = useCallback(async (key: string) => {
     setLoading(true);
@@ -290,8 +370,15 @@ export default function Home() {
 
   return (
     <main className="max-w-xl mx-auto min-h-[100dvh] relative pb-6 antialiased bg-stone-100/60">
-      <header className="px-6 pt-safe pb-2">
+      <header className="px-6 pt-safe pb-2 flex items-center justify-between">
         <h1 className="text-lg font-medium tracking-tight pt-4 text-stone-700">🐟 鱼蛋小账本</h1>
+        <button
+          onClick={() => setSettingsOpen(true)}
+          className="pt-4 text-stone-500 hover:text-stone-700 transition-colors"
+          aria-label="设置"
+        >
+          <Settings className="h-5 w-5" />
+        </button>
       </header>
 
       <BalanceHeader balance={balance} income={totalIncome} expense={totalExpense} />
@@ -320,6 +407,21 @@ export default function Home() {
         transaction={selectedTransaction}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+      />
+
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        currentKey={apiKey}
+        onSave={(key) => {
+          if (key) {
+            localStorage.setItem('api_key', key);
+            setApiKey(key);
+          } else {
+            localStorage.removeItem('api_key');
+            setApiKey(null);
+          }
+        }}
       />
     </main>
   );
