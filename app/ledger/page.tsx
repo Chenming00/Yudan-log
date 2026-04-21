@@ -1250,50 +1250,45 @@ export default function Home() {
         }}
       />
 
-      <MonthlySummary
-        monthLabel={monthSummaryLabel}
-        count={filteredTransactions.length}
-        income={filteredIncome}
-        expense={filteredExpense}
-      />
-
       <FilterSummary count={filteredTransactions.length} income={filteredIncome} expense={filteredExpense} />
 
-      {/* 视图切换按钮 */}
-      <div className="page-padding mx-auto mb-4 flex max-w-4xl gap-2">
-        <button
-          onClick={() => setViewMode('list')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm rounded-xl font-medium transition-colors ${
-            viewMode === 'list'
-              ? 'bg-stone-800 text-white'
-              : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
-          }`}
-        >
-          <List className="h-4 w-4" />
-          列表
-        </button>
-        <button
-          onClick={() => setViewMode('monthly')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm rounded-xl font-medium transition-colors ${
-            viewMode === 'monthly'
-              ? 'bg-stone-800 text-white'
-              : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
-          }`}
-        >
-          <LayoutGrid className="h-4 w-4" />
-          月度
-        </button>
-        <button
-          onClick={() => setViewMode('chart')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm rounded-xl font-medium transition-colors ${
-            viewMode === 'chart'
-              ? 'bg-stone-800 text-white'
-              : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
-          }`}
-        >
-          <BarChart3 className="h-4 w-4" />
-          图表
-        </button>
+      {/* 视图切换按钮 - shadcn Tabs 风格 */}
+      <div className="page-padding mx-auto mb-4 flex max-w-4xl">
+        <div className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-muted p-1">
+          <button
+            onClick={() => setViewMode('list')}
+            className={`flex-1 inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+              viewMode === 'list'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <List className="h-4 w-4" />
+            列表
+          </button>
+          <button
+            onClick={() => setViewMode('monthly')}
+            className={`flex-1 inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+              viewMode === 'monthly'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <LayoutGrid className="h-4 w-4" />
+            月度
+          </button>
+          <button
+            onClick={() => setViewMode('chart')}
+            className={`flex-1 inline-flex items-center justify-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all ${
+              viewMode === 'chart'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <BarChart3 className="h-4 w-4" />
+            图表
+          </button>
+        </div>
       </div>
 
       {/* 列表视图 */}
