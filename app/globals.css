@@ -52,7 +52,11 @@
 }
 
 @utility page-shell {
-  @apply min-h-full w-full bg-background antialiased;
+  min-height: 100%;
+  width: 100%;
+  background-color: hsl(var(--background));
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @utility page-padding {
