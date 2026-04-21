@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { validateAuth } from '@/lib/auth';
 
-export async function POST(req: NextRequest) {
+export async function DELETE(req: NextRequest) {
   if (!validateAuth(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }

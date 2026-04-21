@@ -17,9 +17,9 @@ export function parseMessage(text: string): ParsedTransaction | null {
     const num = parseFloat(word);
     if (!isNaN(num) && amount === null) {
       amount = num;
-    } else if (word.toLowerCase() === 'income') {
+    } else if (word.toLowerCase() === 'income' || word === '收入') {
       type = 'income';
-    } else if (word.toLowerCase() === 'expense') {
+    } else if (word.toLowerCase() === 'expense' || word === '支出') {
       type = 'expense';
     } else {
       remainingWords.push(word);

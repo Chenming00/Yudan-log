@@ -1,4 +1,3 @@
-'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -80,11 +79,14 @@ function TransactionDetail({
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [editForm, setEditForm] = useState({ amount: '', note: '', category: '', type: 'expense' as 'income' | 'expense', transaction_time: '' });
 
   useEffect(() => {
     if (transaction && open) {
       setEditing(false);
+      setActionError(null);
       const dt = transaction.transaction_time || transaction.created_at;
       // Format to datetime-local
       const d = new Date(dt);
@@ -114,9 +116,10 @@ function TransactionDetail({
   const handleSave = async () => {
     if (!apiKey) return;
     setSaving(true);
+    setActionError(null);
     try {
       const res = await fetch('/api/edit', {
-        method: 'POST',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
           id: transaction.id,
@@ -131,27 +134,37 @@ function TransactionDetail({
       if (data.success) {
         onOpenChange(false);
         onUpdated();
+      } else {
+        setActionError(data.error || '保存失败');
       }
-    } catch { /* ignore */ } finally {
+    } catch {
+      setActionError('网络错误，请重试');
+    } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!apiKey || !confirm('确定要删除这条记录吗？')) return;
+    if (!apiKey) return;
     setDeleting(true);
+    setActionError(null);
     try {
       const res = await fetch('/api/delete', {
-        method: 'POST',
+        method: 'DELETE',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({ id: transaction.id }),
       });
       const data = await res.json();
       if (data.success) {
+        setConfirmDeleteOpen(false);
         onOpenChange(false);
         onUpdated();
+      } else {
+        setActionError(data.error || '删除失败');
       }
-    } catch { /* ignore */ } finally {
+    } catch {
+      setActionError('网络错误，请重试');
+    } finally {
       setDeleting(false);
     }
   };
@@ -159,6 +172,18 @@ function TransactionDetail({
   const inputClass = "w-full bg-stone-50 border border-stone-200/70 rounded-lg px-3 py-2 text-sm outline-none focus:border-stone-400 text-stone-700";
 
   return (
+    <>
+    {actionError && <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-rose-50 border border-rose-200 text-rose-600 text-sm px-4 py-2 rounded-xl shadow-sm">{actionError}</div>}
+    <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+      <DialogContent>
+        <DialogHeader><DialogTitle className="text-center">确认删除</DialogTitle></DialogHeader>
+        <p className="text-sm text-stone-500 text-center py-2">确定要删除这条记录吗？此操作不可撤销。</p>
+        <div className="flex gap-2 pt-2">
+          <button onClick={() => setConfirmDeleteOpen(false)} className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors">取消</button>
+          <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2.5 text-sm rounded-xl font-medium bg-rose-500 text-white hover:bg-rose-600 transition-colors disabled:opacity-50">{deleting ? '删除中...' : '确认删除'}</button>
+        </div>
+      </DialogContent>
+    </Dialog>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader className="flex flex-col items-center pt-2 pb-2">
@@ -251,7 +276,7 @@ function TransactionDetail({
             {canEdit && (
               <div className="flex gap-2 pt-3">
                 <button
-                  onClick={handleDelete}
+                  onClick={() => setConfirmDeleteOpen(true)}
                   disabled={deleting}
                   className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-rose-200 text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-50"
                 >
@@ -269,6 +294,7 @@ function TransactionDetail({
         )}
       </DialogContent>
     </Dialog>
+    </>
   );
 }
 
