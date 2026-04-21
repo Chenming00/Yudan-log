@@ -64,7 +64,41 @@ function TransactionItem({ t, onClick }: { t: Transaction; onClick?: () => void 
   );
 }
 
-function TransactionDetail({ transaction, open, onOpenChange }: { transaction: Transaction | null; open: boolean; onOpenChange: (open: boolean) => void }) {
+function TransactionDetail({
+  transaction,
+  open,
+  onOpenChange,
+  apiKey,
+  onUpdated,
+}: {
+  transaction: Transaction | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  apiKey: string | null;
+  onUpdated: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [editForm, setEditForm] = useState({ amount: '', note: '', category: '', type: 'expense' as 'income' | 'expense', transaction_time: '' });
+
+  useEffect(() => {
+    if (transaction && open) {
+      setEditing(false);
+      const dt = transaction.transaction_time || transaction.created_at;
+      // Format to datetime-local
+      const d = new Date(dt);
+      const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+      setEditForm({
+        amount: String(transaction.amount),
+        note: transaction.note || '',
+        category: transaction.category || '',
+        type: transaction.type,
+        transaction_time: local,
+      });
+    }
+  }, [transaction, open]);
+
   if (!transaction) return null;
   const isIncome = transaction.type === 'income';
   const dateStr = new Date(transaction.transaction_time || transaction.created_at).toLocaleString('zh-CN', {
@@ -75,26 +109,164 @@ function TransactionDetail({ transaction, open, onOpenChange }: { transaction: T
     minute: '2-digit',
   });
 
+  const canEdit = Boolean(apiKey);
+
+  const handleSave = async () => {
+    if (!apiKey) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/edit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          id: transaction.id,
+          amount: parseFloat(editForm.amount),
+          note: editForm.note,
+          category: editForm.category,
+          type: editForm.type,
+          transaction_time: editForm.transaction_time ? new Date(editForm.transaction_time).toISOString() : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        onOpenChange(false);
+        onUpdated();
+      }
+    } catch { /* ignore */ } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!apiKey || !confirm('确定要删除这条记录吗？')) return;
+    setDeleting(true);
+    try {
+      const res = await fetch('/api/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({ id: transaction.id }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        onOpenChange(false);
+        onUpdated();
+      }
+    } catch { /* ignore */ } finally {
+      setDeleting(false);
+    }
+  };
+
+  const inputClass = "w-full bg-stone-50 border border-stone-200/70 rounded-lg px-3 py-2 text-sm outline-none focus:border-stone-400 text-stone-700";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader className="flex flex-col items-center pt-2 pb-2">
           <DialogTitle className="text-center">
-            <span className={`text-3xl font-semibold tracking-tight ${isIncome ? 'text-emerald-600' : 'text-stone-800'}`}>
-              {isIncome ? '+' : '-'}¥{Number(transaction.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
+            {editing ? (
+              <input
+                type="number"
+                step="0.01"
+                value={editForm.amount}
+                onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
+                className="text-3xl font-semibold tracking-tight text-center w-full bg-transparent outline-none border-b border-stone-200 pb-1 text-stone-800"
+              />
+            ) : (
+              <span className={`text-3xl font-semibold tracking-tight ${isIncome ? 'text-emerald-600' : 'text-stone-800'}`}>
+                {isIncome ? '+' : '-'}¥{Number(transaction.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            )}
           </DialogTitle>
-          <span className={`mt-2 text-xs px-2.5 py-0.5 rounded-full font-medium ${isIncome ? 'bg-emerald-50 text-emerald-600' : 'bg-stone-100 text-stone-600'}`}>
-            {isIncome ? '收入' : '支出'}
-          </span>
+          {editing ? (
+            <div className="flex gap-1 bg-stone-100 rounded-lg p-0.5 mt-2">
+              {(['expense', 'income'] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setEditForm((f) => ({ ...f, type: t }))}
+                  className={`px-3 py-1 text-xs rounded-md font-medium transition-all ${editForm.type === t ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500'}`}
+                >
+                  {t === 'income' ? '收入' : '支出'}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <span className={`mt-2 text-xs px-2.5 py-0.5 rounded-full font-medium ${isIncome ? 'bg-emerald-50 text-emerald-600' : 'bg-stone-100 text-stone-600'}`}>
+              {isIncome ? '收入' : '支出'}
+            </span>
+          )}
         </DialogHeader>
-        <div className="space-y-3 pt-2">
-          <DetailRow label="备注" value={transaction.note || '无'} multiline />
-          <Separator className="bg-stone-100" />
-          <DetailRow label="分类" value={transaction.category || '未分类'} />
-          <Separator className="bg-stone-100" />
-          <DetailRow label="时间" value={dateStr} />
-        </div>
+
+        {editing ? (
+          <div className="space-y-3 pt-2">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-stone-400">备注</label>
+              <textarea
+                value={editForm.note}
+                onChange={(e) => setEditForm((f) => ({ ...f, note: e.target.value }))}
+                rows={2}
+                className={inputClass + " resize-none"}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-stone-400">分类</label>
+              <input
+                type="text"
+                value={editForm.category}
+                onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))}
+                className={inputClass}
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-stone-400">时间</label>
+              <input
+                type="datetime-local"
+                value={editForm.transaction_time}
+                onChange={(e) => setEditForm((f) => ({ ...f, transaction_time: e.target.value }))}
+                className={inputClass}
+              />
+            </div>
+            <div className="flex gap-2 pt-2">
+              <button
+                onClick={() => setEditing(false)}
+                className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
+              >
+                取消
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 py-2.5 text-sm rounded-xl font-medium bg-stone-800 text-stone-50 hover:bg-stone-700 transition-colors disabled:opacity-50"
+              >
+                {saving ? '保存中...' : '保存'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3 pt-2">
+            <DetailRow label="备注" value={transaction.note || '无'} multiline />
+            <Separator className="bg-stone-100" />
+            <DetailRow label="分类" value={transaction.category || '未分类'} />
+            <Separator className="bg-stone-100" />
+            <DetailRow label="时间" value={dateStr} />
+            {canEdit && (
+              <div className="flex gap-2 pt-3">
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-rose-200 text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-50"
+                >
+                  {deleting ? '删除中...' : '删除'}
+                </button>
+                <button
+                  onClick={() => setEditing(true)}
+                  className="flex-1 py-2.5 text-sm rounded-xl font-medium bg-stone-800 text-stone-50 hover:bg-stone-700 transition-colors"
+                >
+                  编辑
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -407,6 +579,8 @@ export default function Home() {
         transaction={selectedTransaction}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+        apiKey={apiKey}
+        onUpdated={() => fetchTransactions(apiKey || '')}
       />
 
       <SettingsDialog
