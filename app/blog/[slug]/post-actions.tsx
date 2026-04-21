@@ -32,17 +32,17 @@ export function PostActions({ title, summary }: { title: string; summary: string
     <div className="flex flex-wrap gap-2">
       <button
         onClick={handleShare}
-        className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-accent transition-colors"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-border/50 bg-white px-3 py-1.5 text-sm text-foreground hover:bg-muted/50 hover:border-border transition-all"
       >
-        <Share2 className="h-3.5 w-3.5" />
-        分享文章
+        <Share2 className="h-4 w-4" />
+        分享
       </button>
       <button
         onClick={handleCopy}
-        className="inline-flex items-center gap-2 rounded-full bg-muted px-3 py-2 text-xs font-medium text-muted-foreground hover:bg-accent transition-colors"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-border/50 bg-white px-3 py-1.5 text-sm text-foreground hover:bg-muted/50 hover:border-border transition-all"
       >
-        {copied ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />}
-        {copied ? '链接已复制' : '复制链接'}
+        {copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+        {copied ? '已复制' : '复制链接'}
       </button>
     </div>
   );
