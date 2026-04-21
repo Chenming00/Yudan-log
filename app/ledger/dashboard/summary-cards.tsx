@@ -5,14 +5,10 @@ import { ArrowUpRight, ArrowDownRight } from "lucide-react";
 
 interface SummaryCardsProps {
   currentMonth: {
-    income: number;
     expense: number;
-    balance: number;
   };
   lastMonth: {
-    income: number;
     expense: number;
-    balance: number;
   };
 }
 
@@ -21,14 +17,12 @@ function calculateChange(current: number, last: number): number {
   return ((current - last) / last) * 100;
 }
 
-function TrendIndicator({ value, isPositiveGood }: { value: number; isPositiveGood?: boolean }) {
+function TrendIndicator({ value }: { value: number }) {
   const isPositive = value >= 0;
   const absValue = Math.abs(value);
   
-  // 对于支出，负数是好的（减少）；对于收入/结余，正数是好的
-  const isGood = isPositiveGood !== undefined 
-    ? (isPositiveGood ? isPositive : !isPositive)
-    : isPositive;
+  // 对于支出，负数是好的（减少）
+  const isGood = !isPositive;
   
   const colorClass = isGood 
     ? "text-emerald-600" 
@@ -46,58 +40,33 @@ function TrendIndicator({ value, isPositiveGood }: { value: number; isPositiveGo
   );
 }
 
-interface StatCardProps {
-  title: string;
-  value: number;
-  change: number;
-  isPositiveGood?: boolean;
-  colorClass: string;
-}
-
-function StatCard({ title, value, change, isPositiveGood, colorClass }: StatCardProps) {
-  return (
-    <Card className="group relative overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border-stone-200/60">
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between mb-3">
-          <span className="text-xs font-medium text-stone-500 tracking-wide uppercase">{title}</span>
-          <TrendIndicator value={change} isPositiveGood={isPositiveGood} />
-        </div>
-        <div className={`text-2xl font-semibold ${colorClass}`}>
-          ¥{value.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 export function SummaryCards({ currentMonth, lastMonth }: SummaryCardsProps) {
-  const incomeChange = calculateChange(currentMonth.income, lastMonth.income);
   const expenseChange = calculateChange(currentMonth.expense, lastMonth.expense);
-  const balanceChange = calculateChange(currentMonth.balance, lastMonth.balance);
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-      <StatCard
-        title="本月支出"
-        value={currentMonth.expense}
-        change={expenseChange}
-        isPositiveGood={false}
-        colorClass="text-amber-600"
-      />
-      <StatCard
-        title="本月收入"
-        value={currentMonth.income}
-        change={incomeChange}
-        isPositiveGood={true}
-        colorClass="text-emerald-600"
-      />
-      <StatCard
-        title="本月结余"
-        value={currentMonth.balance}
-        change={balanceChange}
-        isPositiveGood={true}
-        colorClass="text-blue-600"
-      />
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      <Card className="group relative overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border-stone-200/60">
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between mb-3">
+            <span className="text-xs font-medium text-stone-500 tracking-wide uppercase">本月支出</span>
+            <TrendIndicator value={expenseChange} />
+          </div>
+          <div className="text-2xl font-semibold text-amber-600">
+            ¥{currentMonth.expense.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          </div>
+        </CardContent>
+      </Card>
+      <Card className="group relative overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border-stone-200/60">
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between mb-3">
+            <span className="text-xs font-medium text-stone-500 tracking-wide uppercase">上月支出</span>
+            <div className="text-xs font-medium text-stone-400">对比基准</div>
+          </div>
+          <div className="text-2xl font-semibold text-stone-600">
+            ¥{lastMonth.expense.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

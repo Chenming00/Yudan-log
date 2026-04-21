@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { Settings, ArrowLeft, Plus } from "lucide-react";
 import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SummaryCards, TrendChart, CategoryBreakdown, Insights, DetailList } from "./dashboard";
+import { SummaryCards, TrendChart, CategoryBreakdown, DetailList } from "./dashboard";
 import { TransactionDialog } from "./components/transaction-dialog";
 import { AddDialog } from "./components/add-dialog";
 import { SettingsDialog } from "./components/settings-dialog";
@@ -69,13 +69,10 @@ export default function LedgerPage() {
     const monthTransactions = transactions.filter(
       (t) => getMonthKey(getTransactionDate(t)) === currentMonthKey
     );
-    const income = monthTransactions
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + Number(t.amount), 0);
     const expense = monthTransactions
       .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + Number(t.amount), 0);
-    return { income, expense, balance: income - expense, transactions: monthTransactions };
+    return { expense, transactions: monthTransactions };
   }, [transactions, currentMonthKey]);
 
   // 上月数据
@@ -86,13 +83,10 @@ export default function LedgerPage() {
     const monthTransactions = transactions.filter(
       (t) => getMonthKey(getTransactionDate(t)) === lastMonthKey
     );
-    const income = monthTransactions
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + Number(t.amount), 0);
     const expense = monthTransactions
       .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + Number(t.amount), 0);
-    return { income, expense, balance: income - expense };
+    return { expense };
   }, [transactions]);
 
   // 按时间排序的交易（用于明细列表）
@@ -160,11 +154,6 @@ export default function LedgerPage() {
             {/* Category Breakdown */}
             <CategoryBreakdown transactions={currentMonthData.transactions} />
 
-            {/* Insights */}
-            <Insights
-              transactions={currentMonthData.transactions}
-              currentMonth={currentMonthData}
-            />
           </TabsContent>
 
           {/* 明细 Tab */}
