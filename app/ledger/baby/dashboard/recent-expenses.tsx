@@ -74,12 +74,12 @@ export function RecentExpenses({ transactions, onSelect, limit = 5 }: RecentExpe
                 className="flex items-center justify-between py-3 px-1 first:pt-0 last:pb-0 cursor-pointer hover:bg-gray-50 rounded-lg transition-colors"
               >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium text-gray-900 truncate">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-sm font-medium text-gray-900">
                       {transaction.category}
                     </span>
                     {transaction.note && (
-                      <span className="text-xs text-gray-400 truncate">
+                      <span className="text-xs text-gray-400 break-all">
                         {transaction.note}
                       </span>
                     )}

@@ -66,12 +66,12 @@ function TransactionItem({ transaction, onClick }: TransactionItemProps) {
       className="flex items-center gap-3 py-3 px-2 rounded-xl hover:bg-stone-50 cursor-pointer transition-colors"
     >
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-stone-800 truncate">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-sm font-medium text-stone-800">
             {transaction.category}
           </span>
           {transaction.note && (
-            <span className="text-xs text-stone-400 truncate">
+            <span className="text-xs text-stone-400 break-all">
               {transaction.note}
             </span>
           )}

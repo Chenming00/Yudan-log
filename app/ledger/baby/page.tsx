@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { SummaryCards, TrendChart, CategoryBreakdown, Insights, RecentExpenses } from "./dashboard";
 import { Transaction } from "../types";
+import { QuickAdd, QuickAddData } from "./components/quick-add";
 
 function getMonthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -21,6 +22,37 @@ export default function BabyDashboardPage() {
   });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const handleAdd = async (data: QuickAddData) => {
+    if (!apiKey) {
+      alert("请先设置 API Key");
+      return;
+    }
+
+    const res = await fetch("/api/add", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        note: data.note,
+        amount: data.amount,
+        category: data.category,
+        type: "expense",
+        transaction_time: data.date,
+      }),
+    });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ error: "添加失败" }));
+      alert(error.error || "添加失败");
+      return;
+    }
+
+    // 刷新数据
+    await fetchTransactions(apiKey);
+  };
 
   const fetchTransactions = useCallback(async (key: string) => {
     setLoading(true);
@@ -152,6 +184,11 @@ export default function BabyDashboardPage() {
           currentMonthExpense={currentMonthData.expense}
           lastMonthExpense={lastMonthExpense}
         />
+
+        {/* Quick Add - 手动补录 */}
+        <div className="pt-2">
+          <QuickAdd apiKey={apiKey} onAdd={handleAdd} />
+        </div>
 
         {/* Recent Expenses */}
         <RecentExpenses transactions={transactions} />
