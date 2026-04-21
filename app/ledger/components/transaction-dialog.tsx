@@ -137,7 +137,7 @@ export function TransactionDialog({
   return (
     <>
       {actionError && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-destructive/10 border border-destructive/20 text-destructive text-sm px-4 py-2 rounded-xl shadow-sm">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-destructive/10 border border-destructive text-destructive text-sm px-4 py-2 rounded-xl shadow-sm">
           {actionError}
         </div>
       )}
@@ -260,7 +260,7 @@ export function TransactionDialog({
               <DetailRow label="时间" value={dateStr} />
               {canEdit && (
                 <div className="flex gap-2 pt-3">
-                  <Button variant="outline" onClick={() => setConfirmDeleteOpen(true)} disabled={deleting} className="flex-1 border-destructive/50 text-destructive hover:bg-destructive/10">
+                  <Button variant="outline" onClick={() => setConfirmDeleteOpen(true)} disabled={deleting} className="flex-1 border-destructive text-destructive hover:bg-destructive/10">
                     {deleting ? '删除中...' : '删除'}
                   </Button>
                   <Button onClick={() => setEditing(true)} className="flex-1">

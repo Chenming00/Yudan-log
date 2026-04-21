@@ -90,7 +90,7 @@ function TransactionItem({ transaction, onClick }: TransactionItemProps) {
         >
           {isExpense ? "-" : "+"}¥{Number(transaction.amount).toLocaleString()}
         </span>
-        <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
       </div>
     </div>
   );
@@ -143,7 +143,7 @@ export function DetailList({ transactions, onSelect }: DetailListProps) {
 
   if (transactions.length === 0) {
     return (
-      <Card className="rounded-2xl shadow-sm">
+          <Card className="rounded-2xl shadow-sm border-stone-200">
         <CardContent className="p-8">
           <p className="text-center text-muted-foreground text-sm">暂无交易记录</p>
         </CardContent>
@@ -164,13 +164,13 @@ export function DetailList({ transactions, onSelect }: DetailListProps) {
         return (
           <Card
             key={groupKey}
-            className="rounded-2xl shadow-sm overflow-hidden border-stone-100/60"
+            className="rounded-2xl shadow-sm overflow-hidden border-stone-200"
           >
             <CardContent className="p-0">
               {/* 组头 */}
               <div
                 onClick={() => toggleGroup(groupKey)}
-                className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-stone-50/50 to-stone-100/30 cursor-pointer hover:from-stone-100/50 hover:to-stone-200/30 transition-colors"
+                className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-stone-50 to-stone-100 cursor-pointer hover:from-stone-100 hover:to-stone-200 transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-foreground">{groupKey}</span>

@@ -61,19 +61,19 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
 
   if (data.length === 0) {
     return (
-      <Card className="rounded-2xl shadow-sm border-stone-100/60">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-center text-muted-foreground text-sm py-8">暂无数据</p>
-        </CardContent>
-      </Card>
+    <Card className="rounded-2xl shadow-sm border-stone-200">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-center text-muted-foreground text-sm py-8">暂无数据</p>
+      </CardContent>
+    </Card>
     );
   }
 
   return (
-    <Card className="rounded-2xl shadow-sm border-stone-100/60">
+    <Card className="rounded-2xl shadow-sm border-stone-200">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
       </CardHeader>

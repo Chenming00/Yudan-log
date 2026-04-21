@@ -125,7 +125,7 @@ export default function LedgerPage() {
       {/* 主要内容区 */}
       <div className="page-padding mx-auto max-w-4xl">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="bg-stone-100/70 rounded-xl p-1 mb-6 border border-stone-200/50">
+          <TabsList className="bg-stone-100 rounded-xl p-1 mb-6 border border-stone-200">
             <TabsTrigger
               value="overview"
               className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-rose-500 rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
