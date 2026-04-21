@@ -740,6 +740,7 @@ export default function Home() {
     if (typeof window === 'undefined') return null;
     return localStorage.getItem('api_key');
   });
+  const canManageTransactions = Boolean(apiKey);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -753,19 +754,11 @@ export default function Home() {
   const [selectedDateRange, setSelectedDateRange] = useState<DateRangeFilter>('all');
 
   const fetchTransactions = useCallback(async (key: string) => {
-    if (!key) {
-      setTransactions([]);
-      setError('请先点击右上角设置，输入 API Key 后再查看账本数据');
-      setLoading(false);
-      return;
-    }
-
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/list', {
-        headers: { Authorization: `Bearer ${key}` },
-      });
+      const headers = key ? { Authorization: `Bearer ${key}` } : undefined;
+      const res = await fetch('/api/list', headers ? { headers } : undefined);
       const data = await res.json();
       if (data.success) {
         setTransactions(data.data);
@@ -862,11 +855,19 @@ export default function Home() {
 
       <div className="px-5 mb-4 flex gap-3">
         <button
-          onClick={() => setAddOpen(true)}
-          className="flex-1 rounded-xl bg-stone-800 text-white px-4 py-3 text-sm font-medium flex items-center justify-center gap-2 hover:bg-stone-700 transition-colors"
+          onClick={() => {
+            if (!canManageTransactions) {
+              setSettingsOpen(true);
+              return;
+            }
+            setAddOpen(true);
+          }}
+          className={`flex-1 rounded-xl px-4 py-3 text-sm font-medium flex items-center justify-center gap-2 transition-colors ${canManageTransactions ? 'bg-stone-800 text-white hover:bg-stone-700' : 'bg-stone-300 text-stone-500 cursor-not-allowed'}`}
+          aria-disabled={!canManageTransactions}
+          title={canManageTransactions ? '新增记录' : '填写 API Key 后才可新增记录'}
         >
           <Plus className="h-4 w-4" />
-          新增记录
+          {canManageTransactions ? '新增记录' : '新增需 API Key'}
         </button>
         <button
           onClick={() => {
@@ -956,8 +957,8 @@ export default function Home() {
             <div className="flex items-start gap-3">
               <CalendarDays className="h-4 w-4 mt-0.5 text-stone-400" />
               <div>
-                <p className="font-medium text-stone-700 mb-1">还没连接账本数据</p>
-                <p>点右上角设置填写 API Key 后，就可以新增、编辑、删除以及筛选统计账本记录。</p>
+                <p className="font-medium text-stone-700 mb-1">当前为只读模式</p>
+                <p>未填写 API Key 时，你仍然可以查看、搜索和筛选账本记录；填写后才可以新增、编辑和删除。</p>
               </div>
             </div>
           </CardContent>
