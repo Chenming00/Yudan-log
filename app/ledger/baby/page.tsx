@@ -153,7 +153,7 @@ export default function BabyDashboardPage() {
   }
 
   return (
-    <main className="page-shell relative pb-6 lg:pb-10 bg-[#FAFAFA] min-h-screen">
+    <main className="page-shell relative pb-24 lg:pb-28 bg-[#FAFAFA] min-h-screen">
       {/* 头部 */}
       <header className="page-padding flex items-center gap-3 pt-safe pb-2">
         <Link href="/ledger" className="pt-4 text-gray-500 hover:text-gray-700 transition-colors">
