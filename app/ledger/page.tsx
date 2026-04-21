@@ -168,8 +168,8 @@ export default function LedgerPage() {
           </TabsContent>
         </Tabs>
 
-        {/* 新增按钮（固定在底部） */}
-        <div className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8">
+        {/* 新增按钮（固定在页面中间靠右） */}
+        <div className="fixed right-6 top-1/2 -translate-y-1/2">
           <button
             onClick={() => {
               if (!canManageTransactions) {

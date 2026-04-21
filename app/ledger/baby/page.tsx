@@ -25,7 +25,8 @@ export default function BabyDashboardPage() {
 
   const handleAdd = async (data: QuickAddData) => {
     if (!apiKey) {
-      alert("请先设置 API Key");
+      alert("请先设置 API Key");分类
+
       return;
     }
 

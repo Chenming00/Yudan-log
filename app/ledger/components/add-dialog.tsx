@@ -2,7 +2,25 @@
 
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Transaction, TransactionFormState } from '../types';
+
+const CATEGORIES = [
+  { label: '喂养用品', value: 'feeding' },
+  { label: '护理清洁', value: 'care' },
+  { label: '辅食零食', value: 'food' },
+  { label: '医疗健康', value: 'medical' },
+  { label: '衣物穿戴', value: 'clothing' },
+  { label: '大件用品', value: 'gear' },
+  { label: '外出相关', value: 'outing' },
+  { label: '其他', value: 'other' },
+];
 
 interface AddDialogProps {
   open: boolean;
@@ -121,13 +139,18 @@ export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProp
           {/* 分类 */}
           <div className="space-y-1">
             <label className="text-xs text-stone-400">分类</label>
-            <input
-              type="text"
-              value={form.category}
-              onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
-              placeholder="如：餐饮 / 通勤 / 工资"
-              className={inputClass}
-            />
+            <Select value={form.category} onValueChange={(value) => setForm((prev) => ({ ...prev, category: value }))}>
+              <SelectTrigger className={inputClass}>
+                <SelectValue placeholder="选择分类" />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    {cat.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* 时间 */}
