@@ -24,8 +24,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const value = payload[0].value;
     return (
-      <div className="rounded-lg border bg-white p-3 shadow-lg">
-        <p className="text-xs font-medium text-stone-500 mb-1">{label}</p>
+      <div className="rounded-lg border bg-background p-3 shadow-lg">
+        <p className="text-xs font-medium text-muted-foreground mb-1">{label}</p>
         <p className="text-sm font-semibold text-amber-600">
           ¥{Number(value).toLocaleString()}
         </p>
@@ -74,23 +74,23 @@ export function TrendChart({ transactions, title = "每日支出趋势" }: Trend
   const avgDaily = totalExpense / timeRange;
 
   return (
-    <Card className="rounded-2xl bg-white shadow-sm border-stone-200/60">
+    <Card className="rounded-2xl shadow-sm">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="text-sm font-medium text-stone-500">{title}</CardTitle>
-            <p className="text-xs text-stone-400 mt-0.5">
+            <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+            <p className="text-xs text-muted-foreground/60 mt-0.5">
               平均每日 ¥{avgDaily.toFixed(0)}
             </p>
           </div>
-          <div className="flex items-center gap-1 bg-stone-100 rounded-lg p-0.5">
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
             <Button
               variant="ghost"
               size="sm"
               className={`h-7 px-3 text-xs ${
                 timeRange === 7
-                  ? "bg-white shadow-sm text-stone-900"
-                  : "text-stone-500 hover:text-stone-700"
+                  ? "bg-background shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
               onClick={() => setTimeRange(7)}
             >
@@ -101,8 +101,8 @@ export function TrendChart({ transactions, title = "每日支出趋势" }: Trend
               size="sm"
               className={`h-7 px-3 text-xs ${
                 timeRange === 30
-                  ? "bg-white shadow-sm text-stone-900"
-                  : "text-stone-500 hover:text-stone-700"
+                  ? "bg-background shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
               }`}
               onClick={() => setTimeRange(30)}
             >

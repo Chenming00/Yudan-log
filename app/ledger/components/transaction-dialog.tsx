@@ -2,6 +2,9 @@
 
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Transaction } from '../types';
 
@@ -33,8 +36,8 @@ function DetailRow({ label, value, multiline = false }: { label: string; value: 
   if (multiline) {
     return (
       <div className="flex flex-col gap-1 text-sm">
-        <span className="text-stone-400 text-xs">{label}</span>
-        <span className="text-stone-700 font-medium whitespace-pre-wrap break-words leading-relaxed">
+        <span className="text-muted-foreground text-xs">{label}</span>
+        <span className="text-foreground font-medium whitespace-pre-wrap break-words leading-relaxed">
           {value}
         </span>
       </div>
@@ -42,8 +45,8 @@ function DetailRow({ label, value, multiline = false }: { label: string; value: 
   }
   return (
     <div className="flex justify-between items-start gap-4 text-sm">
-      <span className="text-stone-400 shrink-0">{label}</span>
-      <span className="text-stone-700 font-medium text-right break-words min-w-0">{value}</span>
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className="text-foreground font-medium text-right break-words min-w-0">{value}</span>
     </div>
   );
 }
@@ -131,13 +134,10 @@ export function TransactionDialog({
     }
   };
 
-  const inputClass =
-    'w-full bg-stone-50 border border-stone-200/70 rounded-lg px-3 py-2 text-sm outline-none focus:border-stone-400 text-stone-700';
-
   return (
     <>
       {actionError && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-rose-50 border border-rose-200 text-rose-600 text-sm px-4 py-2 rounded-xl shadow-sm">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-destructive/10 border border-destructive/20 text-destructive text-sm px-4 py-2 rounded-xl shadow-sm">
           {actionError}
         </div>
       )}
@@ -148,23 +148,16 @@ export function TransactionDialog({
           <DialogHeader>
             <DialogTitle className="text-center">确认删除</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-stone-500 text-center py-2">
+          <p className="text-sm text-muted-foreground text-center py-2">
             确定要删除这条记录吗？此操作不可撤销。
           </p>
           <div className="flex gap-2 pt-2">
-            <button
-              onClick={() => setConfirmDeleteOpen(false)}
-              className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
-            >
+            <Button variant="outline" onClick={() => setConfirmDeleteOpen(false)} className="flex-1">
               取消
-            </button>
-            <button
-              onClick={handleDelete}
-              disabled={deleting}
-              className="flex-1 py-2.5 text-sm rounded-xl font-medium bg-rose-500 text-white hover:bg-rose-600 transition-colors disabled:opacity-50"
-            >
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleting} className="flex-1">
               {deleting ? '删除中...' : '确认删除'}
-            </button>
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -175,17 +168,17 @@ export function TransactionDialog({
           <DialogHeader className="flex flex-col items-center pt-2 pb-2">
             <DialogTitle className="text-center">
               {editing ? (
-                <input
+                <Input
                   type="number"
                   step="0.01"
                   value={editForm.amount}
                   onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
-                  className="text-3xl font-semibold tracking-tight text-center w-full bg-transparent outline-none border-b border-stone-200 pb-1 text-stone-800"
+                  className="text-3xl font-semibold tracking-tight text-center w-full bg-transparent border-b border-border pb-1 text-foreground"
                 />
               ) : (
                 <span
                   className={`text-3xl font-semibold tracking-tight ${
-                    isIncome ? 'text-emerald-600' : 'text-stone-800'
+                    isIncome ? 'text-emerald-600' : 'text-foreground'
                   }`}
                 >
                   {isIncome ? '+' : '-'}
@@ -198,13 +191,13 @@ export function TransactionDialog({
               )}
             </DialogTitle>
             {editing ? (
-              <div className="flex gap-1 bg-stone-100 rounded-lg p-0.5 mt-2">
+              <div className="flex gap-1 bg-muted rounded-lg p-0.5 mt-2">
                 {(['expense', 'income'] as const).map((t) => (
                   <button
                     key={t}
                     onClick={() => setEditForm((f) => ({ ...f, type: t }))}
                     className={`px-3 py-1 text-xs rounded-md font-medium transition-all ${
-                      editForm.type === t ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500'
+                      editForm.type === t ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'
                     }`}
                   >
                     {t === 'income' ? '收入' : '支出'}
@@ -214,7 +207,7 @@ export function TransactionDialog({
             ) : (
               <span
                 className={`mt-2 text-xs px-2.5 py-0.5 rounded-full font-medium ${
-                  isIncome ? 'bg-emerald-50 text-emerald-600' : 'bg-stone-100 text-stone-600'
+                  isIncome ? 'bg-emerald-50 text-emerald-600' : 'bg-muted text-muted-foreground'
                 }`}
               >
                 {isIncome ? '收入' : '支出'}
@@ -224,71 +217,55 @@ export function TransactionDialog({
 
           {editing ? (
             <div className="space-y-3 pt-2">
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-stone-400">备注</label>
+              <div className="space-y-1">
+                <Label>备注</Label>
                 <textarea
                   value={editForm.note}
                   onChange={(e) => setEditForm((f) => ({ ...f, note: e.target.value }))}
                   rows={2}
-                  className={inputClass + ' resize-none'}
+                  className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 />
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-stone-400">分类</label>
-                <input
+              <div className="space-y-1">
+                <Label>分类</Label>
+                <Input
                   type="text"
                   value={editForm.category}
                   onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))}
-                  className={inputClass}
                 />
               </div>
-              <div className="flex flex-col gap-1">
-                <label className="text-xs text-stone-400">时间</label>
-                <input
+              <div className="space-y-1">
+                <Label>时间</Label>
+                <Input
                   type="datetime-local"
                   value={editForm.transaction_time}
                   onChange={(e) => setEditForm((f) => ({ ...f, transaction_time: e.target.value }))}
-                  className={inputClass}
                 />
               </div>
               <div className="flex gap-2 pt-2">
-                <button
-                  onClick={() => setEditing(false)}
-                  className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
-                >
+                <Button variant="outline" onClick={() => setEditing(false)} className="flex-1">
                   取消
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="flex-1 py-2.5 text-sm rounded-xl font-medium bg-stone-800 text-stone-50 hover:bg-stone-700 transition-colors disabled:opacity-50"
-                >
+                </Button>
+                <Button onClick={handleSave} disabled={saving} className="flex-1">
                   {saving ? '保存中...' : '保存'}
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
             <div className="space-y-3 pt-2">
               <DetailRow label="备注" value={transaction.note || '无'} multiline />
-              <Separator className="bg-stone-100" />
+              <Separator />
               <DetailRow label="分类" value={transaction.category || '未分类'} />
-              <Separator className="bg-stone-100" />
+              <Separator />
               <DetailRow label="时间" value={dateStr} />
               {canEdit && (
                 <div className="flex gap-2 pt-3">
-                  <button
-                    onClick={() => setConfirmDeleteOpen(true)}
-                    disabled={deleting}
-                    className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-rose-200 text-rose-500 hover:bg-rose-50 transition-colors disabled:opacity-50"
-                  >
+                  <Button variant="outline" onClick={() => setConfirmDeleteOpen(true)} disabled={deleting} className="flex-1 border-destructive/50 text-destructive hover:bg-destructive/10">
                     {deleting ? '删除中...' : '删除'}
-                  </button>
-                  <button
-                    onClick={() => setEditing(true)}
-                    className="flex-1 py-2.5 text-sm rounded-xl font-medium bg-stone-800 text-stone-50 hover:bg-stone-700 transition-colors"
-                  >
+                  </Button>
+                  <Button onClick={() => setEditing(true)} className="flex-1">
                     编辑
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>

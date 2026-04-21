@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -36,32 +39,25 @@ export function SettingsDialog({ open, onOpenChange, currentKey, onSave }: Setti
           <DialogTitle className="text-center">设置 API Key</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
-          <div className="flex flex-col gap-2">
-            <label className="text-xs text-stone-400">API Key</label>
-            <input
+          <div className="space-y-2">
+            <Label>API Key</Label>
+            <Input
               type="password"
               value={value}
               onChange={(e) => setValue(e.target.value)}
               placeholder="输入你的 API Key"
-              className="w-full bg-stone-50 border border-stone-200/70 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-stone-400 text-stone-700 placeholder:text-stone-400"
             />
-            <p className="text-xs text-stone-400 leading-relaxed">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               API Key 将保存在浏览器本地，仅在当前设备可用。
             </p>
           </div>
           <div className="flex gap-2">
-            <button
-              onClick={handleClear}
-              className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
-            >
+            <Button variant="outline" onClick={handleClear} className="flex-1">
               清除
-            </button>
-            <button
-              onClick={handleSave}
-              className="flex-1 py-2.5 text-sm rounded-xl font-medium bg-stone-800 text-stone-50 hover:bg-stone-700 transition-colors"
-            >
+            </Button>
+            <Button onClick={handleSave} className="flex-1">
               保存
-            </button>
+            </Button>
           </div>
         </div>
       </DialogContent>

@@ -63,21 +63,21 @@ function TransactionItem({ transaction, onClick }: TransactionItemProps) {
   return (
     <div
       onClick={onClick}
-      className="flex items-center gap-3 py-3 px-2 rounded-xl hover:bg-stone-50 cursor-pointer transition-colors"
+      className="flex items-center gap-3 py-3 px-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors"
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-sm font-medium text-stone-800">
+          <span className="text-sm font-medium text-foreground">
             {transaction.category}
           </span>
           {transaction.note && (
-            <span className="text-xs text-stone-400 break-all">
+            <span className="text-xs text-muted-foreground break-all">
               {transaction.note}
             </span>
           )}
         </div>
         <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-xs text-stone-400">
+          <span className="text-xs text-muted-foreground">
             {formatFullDate(date)} {timeStr}
           </span>
         </div>
@@ -90,7 +90,7 @@ function TransactionItem({ transaction, onClick }: TransactionItemProps) {
         >
           {isExpense ? "-" : "+"}¥{Number(transaction.amount).toLocaleString()}
         </span>
-        <ChevronRight className="h-4 w-4 text-stone-300" />
+        <ChevronRight className="h-4 w-4 text-muted-foreground/50" />
       </div>
     </div>
   );
@@ -143,9 +143,9 @@ export function DetailList({ transactions, onSelect }: DetailListProps) {
 
   if (transactions.length === 0) {
     return (
-      <Card className="rounded-2xl bg-white shadow-sm border-stone-200/60">
+      <Card className="rounded-2xl shadow-sm">
         <CardContent className="p-8">
-          <p className="text-center text-stone-400 text-sm">暂无交易记录</p>
+          <p className="text-center text-muted-foreground text-sm">暂无交易记录</p>
         </CardContent>
       </Card>
     );
@@ -164,26 +164,26 @@ export function DetailList({ transactions, onSelect }: DetailListProps) {
         return (
           <Card
             key={groupKey}
-            className="rounded-2xl bg-white shadow-sm border-stone-200/60 overflow-hidden"
+            className="rounded-2xl shadow-sm overflow-hidden"
           >
             <CardContent className="p-0">
               {/* 组头 */}
               <div
                 onClick={() => toggleGroup(groupKey)}
-                className="flex items-center justify-between px-4 py-3 bg-stone-50/50 cursor-pointer hover:bg-stone-100/50 transition-colors"
+                className="flex items-center justify-between px-4 py-3 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-stone-700">{groupKey}</span>
-                  <span className="text-xs text-stone-400">
+                  <span className="text-sm font-medium text-foreground">{groupKey}</span>
+                  <span className="text-xs text-muted-foreground">
                     {items.length} 笔交易
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-stone-500">
+                  <span className="text-xs text-muted-foreground">
                     支出 ¥{groupTotal.toLocaleString()}
                   </span>
                   <ChevronRight
-                    className={`h-4 w-4 text-stone-400 transition-transform ${
+                    className={`h-4 w-4 text-muted-foreground transition-transform ${
                       isExpanded ? "rotate-90" : ""
                     }`}
                   />
@@ -192,7 +192,7 @@ export function DetailList({ transactions, onSelect }: DetailListProps) {
 
               {/* 交易列表 */}
               {isExpanded && (
-                <div className="divide-y divide-stone-100 px-4">
+                <div className="divide-y divide-border px-4">
                   {items.map((transaction) => (
                     <TransactionItem
                       key={transaction.id}

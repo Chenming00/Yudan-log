@@ -105,17 +105,17 @@ export default function LedgerPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/"
-            className="pt-4 text-stone-500 hover:text-stone-700 transition-colors"
+            className="pt-4 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-lg font-medium tracking-tight pt-4 text-stone-700">
+          <h1 className="text-lg font-medium tracking-tight pt-4 text-foreground">
             🐟 鱼蛋小账本
           </h1>
         </div>
         <button
           onClick={() => setSettingsOpen(true)}
-          className="pt-4 text-stone-500 hover:text-stone-700 transition-colors"
+          className="pt-4 text-muted-foreground hover:text-foreground transition-colors"
           aria-label="设置"
         >
           <Settings className="h-5 w-5" />
@@ -125,16 +125,16 @@ export default function LedgerPage() {
       {/* 主要内容区 */}
       <div className="page-padding mx-auto max-w-4xl">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="bg-stone-100 rounded-xl p-1 mb-6">
+          <TabsList className="bg-muted rounded-xl p-1 mb-6">
             <TabsTrigger
               value="overview"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-4 py-2 text-sm font-medium transition-all"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-4 py-2 text-sm font-medium transition-all"
             >
               概览
             </TabsTrigger>
             <TabsTrigger
               value="detail"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-lg px-4 py-2 text-sm font-medium transition-all"
+              className="data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg px-4 py-2 text-sm font-medium transition-all"
             >
               明细
             </TabsTrigger>
@@ -180,8 +180,8 @@ export default function LedgerPage() {
             }}
             className={`rounded-full p-4 shadow-lg transition-all hover:shadow-xl hover:scale-105 ${
               canManageTransactions
-                ? "bg-stone-800 text-white hover:bg-stone-700"
-                : "bg-stone-300 text-stone-500 cursor-not-allowed"
+                ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                : "bg-muted text-muted-foreground cursor-not-allowed"
             }`}
             aria-label={canManageTransactions ? "新增记录" : "新增需 API Key"}
             title={canManageTransactions ? "新增记录" : "填写 API Key 后才可新增记录"}

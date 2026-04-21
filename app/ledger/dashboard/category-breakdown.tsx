@@ -32,9 +32,9 @@ const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const entry = payload[0].payload;
     return (
-      <div className="rounded-lg border bg-white p-3 shadow-lg">
-        <p className="text-sm font-medium text-stone-700 mb-1">{entry.name}</p>
-        <p className="text-xs text-stone-500">
+      <div className="rounded-lg border bg-background p-3 shadow-lg">
+        <p className="text-sm font-medium text-foreground mb-1">{entry.name}</p>
+        <p className="text-xs text-muted-foreground">
           ¥{Number(entry.value).toLocaleString()} ({entry.percentage}%)
         </p>
       </div>
@@ -61,21 +61,21 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
 
   if (data.length === 0) {
     return (
-      <Card className="rounded-2xl bg-white shadow-sm border-stone-200/60">
+      <Card className="rounded-2xl shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-medium text-stone-500">{title}</CardTitle>
+          <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-center text-stone-400 text-sm py-8">暂无数据</p>
+          <p className="text-center text-muted-foreground text-sm py-8">暂无数据</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <Card className="rounded-2xl bg-white shadow-sm border-stone-200/60">
+    <Card className="rounded-2xl shadow-sm">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-stone-500">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
       </CardHeader>
       <CardContent className="pt-2">
         <div className="flex flex-col sm:flex-row gap-6">
@@ -108,7 +108,7 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
 
           {/* Top 3 列表 */}
           <div className="flex-1 min-w-0">
-            <h4 className="text-xs font-medium text-stone-400 mb-3 uppercase tracking-wide">
+            <h4 className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">
               Top 3 分类
             </h4>
             <div className="space-y-3">
@@ -118,12 +118,12 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
                     className="w-3 h-3 rounded-full flex-shrink-0"
                     style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
                   />
-                  <span className="text-sm text-stone-600 flex-1 truncate">{item.name}</span>
+                  <span className="text-sm text-foreground flex-1 truncate">{item.name}</span>
                   <div className="text-right">
-                    <div className="text-sm font-medium text-stone-900">
+                    <div className="text-sm font-medium text-foreground">
                       ¥{item.value.toLocaleString()}
                     </div>
-                    <div className="text-xs text-stone-400">
+                    <div className="text-xs text-muted-foreground">
                       {((item.value / total) * 100).toFixed(0)}%
                     </div>
                   </div>
@@ -132,8 +132,8 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
             </div>
             
             {data.length > 3 && (
-              <div className="mt-3 pt-3 border-t border-stone-100">
-                <p className="text-xs text-stone-400">
+              <div className="mt-3 pt-3 border-t border-border">
+                <p className="text-xs text-muted-foreground">
                   其他 {data.length - 3} 个分类
                 </p>
               </div>

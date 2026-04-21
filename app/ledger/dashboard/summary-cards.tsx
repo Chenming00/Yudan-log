@@ -45,10 +45,10 @@ export function SummaryCards({ currentMonth, lastMonth }: SummaryCardsProps) {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-      <Card className="group relative overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border-stone-200/60">
+      <Card className="group relative overflow-hidden rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
         <CardContent className="p-5">
           <div className="flex items-start justify-between mb-3">
-            <span className="text-xs font-medium text-stone-500 tracking-wide uppercase">本月支出</span>
+            <span className="text-xs font-medium text-muted-foreground tracking-wide uppercase">本月支出</span>
             <TrendIndicator value={expenseChange} />
           </div>
           <div className="text-2xl font-semibold text-amber-600">
@@ -56,13 +56,13 @@ export function SummaryCards({ currentMonth, lastMonth }: SummaryCardsProps) {
           </div>
         </CardContent>
       </Card>
-      <Card className="group relative overflow-hidden rounded-2xl bg-white shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border-stone-200/60">
+      <Card className="group relative overflow-hidden rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5">
         <CardContent className="p-5">
           <div className="flex items-start justify-between mb-3">
-            <span className="text-xs font-medium text-stone-500 tracking-wide uppercase">上月支出</span>
-            <div className="text-xs font-medium text-stone-400">对比基准</div>
+            <span className="text-xs font-medium text-muted-foreground tracking-wide uppercase">上月支出</span>
+            <div className="text-xs font-medium text-muted-foreground/60">对比基准</div>
           </div>
-          <div className="text-2xl font-semibold text-stone-600">
+          <div className="text-2xl font-semibold text-foreground">
             ¥{lastMonth.expense.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </div>
         </CardContent>
