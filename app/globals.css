@@ -11,6 +11,12 @@
   --chart-3: 197 37% 24%;
   --chart-4: 43 74% 66%;
   --chart-5: 27 87% 67%;
+  
+  /* shadcn/ui popover 和 accent 颜色变量 */
+  --popover: 0 0% 100%;
+  --popover-foreground: 20 14.3% 4.1%;
+  --accent: 60 4.8% 95.9%;
+  --accent-foreground: 24 9.8% 10%;
 }
 
 @utility pt-safe {

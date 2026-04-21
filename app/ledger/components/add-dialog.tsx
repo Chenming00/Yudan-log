@@ -63,6 +63,8 @@ export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProp
     setSaving(true);
     setError(null);
     try {
+      // 将分类代码转换为中文标签
+      const categoryLabel = CATEGORIES.find(c => c.value === form.category)?.label || form.category;
       const res = await fetch('/api/add', {
         method: 'POST',
         headers: {
@@ -71,6 +73,7 @@ export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProp
         },
         body: JSON.stringify({
           ...form,
+          category: categoryLabel,
           amount: Number(form.amount),
           transaction_time: form.transaction_time ? new Date(form.transaction_time).toISOString() : undefined,
         }),
