@@ -86,9 +86,9 @@ export default function RootLayout({
       lang="zh-CN"
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
-      <body className="bg-[#F7F8FA] text-black w-full min-h-screen font-sans">
+      <body className="min-h-screen w-full overflow-x-hidden bg-[#F7F8FA] font-sans text-black">
         <Providers>
-          <div className="min-h-screen bg-[#F7F8FA] pb-[calc(env(safe-area-inset-bottom)+76px)]">
+          <div className="min-h-screen bg-[#F7F8FA] pb-[calc(env(safe-area-inset-bottom)+84px)] lg:pb-8">
             {children}
           </div>
           <FloatingNav />

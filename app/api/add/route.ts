@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
 import { validateAuth } from '@/lib/auth';
 
 function getErrorMessage(error: unknown) {
@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const supabase = getSupabaseClient();
     const { amount, category, note, type, transaction_time } = await req.json();
 
     if (amount === undefined || amount === null || !type) {

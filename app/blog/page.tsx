@@ -21,8 +21,8 @@ export default function BlogPage() {
   const posts = getAllPosts();
 
   return (
-    <main className="max-w-xl mx-auto min-h-full pb-6 antialiased bg-stone-100/60">
-      <header className="px-6 pt-safe pb-2 flex items-center gap-3">
+    <main className="page-shell pb-6 lg:pb-10">
+      <header className="page-padding flex items-center gap-3 pt-safe pb-2">
         <Link href="/" className="pt-4 text-stone-500 hover:text-stone-700 transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </Link>

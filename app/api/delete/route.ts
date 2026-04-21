@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
 import { validateAuth } from '@/lib/auth';
 
 function getErrorMessage(error: unknown) {
@@ -12,6 +12,7 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
+    const supabase = getSupabaseClient();
     const { id } = await req.json();
 
     if (!id) {

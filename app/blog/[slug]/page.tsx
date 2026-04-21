@@ -52,8 +52,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const { previous, next } = getAdjacentPosts(slug);
 
   return (
-    <main className="max-w-xl mx-auto min-h-full pb-6 antialiased bg-stone-100/60">
-      <header className="px-6 pt-safe pb-2 flex items-center gap-3">
+    <main className="page-shell pb-6 lg:pb-10">
+      <header className="page-padding flex items-center gap-3 pt-safe pb-2">
         <Link href="/blog" className="pt-4 text-stone-500 hover:text-stone-700 transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </Link>
@@ -68,8 +68,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         </div>
       </header>
 
-      <Card className="mx-5 mt-4 border-stone-200/70 shadow-none overflow-hidden">
-        <div className="px-5 pt-5 pb-4 bg-white border-b border-stone-100">
+      <Card className="card-gutter mx-auto mt-4 max-w-4xl overflow-hidden border-stone-200/70 shadow-none">
+        <div className="border-b border-stone-100 bg-white px-4 pt-5 pb-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-3 text-xs text-stone-400">
             {post.date && (
               <div className="flex items-center gap-1">
@@ -96,14 +96,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <PostActions title={post.title} summary={post.summary} />
           </div>
         </div>
-        <CardContent className="py-6 px-5">
+        <CardContent className="px-4 py-6 sm:px-5">
           <TocCard headings={post.headings} />
           <MarkdownContent content={post.content} />
         </CardContent>
       </Card>
 
       {(previous || next) && (
-        <div className="mx-5 mt-4 grid gap-3 md:grid-cols-2">
+        <div className="card-gutter mx-auto mt-4 grid max-w-4xl gap-3 md:grid-cols-2">
           {previous ? (
             <Link href={`/blog/${previous.slug}`} className="rounded-2xl border border-stone-200 bg-white px-4 py-4 hover:bg-stone-50 transition-colors">
               <p className="text-xs text-stone-400">上一篇</p>

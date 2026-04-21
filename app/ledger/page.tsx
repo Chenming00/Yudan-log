@@ -60,13 +60,13 @@ function createDefaultTransactionForm(): TransactionFormState {
 
 function BalanceHeader({ balance, income, expense }: { balance: number; income: number; expense: number }) {
   return (
-    <Card className="mx-5 mb-5 bg-stone-50 border-stone-200/70 shadow-none">
-      <CardContent className="py-8 px-6 text-center">
+    <Card className="card-gutter mx-auto mb-5 max-w-4xl border-stone-200/70 bg-stone-50 shadow-none">
+      <CardContent className="px-4 py-7 text-center sm:px-6 sm:py-8">
         <p className="text-[11px] font-medium text-stone-400 mb-1.5 tracking-[0.2em] uppercase">余额</p>
-        <h1 className="text-3xl font-semibold tracking-tight text-stone-800 mb-6">
+        <h1 className="mb-6 text-2xl font-semibold tracking-tight text-stone-800 sm:text-3xl">
           ¥{balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </h1>
-        <div className="flex items-center justify-center gap-8">
+        <div className="flex items-center justify-center gap-5 sm:gap-8">
           <div className="flex flex-col items-center">
             <span className="text-[11px] text-stone-400 tracking-wider mb-1">收入</span>
             <span className="text-sm font-medium text-stone-700">+¥{income.toLocaleString()}</span>
@@ -92,9 +92,9 @@ function FilterSummary({
   expense: number;
 }) {
   return (
-    <Card className="mx-5 mb-4 border-stone-200/70 shadow-none bg-white/80">
+    <Card className="card-gutter mx-auto mb-4 max-w-4xl border-stone-200/70 bg-white/80 shadow-none">
       <CardContent className="px-4 py-4">
-        <div className="grid grid-cols-3 gap-3 text-center">
+        <div className="grid grid-cols-1 gap-3 text-center sm:grid-cols-3">
           <div>
             <p className="text-[11px] text-stone-400 tracking-wide">筛选结果</p>
             <p className="mt-1 text-base font-semibold text-stone-800">{count}</p>
@@ -586,7 +586,7 @@ function TransactionList({ transactions, loading, error, onSelect }: { transacti
 
   if (error) {
     return (
-      <Card className="mx-5 mb-6 border-stone-200/70 shadow-none">
+      <Card className="card-gutter mx-auto mb-6 max-w-4xl border-stone-200/70 shadow-none">
         <CardContent className="text-center py-8 text-rose-400 text-sm">{error}</CardContent>
       </Card>
     );
@@ -594,7 +594,7 @@ function TransactionList({ transactions, loading, error, onSelect }: { transacti
 
   if (transactions.length === 0) {
     return (
-      <Card className="mx-5 mb-6 border-stone-200/70 shadow-none">
+      <Card className="card-gutter mx-auto mb-6 max-w-4xl border-stone-200/70 shadow-none">
         <CardContent className="text-center py-8 text-stone-400 text-sm">
           没有匹配的记录，试试换个关键词或筛选条件。
         </CardContent>
@@ -603,7 +603,7 @@ function TransactionList({ transactions, loading, error, onSelect }: { transacti
   }
 
   return (
-    <Card className="mx-5 mb-6 border-stone-200/70 shadow-none">
+    <Card className="card-gutter mx-auto mb-6 max-w-4xl border-stone-200/70 shadow-none">
       <CardContent className="p-0">
         {transactions.map((t, index) => (
           <div key={t.id}>
@@ -646,7 +646,7 @@ function SearchAndFilterBar({
   const categoryFilters = ['全部分类', ...categories];
 
   return (
-    <div className="px-5 mb-5 space-y-3">
+    <div className="page-padding mx-auto mb-5 max-w-4xl space-y-3">
       <div className="flex items-center gap-3 bg-stone-50 rounded-xl border border-stone-200/70 px-4 py-2.5">
         <Search className="h-4 w-4 text-stone-400 shrink-0" />
         <input
@@ -834,8 +834,8 @@ export default function Home() {
   const hasActiveFilters = selectedType !== 'all' || selectedCategory !== '' || normalizedSearch !== '' || selectedDateRange !== 'all';
 
   return (
-    <main className="max-w-xl mx-auto min-h-full relative pb-6 antialiased bg-stone-100/60">
-      <header className="px-6 pt-safe pb-2 flex items-center justify-between">
+    <main className="page-shell relative pb-6 lg:pb-10">
+      <header className="page-padding flex items-center justify-between pt-safe pb-2">
         <div className="flex items-center gap-3">
           <Link href="/" className="pt-4 text-stone-500 hover:text-stone-700 transition-colors">
             <ArrowLeft className="h-5 w-5" />
@@ -853,7 +853,7 @@ export default function Home() {
 
       <BalanceHeader balance={balance} income={totalIncome} expense={totalExpense} />
 
-      <div className="px-5 mb-4 flex gap-3">
+      <div className="page-padding mx-auto mb-4 flex max-w-4xl flex-col gap-3 sm:flex-row">
         <button
           onClick={() => {
             if (!canManageTransactions) {
@@ -876,7 +876,7 @@ export default function Home() {
             setSelectedCategory('');
             setSelectedDateRange('all');
           }}
-          className="rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-600 flex items-center justify-center gap-2 hover:bg-stone-50 transition-colors"
+          className="rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-600 flex items-center justify-center gap-2 transition-colors hover:bg-stone-50 sm:w-auto"
         >
           <FunnelX className="h-4 w-4" />
           重置
@@ -952,7 +952,7 @@ export default function Home() {
       />
 
       {!apiKey && !loading && (
-        <Card className="mx-5 mt-4 border-dashed border-stone-300 shadow-none bg-white/70">
+        <Card className="card-gutter mx-auto mt-4 max-w-4xl border-dashed border-stone-300 bg-white/70 shadow-none">
           <CardContent className="py-5 px-4 text-sm text-stone-500">
             <div className="flex items-start gap-3">
               <CalendarDays className="h-4 w-4 mt-0.5 text-stone-400" />

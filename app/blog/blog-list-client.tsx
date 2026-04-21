@@ -29,7 +29,7 @@ export function BlogListClient({ posts }: { posts: BlogPost[] }) {
   }, [posts, search, selectedTag]);
 
   return (
-    <div className="px-5 mt-4 space-y-4">
+    <div className="page-padding mx-auto mt-4 max-w-4xl space-y-4">
       <div className="space-y-3">
         <div className="flex items-center gap-3 bg-stone-50 rounded-xl border border-stone-200/70 px-4 py-2.5">
           <Search className="h-4 w-4 text-stone-400 shrink-0" />
@@ -86,8 +86,8 @@ export function BlogListClient({ posts }: { posts: BlogPost[] }) {
       ) : (
         filteredPosts.map((post) => (
           <Link key={post.slug} href={`/blog/${post.slug}`}>
-            <Card className="border-stone-200/70 shadow-none hover:bg-stone-50 active:bg-stone-100 transition-all cursor-pointer mb-3">
-              <CardContent className="py-4 px-5 flex items-start gap-3">
+            <Card className="mb-3 border-stone-200/70 shadow-none transition-all hover:bg-stone-50 active:bg-stone-100 cursor-pointer">
+              <CardContent className="flex items-start gap-3 px-4 py-4 sm:px-5">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 text-xs text-stone-400 mb-1.5">
                     <Calendar className="h-3 w-3 text-stone-300" />

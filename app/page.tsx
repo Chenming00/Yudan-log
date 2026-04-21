@@ -22,29 +22,30 @@ const modules = [
 
 export default function HomePage() {
   return (
-    <main className="max-w-xl mx-auto min-h-full pb-6 antialiased bg-stone-100/60">
+    <main className="page-shell pb-6 lg:pb-10">
       {/* Profile Section */}
-      <div className="flex flex-col items-center pt-safe px-6 pb-2">
-        <div className="mt-10 mb-3">
+      <div className="page-padding flex flex-col items-center pt-safe pb-2">
+        <div className="mb-3 mt-8 sm:mt-10">
           <Image
             src="/apple-home-logo.png"
             alt="头像"
             width={80}
             height={80}
-            className="rounded-full ring-2 ring-stone-200 shadow-sm object-cover scale-125"
+            sizes="80px"
+            className="h-20 w-20 rounded-full object-cover shadow-sm ring-2 ring-stone-200 scale-110 sm:scale-125"
             priority
           />
         </div>
-        <h1 className="text-xl font-semibold tracking-tight text-stone-800">鱼蛋宝宝</h1>
-        <p className="text-sm text-stone-400 mt-1">记录生活的每一面 🌱</p>
+        <h1 className="text-center text-xl font-semibold tracking-tight text-stone-800 sm:text-2xl">鱼蛋宝宝</h1>
+        <p className="mt-1 text-center text-sm text-stone-400">记录生活的每一面 🌱</p>
       </div>
 
       {/* Module Cards */}
-      <div className="px-5 mt-8 space-y-3">
+      <div className="page-padding mx-auto mt-8 grid max-w-4xl gap-3 md:grid-cols-2 md:gap-4">
         {modules.map((mod) => (
           <Link key={mod.href} href={mod.href}>
-            <Card className="border-stone-200/70 shadow-none hover:bg-stone-50 active:bg-stone-100 transition-all cursor-pointer mb-3">
-              <CardContent className="py-5 px-5 flex items-center gap-4">
+            <Card className="h-full border-stone-200/70 shadow-none transition-all hover:bg-stone-50 active:bg-stone-100 cursor-pointer">
+              <CardContent className="flex items-center gap-4 px-4 py-5 sm:px-5">
                 <div className={`rounded-xl p-2.5 ${mod.color}`}>
                   <mod.icon className="h-5 w-5" />
                 </div>

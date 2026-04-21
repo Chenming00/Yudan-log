@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { getSupabaseClient } from '@/lib/supabase';
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : '获取记录失败';
@@ -8,6 +8,7 @@ function getErrorMessage(error: unknown) {
 export async function GET(_req: NextRequest) {
 
   try {
+    const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('transactions')
       .select('*')
