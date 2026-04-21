@@ -932,6 +932,7 @@ function SearchAndFilterBar({
   hasActiveFilters: boolean;
   onClearFilters: () => void;
 }) {
+  const [monthDropdownOpen, setMonthDropdownOpen] = useState(false);
   const categoryFilters = ['全部分类', ...categories];
 
   return (
@@ -988,7 +989,7 @@ function SearchAndFilterBar({
         </div>
       )}
 
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
         {([
           ['all', '全部时间'],
           ['7d', '近 7 天'],
@@ -999,7 +1000,12 @@ function SearchAndFilterBar({
           return (
             <button
               key={key}
-              onClick={() => onDateRangeChange(key)}
+              onClick={() => {
+                onDateRangeChange(key);
+                if (key !== 'all') {
+                  onMonthChange('');
+                }
+              }}
               className={`shrink-0 px-3 py-1 text-xs rounded-full border font-medium transition-all ${
                 isActive
                   ? 'bg-amber-50 text-amber-700 border-amber-200'
@@ -1010,38 +1016,59 @@ function SearchAndFilterBar({
             </button>
           );
         })}
+        
+        {availableMonths.length > 0 && (
+          <div className="relative">
+            <button
+              onClick={() => setMonthDropdownOpen(!monthDropdownOpen)}
+              className={`shrink-0 px-3 py-1 text-xs rounded-full border font-medium transition-all flex items-center gap-1 ${
+                selectedMonth
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : 'bg-stone-50 text-stone-500 border-stone-200 hover:bg-stone-100'
+              }`}
+            >
+              {selectedMonth ? formatMonthLabel(selectedMonth) : '月份'}
+              <svg className={`w-3 h-3 transition-transform ${monthDropdownOpen ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {monthDropdownOpen && (
+              <div className="absolute right-0 top-full mt-1 bg-white border border-stone-200 rounded-xl shadow-lg p-2 z-10 min-w-[140px] max-h-60 overflow-y-auto">
+                <button
+                  onClick={() => {
+                    onMonthChange('');
+                    setMonthDropdownOpen(false);
+                  }}
+                  className={`w-full text-left px-3 py-1.5 text-xs rounded-lg font-medium transition-all ${
+                    selectedMonth === ''
+                      ? 'bg-stone-800 text-stone-50'
+                      : 'text-stone-600 hover:bg-stone-100'
+                  }`}
+                >
+                  全部月份
+                </button>
+                {availableMonths.map((month) => (
+                  <button
+                    key={month}
+                    onClick={() => {
+                      onMonthChange(month);
+                      setMonthDropdownOpen(false);
+                    }}
+                    className={`w-full text-left px-3 py-1.5 text-xs rounded-lg font-medium transition-all ${
+                      selectedMonth === month
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'text-stone-600 hover:bg-stone-100'
+                    }`}
+                  >
+                    {formatMonthLabel(month)}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
-
-      {availableMonths.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-          <button
-            onClick={() => onMonthChange('')}
-            className={`shrink-0 px-3 py-1 text-xs rounded-full border font-medium transition-all ${
-              selectedMonth === ''
-                ? 'bg-stone-800 text-stone-50 border-stone-800'
-                : 'bg-stone-50 text-stone-500 border-stone-200 hover:bg-stone-100'
-            }`}
-          >
-            全部月份
-          </button>
-          {availableMonths.map((month) => {
-            const isActive = selectedMonth === month;
-            return (
-              <button
-                key={month}
-                onClick={() => onMonthChange(month)}
-                className={`shrink-0 px-3 py-1 text-xs rounded-full border font-medium transition-all ${
-                  isActive
-                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                    : 'bg-stone-50 text-stone-500 border-stone-200 hover:bg-stone-100'
-                }`}
-              >
-                {formatMonthLabel(month)}
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       <div className="flex items-center justify-between">
         <span className="text-xs text-stone-400">共 {resultCount} 条记录</span>
