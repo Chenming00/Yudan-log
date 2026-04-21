@@ -1,3 +1,4 @@
+"use client";
 
 import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -435,6 +436,9 @@ function SearchAndFilterBar({
   categories,
   selectedCategory,
   onCategoryChange,
+  resultCount,
+  hasActiveFilters,
+  onClearFilters,
 }: {
   searchTerm: string;
   onSearchChange: (value: string) => void;
@@ -443,6 +447,9 @@ function SearchAndFilterBar({
   categories: string[];
   selectedCategory: string;
   onCategoryChange: (value: string) => void;
+  resultCount: number;
+  hasActiveFilters: boolean;
+  onClearFilters: () => void;
 }) {
   const categoryFilters = ['全部分类', ...categories];
 
@@ -457,6 +464,9 @@ function SearchAndFilterBar({
           onChange={(e) => onSearchChange(e.target.value)}
           className="w-full bg-transparent text-sm outline-none placeholder:text-stone-400 text-stone-700"
         />
+        {searchTerm && (
+          <button onClick={() => onSearchChange('')} className="text-stone-400 hover:text-stone-600 text-xs shrink-0">✕</button>
+        )}
       </div>
 
       <div className="flex gap-1 bg-stone-100 rounded-lg p-1">
@@ -475,24 +485,35 @@ function SearchAndFilterBar({
         ))}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {categoryFilters.map((category) => {
-          const value = category === '全部分类' ? '' : category;
-          const isActive = selectedCategory === value;
-          return (
-            <button
-              key={category}
-              onClick={() => onCategoryChange(value)}
-              className={`shrink-0 px-3 py-1 text-xs rounded-full border font-medium transition-all ${
-                isActive
-                  ? 'bg-stone-800 text-stone-50 border-stone-800'
-                  : 'bg-stone-50 text-stone-500 border-stone-200 hover:bg-stone-100'
-              }`}
-            >
-              {category}
-            </button>
-          );
-        })}
+      {categories.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {categoryFilters.map((category) => {
+            const value = category === '全部分类' ? '' : category;
+            const isActive = selectedCategory === value;
+            return (
+              <button
+                key={category}
+                onClick={() => onCategoryChange(value)}
+                className={`shrink-0 px-3 py-1 text-xs rounded-full border font-medium transition-all ${
+                  isActive
+                    ? 'bg-stone-800 text-stone-50 border-stone-800'
+                    : 'bg-stone-50 text-stone-500 border-stone-200 hover:bg-stone-100'
+                }`}
+              >
+                {category}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-stone-400">共 {resultCount} 条记录</span>
+        {hasActiveFilters && (
+          <button onClick={onClearFilters} className="text-xs text-stone-500 hover:text-stone-700 transition-colors">
+            清除筛选
+          </button>
+        )}
       </div>
     </div>
   );
@@ -556,15 +577,33 @@ export default function Home() {
     )
   );
 
-  const filteredTransactions = transactions.filter((t) => {
-    const matchesType = selectedType === 'all' || t.type === selectedType;
-    const matchesCategory = !selectedCategory || t.category === selectedCategory;
-    const matchesSearch =
-      !normalizedSearch ||
-      t.note?.toLowerCase().includes(normalizedSearch) ||
-      t.category?.toLowerCase().includes(normalizedSearch);
-    return matchesType && matchesCategory && matchesSearch;
-  });
+  const filteredTransactions = transactions
+    .filter((t) => {
+      const matchesType = selectedType === 'all' || t.type === selectedType;
+      const matchesCategory = !selectedCategory || t.category === selectedCategory;
+      const matchesSearch =
+        !normalizedSearch ||
+        t.note?.toLowerCase().includes(normalizedSearch) ||
+        t.category?.toLowerCase().includes(normalizedSearch);
+      return matchesType && matchesCategory && matchesSearch;
+    })
+    .sort((a, b) => {
+      const timeA = new Date(a.transaction_time || a.created_at).getTime();
+      const timeB = new Date(b.transaction_time || b.created_at).getTime();
+      return timeB - timeA;
+    });
+
+  // 根据当前类型筛选动态计算分类列表
+  const filteredCategories = Array.from(
+    new Set(
+      transactions
+        .filter((t) => selectedType === 'all' || t.type === selectedType)
+        .map((t) => t.category?.trim())
+        .filter((category): category is string => Boolean(category))
+    )
+  );
+
+  const hasActiveFilters = selectedType !== 'all' || selectedCategory !== '' || normalizedSearch !== '';
 
   return (
     <main className="max-w-xl mx-auto min-h-[100dvh] relative pb-6 antialiased bg-stone-100/60">
@@ -585,10 +624,20 @@ export default function Home() {
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
         selectedType={selectedType}
-        onTypeChange={setSelectedType}
-        categories={categories}
+        onTypeChange={(type) => {
+          setSelectedType(type);
+          setSelectedCategory(''); // 切换类型时重置分类
+        }}
+        categories={filteredCategories}
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
+        resultCount={filteredTransactions.length}
+        hasActiveFilters={hasActiveFilters}
+        onClearFilters={() => {
+          setSearchTerm('');
+          setSelectedType('all');
+          setSelectedCategory('');
+        }}
       />
 
       <TransactionList
