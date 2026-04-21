@@ -6,6 +6,8 @@ import {
   CardContent,
   Spinner,
   Separator,
+  Modal,
+  useOverlayState,
 } from '@heroui/react';
 
 type TransactionTypeFilter = 'all' | 'income' | 'expense';
@@ -44,7 +46,7 @@ function BalanceHeader({ balance, income, expense }: { balance: number; income: 
   );
 }
 
-function TransactionItem({ t }: { t: Transaction }) {
+function TransactionItem({ t, onClick }: { t: Transaction; onClick?: () => void }) {
   const isIncome = t.type === 'income';
   const displayDate = new Date(t.transaction_time || t.created_at).toLocaleDateString([], {
     month: 'short',
@@ -52,7 +54,7 @@ function TransactionItem({ t }: { t: Transaction }) {
   });
 
   return (
-    <div className="flex items-center justify-between py-3 px-4">
+    <div className="flex items-center justify-between py-3 px-4 cursor-pointer hover:bg-stone-50 transition-colors active:bg-stone-100" onClick={onClick}>
       <div className="flex flex-col gap-0.5">
         <span className="font-medium text-sm text-stone-800">{t.note || 'Untitled'}</span>
         <span className="text-xs text-stone-400">
@@ -66,7 +68,59 @@ function TransactionItem({ t }: { t: Transaction }) {
   );
 }
 
-function TransactionList({ transactions, loading, error }: { transactions: Transaction[]; loading: boolean; error: string | null }) {
+function TransactionDetail({ transaction, state }: { transaction: Transaction | null; state: ReturnType<typeof useOverlayState> }) {
+  if (!transaction) return null;
+  const isIncome = transaction.type === 'income';
+  const dateStr = new Date(transaction.transaction_time || transaction.created_at).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  return (
+    <Modal.Root state={state}>
+      <Modal.Backdrop isDismissable>
+        <Modal.Container placement="center" size="sm">
+          <Modal.Dialog>
+            <Modal.Header className="flex flex-col items-center pt-8 pb-2">
+              <Modal.Heading className="text-center">
+                <span className={`text-3xl font-semibold tracking-tight ${isIncome ? 'text-emerald-600' : 'text-stone-800'}`}>
+                  {isIncome ? '+' : '-'}¥{Number(transaction.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </Modal.Heading>
+              <span className={`mt-2 text-xs px-2.5 py-0.5 rounded-full font-medium ${isIncome ? 'bg-emerald-50 text-emerald-600' : 'bg-stone-100 text-stone-600'}`}>
+                {isIncome ? '收入' : '支出'}
+              </span>
+            </Modal.Header>
+            <Modal.Body className="px-6 pb-8 pt-4">
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-stone-400">备注</span>
+                  <span className="text-stone-700 font-medium">{transaction.note || '无'}</span>
+                </div>
+                <Separator className="bg-stone-100" />
+                <div className="flex justify-between text-sm">
+                  <span className="text-stone-400">分类</span>
+                  <span className="text-stone-700 font-medium">{transaction.category || '未分类'}</span>
+                </div>
+                <Separator className="bg-stone-100" />
+                <div className="flex justify-between text-sm">
+                  <span className="text-stone-400">时间</span>
+                  <span className="text-stone-700 font-medium">{dateStr}</span>
+                </div>
+              </div>
+            </Modal.Body>
+            <Modal.CloseTrigger className="absolute top-3 right-3 text-stone-400 hover:text-stone-600" />
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
+    </Modal.Root>
+  );
+}
+
+function TransactionList({ transactions, loading, error, onSelect }: { transactions: Transaction[]; loading: boolean; error: string | null; onSelect: (t: Transaction) => void }) {
   if (loading) {
     return (
       <div className="flex justify-center py-12">
@@ -98,7 +152,7 @@ function TransactionList({ transactions, loading, error }: { transactions: Trans
       <CardContent className="p-0">
         {transactions.map((t, index) => (
           <div key={t.id}>
-            <TransactionItem t={t} />
+            <TransactionItem t={t} onClick={() => onSelect(t)} />
             {index < transactions.length - 1 && <Separator className="bg-stone-100" />}
           </div>
         ))}
@@ -192,6 +246,8 @@ export default function Home() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<TransactionTypeFilter>('all');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const modalState = useOverlayState();
 
   const fetchTransactions = useCallback(async (key: string) => {
     setLoading(true);
@@ -264,7 +320,17 @@ export default function Home() {
         onCategoryChange={setSelectedCategory}
       />
 
-      <TransactionList transactions={filteredTransactions} loading={loading} error={error} />
+      <TransactionList
+        transactions={filteredTransactions}
+        loading={loading}
+        error={error}
+        onSelect={(t) => {
+          setSelectedTransaction(t);
+          modalState.open();
+        }}
+      />
+
+      <TransactionDetail transaction={selectedTransaction} state={modalState} />
     </main>
   );
 }
