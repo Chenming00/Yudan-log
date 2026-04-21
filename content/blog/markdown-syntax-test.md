@@ -1,6 +1,11 @@
 ---
 title: 🧪 Markdown 语法测试
 date: 2026-04-21
+summary: 用一篇文章集中验证标题、列表、表格、代码块、图片等 Markdown 能力是否渲染正常。
+tags:
+  - Markdown
+  - 测试
+cover: /logo.png
 ---
 
 这是一篇用于测试 Markdown 各种语法渲染效果的文章。

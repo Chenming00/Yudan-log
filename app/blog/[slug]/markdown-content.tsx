@@ -1,9 +1,27 @@
 "use client";
 
+import type { ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github-dark.min.css';
+
+function slugify(text: string) {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[`~!@#$%^&*()+=,[\]{}\\|;:'",.<>/?]/g, '')
+    .replace(/\s+/g, '-');
+}
+
+function toText(children: ReactNode): string {
+  if (typeof children === 'string' || typeof children === 'number') return String(children);
+  if (Array.isArray(children)) return children.map(toText).join('');
+  if (children && typeof children === 'object' && 'props' in children) {
+    return toText((children as { props?: { children?: ReactNode } }).props?.children);
+  }
+  return '';
+}
 
 export function MarkdownContent({ content }: { content: string }) {
   return (
@@ -28,6 +46,25 @@ export function MarkdownContent({ content }: { content: string }) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
+        components={{
+          h2: ({ children, ...props }) => {
+            const id = slugify(toText(children));
+            return <h2 id={id} {...props}>{children}</h2>;
+          },
+          h3: ({ children, ...props }) => {
+            const id = slugify(toText(children));
+            return <h3 id={id} {...props}>{children}</h3>;
+          },
+          h4: ({ children, ...props }) => {
+            const id = slugify(toText(children));
+            return <h4 id={id} {...props}>{children}</h4>;
+          },
+          a: ({ href, children, ...props }) => (
+            <a href={href} target={href?.startsWith('http') ? '_blank' : undefined} rel={href?.startsWith('http') ? 'noreferrer' : undefined} {...props}>
+              {children}
+            </a>
+          ),
+        }}
       >
         {content}
       </ReactMarkdown>

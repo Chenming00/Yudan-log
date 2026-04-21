@@ -1,8 +1,9 @@
 {
   "name": "鱼蛋宝宝",
   "short_name": "鱼蛋宝宝",
-  "description": "记录生活的每一面",
+  "description": "记录生活的每一面，用小账本和成长日志沉淀日常、复盘成长。",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#F7F8FA",
   "theme_color": "#F7F8FA",
@@ -17,6 +18,20 @@
       "src": "/logo.png",
       "sizes": "512x512",
       "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "鱼蛋小账本",
+      "short_name": "记账",
+      "url": "/ledger",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "成长 Log",
+      "short_name": "日志",
+      "url": "/blog",
+      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
     }
   ]
 }

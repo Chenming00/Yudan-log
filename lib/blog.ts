@@ -4,39 +4,116 @@ import matter from 'gray-matter';
 
 const blogDir = path.join(process.cwd(), 'content', 'blog');
 
+export interface BlogHeading {
+  level: number;
+  text: string;
+  id: string;
+}
+
 export interface BlogPost {
   slug: string;
   title: string;
   date: string;
+  summary: string;
+  tags: string[];
+  cover: string;
+  readingTime: number;
+  headings: BlogHeading[];
   content: string;
+}
+
+function slugify(text: string) {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[`~!@#$%^&*()+=,[\]{}\\|;:'",.<>/?]/g, '')
+    .replace(/\s+/g, '-');
+}
+
+function stripMarkdown(markdown: string) {
+  return markdown
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/[#>*_~-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getReadingTime(content: string) {
+  const words = stripMarkdown(content).length;
+  return Math.max(1, Math.ceil(words / 300));
+}
+
+function extractSummary(content: string, summary?: unknown) {
+  if (typeof summary === 'string' && summary.trim()) return summary.trim();
+  const plain = stripMarkdown(content);
+  return plain.slice(0, 120) + (plain.length > 120 ? '…' : '');
+}
+
+function extractHeadings(content: string): BlogHeading[] {
+  const lines = content.split(/\r?\n/);
+  const headings: BlogHeading[] = [];
+  let inCodeBlock = false;
+
+  for (const line of lines) {
+    if (line.trim().startsWith('```')) {
+      inCodeBlock = !inCodeBlock;
+      continue;
+    }
+    if (inCodeBlock) continue;
+
+    const match = /^(#{2,4})\s+(.+)$/.exec(line.trim());
+    if (!match) continue;
+
+    const text = match[2].trim();
+    headings.push({
+      level: match[1].length,
+      text,
+      id: slugify(text),
+    });
+  }
+
+  return headings;
+}
+
+function normalizePost(file: string, raw: string): BlogPost {
+  const { data, content } = matter(raw);
+  const slug = file.replace(/\.md$/, '');
+
+  return {
+    slug,
+    title: data.title || slug,
+    date: data.date ? String(data.date) : '',
+    summary: extractSummary(content, data.summary),
+    tags: Array.isArray(data.tags) ? data.tags.map(String).filter(Boolean) : [],
+    cover: typeof data.cover === 'string' && data.cover.trim() ? data.cover.trim() : '/logo.png',
+    readingTime: getReadingTime(content),
+    headings: extractHeadings(content),
+    content,
+  };
 }
 
 export function getAllPosts(): BlogPost[] {
   if (!fs.existsSync(blogDir)) return [];
   const files = fs.readdirSync(blogDir).filter((f) => f.endsWith('.md'));
   return files
-    .map((file) => {
-      const raw = fs.readFileSync(path.join(blogDir, file), 'utf-8');
-      const { data, content } = matter(raw);
-      return {
-        slug: file.replace(/\.md$/, ''),
-        title: data.title || file.replace(/\.md$/, ''),
-        date: data.date ? String(data.date) : '',
-        content,
-      };
-    })
-    .sort((a, b) => (b.date > a.date ? 1 : -1));
+    .map((file) => normalizePost(file, fs.readFileSync(path.join(blogDir, file), 'utf-8')))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
 export function getPostBySlug(slug: string): BlogPost | null {
   const filePath = path.join(blogDir, `${slug}.md`);
   if (!fs.existsSync(filePath)) return null;
-  const raw = fs.readFileSync(filePath, 'utf-8');
-  const { data, content } = matter(raw);
+  return normalizePost(`${slug}.md`, fs.readFileSync(filePath, 'utf-8'));
+}
+
+export function getAdjacentPosts(slug: string) {
+  const posts = getAllPosts();
+  const index = posts.findIndex((post) => post.slug === slug);
   return {
-    slug,
-    title: data.title || slug,
-    date: data.date ? String(data.date) : '',
-    content,
+    previous: index < posts.length - 1 ? posts[index + 1] : null,
+    next: index > 0 ? posts[index - 1] : null,
   };
 }

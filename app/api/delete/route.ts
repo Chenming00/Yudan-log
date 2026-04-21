@@ -2,16 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { validateAuth } from '@/lib/auth';
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : '删除记录失败';
+}
+
 export async function DELETE(req: NextRequest) {
   if (!validateAuth(req)) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'API Key 无效或未提供' }, { status: 401 });
   }
 
   try {
     const { id } = await req.json();
 
     if (!id) {
-      return NextResponse.json({ error: 'Missing transaction ID' }, { status: 400 });
+      return NextResponse.json({ error: '缺少交易记录 ID' }, { status: 400 });
     }
 
     const { error } = await supabase
@@ -22,7 +26,7 @@ export async function DELETE(req: NextRequest) {
     if (error) throw error;
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: getErrorMessage(error) }, { status: 500 });
   }
 }

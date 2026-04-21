@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Loader2, Search, Settings, ArrowLeft } from 'lucide-react';
+import { Loader2, Search, Settings, ArrowLeft, Plus, CalendarDays, FunnelX } from 'lucide-react';
 import Link from 'next/link';
 
 type TransactionTypeFilter = 'all' | 'income' | 'expense';
+type DateRangeFilter = 'all' | '7d' | '30d' | 'month';
 
 interface Transaction {
   id: string;
@@ -17,6 +18,44 @@ interface Transaction {
   type: 'expense' | 'income';
   transaction_time?: string;
   created_at: string;
+}
+
+interface TransactionFormState {
+  amount: string;
+  note: string;
+  category: string;
+  type: 'expense' | 'income';
+  transaction_time: string;
+}
+
+function toLocalDateTimeInputValue(value: string) {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}T${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+}
+
+function createTransactionEditForm(transaction: Transaction | null): TransactionFormState {
+  if (!transaction) {
+    return { amount: '', note: '', category: '', type: 'expense' as const, transaction_time: '' };
+  }
+
+  const dt = transaction.transaction_time || transaction.created_at;
+  return {
+    amount: String(transaction.amount),
+    note: transaction.note || '',
+    category: transaction.category || '',
+    type: transaction.type,
+    transaction_time: toLocalDateTimeInputValue(dt),
+  };
+}
+
+function createDefaultTransactionForm(): TransactionFormState {
+  return {
+    amount: '',
+    note: '',
+    category: '',
+    type: 'expense' as const,
+    transaction_time: toLocalDateTimeInputValue(new Date().toISOString()),
+  };
 }
 
 function BalanceHeader({ balance, income, expense }: { balance: number; income: number; expense: number }) {
@@ -36,6 +75,37 @@ function BalanceHeader({ balance, income, expense }: { balance: number; income: 
           <div className="flex flex-col items-center">
             <span className="text-[11px] text-stone-400 tracking-wider mb-1">支出</span>
             <span className="text-sm font-medium text-stone-700">-¥{expense.toLocaleString()}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function FilterSummary({
+  count,
+  income,
+  expense,
+}: {
+  count: number;
+  income: number;
+  expense: number;
+}) {
+  return (
+    <Card className="mx-5 mb-4 border-stone-200/70 shadow-none bg-white/80">
+      <CardContent className="px-4 py-4">
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div>
+            <p className="text-[11px] text-stone-400 tracking-wide">筛选结果</p>
+            <p className="mt-1 text-base font-semibold text-stone-800">{count}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-stone-400 tracking-wide">收入合计</p>
+            <p className="mt-1 text-base font-semibold text-emerald-600">¥{income.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-stone-400 tracking-wide">支出合计</p>
+            <p className="mt-1 text-base font-semibold text-stone-700">¥{expense.toLocaleString()}</p>
           </div>
         </div>
       </CardContent>
@@ -83,25 +153,7 @@ function TransactionDetail({
   const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ amount: '', note: '', category: '', type: 'expense' as 'income' | 'expense', transaction_time: '' });
-
-  useEffect(() => {
-    if (transaction && open) {
-      setEditing(false);
-      setActionError(null);
-      const dt = transaction.transaction_time || transaction.created_at;
-      // Format to datetime-local
-      const d = new Date(dt);
-      const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}T${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-      setEditForm({
-        amount: String(transaction.amount),
-        note: transaction.note || '',
-        category: transaction.category || '',
-        type: transaction.type,
-        transaction_time: local,
-      });
-    }
-  }, [transaction, open]);
+  const [editForm, setEditForm] = useState(() => createTransactionEditForm(transaction));
 
   if (!transaction) return null;
   const isIncome = transaction.type === 'income';
@@ -300,6 +352,145 @@ function TransactionDetail({
   );
 }
 
+function AddTransactionDialog({
+  open,
+  onOpenChange,
+  apiKey,
+  onAdded,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  apiKey: string | null;
+  onAdded: () => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState(createDefaultTransactionForm);
+
+  const inputClass = "w-full bg-stone-50 border border-stone-200/70 rounded-lg px-3 py-2 text-sm outline-none focus:border-stone-400 text-stone-700";
+
+  const handleSubmit = async () => {
+    if (!apiKey) {
+      setError('请先在设置中填写 API Key');
+      return;
+    }
+
+    if (!form.amount.trim()) {
+      setError('请输入金额');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          ...form,
+          amount: Number(form.amount),
+          transaction_time: form.transaction_time ? new Date(form.transaction_time).toISOString() : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setError(data.error || '新增失败');
+        return;
+      }
+      onOpenChange(false);
+      onAdded();
+    } catch {
+      setError('网络错误，请稍后再试');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="text-center">新增记账记录</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 pt-2">
+          <div className="flex gap-1 bg-stone-100 rounded-lg p-1">
+            {(['expense', 'income'] as const).map((type) => (
+              <button
+                key={type}
+                onClick={() => setForm((prev) => ({ ...prev, type }))}
+                className={`flex-1 py-1.5 text-sm rounded-md font-medium transition-all ${
+                  form.type === type ? 'bg-white text-stone-800 shadow-sm' : 'text-stone-500'
+                }`}
+              >
+                {type === 'income' ? '收入' : '支出'}
+              </button>
+            ))}
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-stone-400">金额</label>
+            <input
+              type="number"
+              step="0.01"
+              value={form.amount}
+              onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
+              placeholder="例如 88.80"
+              className={inputClass}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-stone-400">备注</label>
+            <textarea
+              rows={2}
+              value={form.note}
+              onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
+              placeholder="这笔钱花在了哪里？"
+              className={`${inputClass} resize-none`}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-stone-400">分类</label>
+            <input
+              type="text"
+              value={form.category}
+              onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}
+              placeholder="如：餐饮 / 通勤 / 工资"
+              className={inputClass}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-stone-400">时间</label>
+            <input
+              type="datetime-local"
+              value={form.transaction_time}
+              onChange={(e) => setForm((prev) => ({ ...prev, transaction_time: e.target.value }))}
+              className={inputClass}
+            />
+          </div>
+          {error && <p className="text-sm text-rose-500 bg-rose-50 border border-rose-200 rounded-lg px-3 py-2">{error}</p>}
+          <div className="flex gap-2 pt-2">
+            <button
+              onClick={() => onOpenChange(false)}
+              className="flex-1 py-2.5 text-sm rounded-xl font-medium border border-stone-200 text-stone-600 hover:bg-stone-50 transition-colors"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={saving}
+              className="flex-1 py-2.5 text-sm rounded-xl font-medium bg-stone-800 text-stone-50 hover:bg-stone-700 transition-colors disabled:opacity-50"
+            >
+              {saving ? '保存中...' : '确认新增'}
+            </button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function DetailRow({ label, value, multiline = false }: { label: string; value: string; multiline?: boolean }) {
   if (multiline) {
     return (
@@ -330,11 +521,7 @@ function SettingsDialog({
   currentKey: string | null;
   onSave: (key: string) => void;
 }) {
-  const [value, setValue] = useState('');
-
-  useEffect(() => {
-    if (open) setValue(currentKey || '');
-  }, [open, currentKey]);
+  const [value, setValue] = useState(() => currentKey || '');
 
   const handleSave = () => {
     const trimmed = value.trim();
@@ -437,6 +624,8 @@ function SearchAndFilterBar({
   categories,
   selectedCategory,
   onCategoryChange,
+  selectedDateRange,
+  onDateRangeChange,
   resultCount,
   hasActiveFilters,
   onClearFilters,
@@ -448,6 +637,8 @@ function SearchAndFilterBar({
   categories: string[];
   selectedCategory: string;
   onCategoryChange: (value: string) => void;
+  selectedDateRange: DateRangeFilter;
+  onDateRangeChange: (value: DateRangeFilter) => void;
   resultCount: number;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
@@ -487,7 +678,7 @@ function SearchAndFilterBar({
       </div>
 
       {categories.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
           {categoryFilters.map((category) => {
             const value = category === '全部分类' ? '' : category;
             const isActive = selectedCategory === value;
@@ -507,6 +698,30 @@ function SearchAndFilterBar({
           })}
         </div>
       )}
+
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+        {([
+          ['all', '全部时间'],
+          ['7d', '近 7 天'],
+          ['30d', '近 30 天'],
+          ['month', '本月'],
+        ] as const).map(([key, label]) => {
+          const isActive = selectedDateRange === key;
+          return (
+            <button
+              key={key}
+              onClick={() => onDateRangeChange(key)}
+              className={`shrink-0 px-3 py-1 text-xs rounded-full border font-medium transition-all ${
+                isActive
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : 'bg-stone-50 text-stone-500 border-stone-200 hover:bg-stone-100'
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
 
       <div className="flex items-center justify-between">
         <span className="text-xs text-stone-400">共 {resultCount} 条记录</span>
@@ -534,8 +749,17 @@ export default function Home() {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRangeFilter>('all');
 
   const fetchTransactions = useCallback(async (key: string) => {
+    if (!key) {
+      setTransactions([]);
+      setError('请先点击右上角设置，输入 API Key 后再查看账本数据');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     try {
@@ -546,14 +770,14 @@ export default function Home() {
       if (data.success) {
         setTransactions(data.data);
       } else {
-        setError(data.error || 'Failed to fetch');
+        setError(data.error || '获取账本失败');
         if (res.status === 401) {
           localStorage.removeItem('api_key');
           setApiKey(null);
         }
       }
     } catch {
-      setError('Network error');
+      setError('网络异常，请稍后重试');
     } finally {
       setLoading(false);
     }
@@ -570,15 +794,24 @@ export default function Home() {
   const totalExpense = transactions.filter((t) => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0);
   const balance = totalIncome - totalExpense;
   const normalizedSearch = searchTerm.trim().toLowerCase();
-  const categories = Array.from(
-    new Set(
-      transactions
-        .map((t) => t.category?.trim())
-        .filter((category): category is string => Boolean(category))
-    )
-  );
 
-  const filteredTransactions = transactions
+  const isWithinDateRange = useCallback((transaction: Transaction) => {
+    if (selectedDateRange === 'all') return true;
+    const current = new Date(transaction.transaction_time || transaction.created_at).getTime();
+    const now = new Date();
+
+    if (selectedDateRange === '7d') {
+      return current >= now.getTime() - 7 * 24 * 60 * 60 * 1000;
+    }
+
+    if (selectedDateRange === '30d') {
+      return current >= now.getTime() - 30 * 24 * 60 * 60 * 1000;
+    }
+
+    return new Date(current).getMonth() === now.getMonth() && new Date(current).getFullYear() === now.getFullYear();
+  }, [selectedDateRange]);
+
+  const filteredTransactions = useMemo(() => transactions
     .filter((t) => {
       const matchesType = selectedType === 'all' || t.type === selectedType;
       const matchesCategory = !selectedCategory || t.category === selectedCategory;
@@ -586,15 +819,14 @@ export default function Home() {
         !normalizedSearch ||
         t.note?.toLowerCase().includes(normalizedSearch) ||
         t.category?.toLowerCase().includes(normalizedSearch);
-      return matchesType && matchesCategory && matchesSearch;
+      return matchesType && matchesCategory && matchesSearch && isWithinDateRange(t);
     })
     .sort((a, b) => {
       const timeA = new Date(a.transaction_time || a.created_at).getTime();
       const timeB = new Date(b.transaction_time || b.created_at).getTime();
       return timeB - timeA;
-    });
+    }), [transactions, selectedType, selectedCategory, normalizedSearch, isWithinDateRange]);
 
-  // 根据当前类型筛选动态计算分类列表
   const filteredCategories = Array.from(
     new Set(
       transactions
@@ -604,7 +836,9 @@ export default function Home() {
     )
   );
 
-  const hasActiveFilters = selectedType !== 'all' || selectedCategory !== '' || normalizedSearch !== '';
+  const filteredIncome = filteredTransactions.filter((t) => t.type === 'income').reduce((sum, t) => sum + Number(t.amount), 0);
+  const filteredExpense = filteredTransactions.filter((t) => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0);
+  const hasActiveFilters = selectedType !== 'all' || selectedCategory !== '' || normalizedSearch !== '' || selectedDateRange !== 'all';
 
   return (
     <main className="max-w-xl mx-auto min-h-[100dvh] relative pb-6 antialiased bg-stone-100/60">
@@ -626,6 +860,28 @@ export default function Home() {
 
       <BalanceHeader balance={balance} income={totalIncome} expense={totalExpense} />
 
+      <div className="px-5 mb-4 flex gap-3">
+        <button
+          onClick={() => setAddOpen(true)}
+          className="flex-1 rounded-xl bg-stone-800 text-white px-4 py-3 text-sm font-medium flex items-center justify-center gap-2 hover:bg-stone-700 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          新增记录
+        </button>
+        <button
+          onClick={() => {
+            setSearchTerm('');
+            setSelectedType('all');
+            setSelectedCategory('');
+            setSelectedDateRange('all');
+          }}
+          className="rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-600 flex items-center justify-center gap-2 hover:bg-stone-50 transition-colors"
+        >
+          <FunnelX className="h-4 w-4" />
+          重置
+        </button>
+      </div>
+
       <SearchAndFilterBar
         searchTerm={searchTerm}
         onSearchChange={setSearchTerm}
@@ -637,14 +893,19 @@ export default function Home() {
         categories={filteredCategories}
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
+        selectedDateRange={selectedDateRange}
+        onDateRangeChange={setSelectedDateRange}
         resultCount={filteredTransactions.length}
         hasActiveFilters={hasActiveFilters}
         onClearFilters={() => {
           setSearchTerm('');
           setSelectedType('all');
           setSelectedCategory('');
+          setSelectedDateRange('all');
         }}
       />
+
+      <FilterSummary count={filteredTransactions.length} income={filteredIncome} expense={filteredExpense} />
 
       <TransactionList
         transactions={filteredTransactions}
@@ -657,6 +918,7 @@ export default function Home() {
       />
 
       <TransactionDetail
+        key={`${selectedTransaction?.id ?? 'empty'}-${dialogOpen ? 'open' : 'closed'}`}
         transaction={selectedTransaction}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -664,7 +926,16 @@ export default function Home() {
         onUpdated={() => fetchTransactions(apiKey || '')}
       />
 
+      <AddTransactionDialog
+        key={addOpen ? 'add-open' : 'add-closed'}
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        apiKey={apiKey}
+        onAdded={() => fetchTransactions(apiKey || '')}
+      />
+
       <SettingsDialog
+        key={`${settingsOpen ? 'settings-open' : 'settings-closed'}-${apiKey ?? ''}`}
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
         currentKey={apiKey}
@@ -678,6 +949,20 @@ export default function Home() {
           }
         }}
       />
+
+      {!apiKey && !loading && (
+        <Card className="mx-5 mt-4 border-dashed border-stone-300 shadow-none bg-white/70">
+          <CardContent className="py-5 px-4 text-sm text-stone-500">
+            <div className="flex items-start gap-3">
+              <CalendarDays className="h-4 w-4 mt-0.5 text-stone-400" />
+              <div>
+                <p className="font-medium text-stone-700 mb-1">还没连接账本数据</p>
+                <p>点右上角设置填写 API Key 后，就可以新增、编辑、删除以及筛选统计账本记录。</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </main>
   );
 }

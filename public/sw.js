@@ -1,5 +1,5 @@
-const CACHE_NAME = 'yudanhuafei-v1';
-const PRECACHE_URLS = ['/', '/logo.png', '/apple-icon.png'];
+const CACHE_NAME = 'yudanhuafei-v2';
+const PRECACHE_URLS = ['/', '/blog', '/ledger', '/logo.png', '/apple-icon.png', '/offline.html'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -19,13 +19,30 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  const { request } = event;
+  const acceptsHtml = request.headers.get('accept')?.includes('text/html');
+
+  if (acceptsHtml) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          return response;
+        })
+        .catch(async () => (await caches.match(request)) || caches.match('/offline.html'))
+    );
+    return;
+  }
+
   event.respondWith(
-    fetch(event.request)
+    fetch(request)
       .then((response) => {
         const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         return response;
       })
-      .catch(() => caches.match(event.request))
+      .catch(() => caches.match(request))
   );
 });

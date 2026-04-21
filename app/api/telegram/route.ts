@@ -4,6 +4,10 @@ import { parseMessage } from '@/lib/parser';
 const API_KEY = process.env.API_KEY || '';
 const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'Unknown telegram webhook error';
+}
+
 export async function POST(req: NextRequest) {
   try {
     const payload = await req.json();
@@ -32,8 +36,8 @@ export async function POST(req: NextRequest) {
     const result = await response.json();
 
     return NextResponse.json({ ok: true, result });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Telegram Webhook Error:', error);
-    return NextResponse.json({ ok: true, error: error.message });
+    return NextResponse.json({ ok: true, error: getErrorMessage(error) });
   }
 }
