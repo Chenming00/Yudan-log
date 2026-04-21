@@ -6,6 +6,7 @@ import { ArrowLeft, Calendar, Clock3 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { MarkdownContent } from './markdown-content';
 import { PostActions } from './post-actions';
+import { TocCard } from './toc-card';
 
 export function generateStaticParams() {
   return getAllPosts().map((post) => ({ slug: post.slug }));
@@ -96,23 +97,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           </div>
         </div>
         <CardContent className="py-6 px-5">
-          {post.headings.length > 0 && (
-            <div className="mb-6 rounded-2xl bg-stone-50 border border-stone-200/70 p-4">
-              <p className="text-xs font-medium tracking-wide text-stone-400 mb-3">文章目录</p>
-              <div className="space-y-2">
-                {post.headings.map((heading) => (
-                  <a
-                    key={heading.id}
-                    href={`#${heading.id}`}
-                    className="block text-sm text-stone-600 hover:text-stone-900 transition-colors"
-                    style={{ paddingLeft: `${(heading.level - 2) * 12}px` }}
-                  >
-                    {heading.text}
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
+          <TocCard headings={post.headings} />
           <MarkdownContent content={post.content} />
         </CardContent>
       </Card>

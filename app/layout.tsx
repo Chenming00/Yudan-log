@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { FloatingNav } from "@/components/floating-nav";
 import { Providers } from "./providers";
 import { RegisterSW } from "./register-sw";
 
@@ -55,7 +56,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: "/logo.png",
-    apple: "/apple-icon.png",
+    apple: "/apple-home-logo.png",
   },
   appleWebApp: {
     capable: true,
@@ -87,6 +88,7 @@ export default function RootLayout({
     >
       <body className="bg-[#F7F8FA] text-black w-full min-h-screen font-sans">
         <Providers>{children}</Providers>
+        <FloatingNav />
         <RegisterSW />
       </body>
     </html>

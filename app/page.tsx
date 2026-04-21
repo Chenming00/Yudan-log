@@ -27,7 +27,7 @@ export default function HomePage() {
       <div className="flex flex-col items-center pt-safe px-6 pb-2">
         <div className="mt-10 mb-3">
           <Image
-            src="/logo.png"
+            src="/apple-home-logo.png"
             alt="头像"
             width={80}
             height={80}

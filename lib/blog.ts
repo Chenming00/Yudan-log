@@ -52,6 +52,34 @@ function extractSummary(content: string, summary?: unknown) {
   return plain.slice(0, 120) + (plain.length > 120 ? '…' : '');
 }
 
+function formatPostDate(value: unknown) {
+  if (!value) return '';
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+
+    const parsed = new Date(trimmed);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString().slice(0, 10);
+    }
+
+    return trimmed;
+  }
+
+  const parsed = new Date(String(value));
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+
+  return String(value);
+}
+
 function extractHeadings(content: string): BlogHeading[] {
   const lines = content.split(/\r?\n/);
   const headings: BlogHeading[] = [];
@@ -85,7 +113,7 @@ function normalizePost(file: string, raw: string): BlogPost {
   return {
     slug,
     title: data.title || slug,
-    date: data.date ? String(data.date) : '',
+    date: formatPostDate(data.date),
     summary: extractSummary(content, data.summary),
     tags: Array.isArray(data.tags) ? data.tags.map(String).filter(Boolean) : [],
     cover: typeof data.cover === 'string' && data.cover.trim() ? data.cover.trim() : '/logo.png',
