@@ -87,8 +87,12 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
       <body className="bg-[#F7F8FA] text-black w-full min-h-screen font-sans">
-        <Providers>{children}</Providers>
-        <FloatingNav />
+        <Providers>
+          <div className="flex min-h-screen flex-col bg-[#F7F8FA]">
+            <div className="flex-1">{children}</div>
+            <FloatingNav />
+          </div>
+        </Providers>
         <RegisterSW />
       </body>
     </html>

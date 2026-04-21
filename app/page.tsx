@@ -22,7 +22,7 @@ const modules = [
 
 export default function HomePage() {
   return (
-    <main className="max-w-xl mx-auto min-h-[100dvh] pb-6 antialiased bg-stone-100/60">
+    <main className="max-w-xl mx-auto min-h-full pb-6 antialiased bg-stone-100/60">
       {/* Profile Section */}
       <div className="flex flex-col items-center pt-safe px-6 pb-2">
         <div className="mt-10 mb-3">

@@ -30,10 +30,10 @@ export function FloatingNav() {
 
   return (
     <nav
-      aria-label="全局悬浮导航"
-      className="fixed inset-x-0 bottom-0 z-50 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)]"
+      aria-label="全局底部导航"
+      className="border-t border-stone-200/80 bg-stone-50/95 px-4 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2 backdrop-blur-sm"
     >
-      <div className="mx-auto flex w-full max-w-xl items-center justify-around rounded-[28px] border border-stone-200/80 bg-white/92 px-2 py-2 shadow-[0_-8px_30px_rgba(15,23,42,0.10)] backdrop-blur-md">
+      <div className="mx-auto flex w-full max-w-xl items-center justify-around gap-1">
         {items.map((item) => {
           const isActive = item.match(pathname);
           const Icon = item.icon;
@@ -44,16 +44,16 @@ export function FloatingNav() {
               href={item.href}
               aria-current={isActive ? "page" : undefined}
               className={[
-                "flex min-w-[88px] flex-1 flex-col items-center justify-center gap-1.5 rounded-[20px] px-3 py-2.5 text-xs font-medium transition-all duration-200",
+                "flex min-w-[88px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 text-xs font-medium transition-colors duration-200",
                 isActive
-                  ? "bg-stone-900 text-white shadow-sm"
-                  : "text-stone-500 hover:bg-stone-100/90 active:bg-stone-200/80",
+                  ? "bg-white text-stone-800"
+                  : "text-stone-500 hover:bg-stone-100/80 active:bg-stone-100",
               ].join(" ")}
             >
               <span
                 className={[
-                  "flex h-9 w-9 items-center justify-center rounded-full transition-colors",
-                  isActive ? "bg-white/15" : "bg-stone-100 text-stone-700",
+                  "flex h-8.5 w-8.5 items-center justify-center rounded-full transition-colors",
+                  isActive ? "bg-stone-100 text-stone-800" : "text-stone-600",
                 ].join(" ")}
               >
                 <Icon className="h-4.5 w-4.5" />

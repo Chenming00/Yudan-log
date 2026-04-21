@@ -603,7 +603,7 @@ function TransactionList({ transactions, loading, error, onSelect }: { transacti
   }
 
   return (
-    <Card className="mx-5 mb-28 border-stone-200/70 shadow-none">
+    <Card className="mx-5 mb-6 border-stone-200/70 shadow-none">
       <CardContent className="p-0">
         {transactions.map((t, index) => (
           <div key={t.id}>
@@ -834,7 +834,7 @@ export default function Home() {
   const hasActiveFilters = selectedType !== 'all' || selectedCategory !== '' || normalizedSearch !== '' || selectedDateRange !== 'all';
 
   return (
-    <main className="max-w-xl mx-auto min-h-[100dvh] relative pb-6 antialiased bg-stone-100/60">
+    <main className="max-w-xl mx-auto min-h-full relative pb-6 antialiased bg-stone-100/60">
       <header className="px-6 pt-safe pb-2 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/" className="pt-4 text-stone-500 hover:text-stone-700 transition-colors">
