@@ -1,10 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import {
+  Card,
+  CardContent,
+  Spinner,
+  Separator,
+} from '@heroui/react';
 
 type TransactionTypeFilter = 'all' | 'income' | 'expense';
 
-// Reuse Transaction Interface
 interface Transaction {
   id: string;
   amount: number;
@@ -15,26 +20,27 @@ interface Transaction {
   created_at: string;
 }
 
-// Subcomponents
-function BalanceHeader({ balance, income, expense }: { balance: number, income: number, expense: number }) {
+function BalanceHeader({ balance, income, expense }: { balance: number; income: number; expense: number }) {
   return (
-    <div className="pt-8 pb-10 px-6">
-      <p className="text-center text-[0.85rem] font-medium text-gray-500 mb-1 tracking-wide">Total Balance</p>
-      <h1 className="text-center text-5xl leading-tight font-semibold text-black tracking-tight mb-8">
-        ¥{balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-      </h1>
-      <div className="flex items-center justify-center space-x-10 text-sm font-medium">
-        <div className="flex flex-col items-center">
-          <span className="text-gray-400 text-xs mb-1 uppercase tracking-wider font-semibold">Income</span>
-          <span className="text-emerald-500 text-base font-semibold">+¥{income.toLocaleString()}</span>
+    <Card className="mx-5 mb-5 bg-stone-50 border border-stone-200/70 shadow-none">
+      <CardContent className="py-8 px-6 text-center">
+        <p className="text-[11px] font-medium text-stone-400 mb-1.5 tracking-[0.2em] uppercase">余额</p>
+        <h1 className="text-3xl font-semibold tracking-tight text-stone-800 mb-6">
+          ¥{balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </h1>
+        <div className="flex items-center justify-center gap-8">
+          <div className="flex flex-col items-center">
+            <span className="text-[11px] text-stone-400 tracking-wider mb-1">收入</span>
+            <span className="text-sm font-medium text-stone-700">+¥{income.toLocaleString()}</span>
+          </div>
+          <Separator orientation="vertical" className="h-8 bg-stone-200" />
+          <div className="flex flex-col items-center">
+            <span className="text-[11px] text-stone-400 tracking-wider mb-1">支出</span>
+            <span className="text-sm font-medium text-stone-700">-¥{expense.toLocaleString()}</span>
+          </div>
         </div>
-        <div className="h-8 w-[1px] bg-gray-200"></div>
-        <div className="flex flex-col items-center">
-          <span className="text-gray-400 text-xs mb-1 uppercase tracking-wider font-semibold">Expense</span>
-          <span className="text-red-500 text-base font-semibold">-¥{expense.toLocaleString()}</span>
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -42,45 +48,62 @@ function TransactionItem({ t }: { t: Transaction }) {
   const isIncome = t.type === 'income';
   const displayDate = new Date(t.transaction_time || t.created_at).toLocaleDateString([], {
     month: 'short',
-    day: 'numeric'
+    day: 'numeric',
   });
 
   return (
-    <div className="flex items-center justify-between py-3.5 px-5 mx-1">
-      <div className="flex flex-col">
-        <span className="font-medium text-gray-900 text-base leading-snug">{t.note || 'Untitled'}</span>
-        <span className="text-[0.8rem] text-gray-400 font-medium mt-0.5">
-          {displayDate} {t.category ? `• ${t.category}` : ''}
+    <div className="flex items-center justify-between py-3 px-4">
+      <div className="flex flex-col gap-0.5">
+        <span className="font-medium text-sm text-stone-800">{t.note || 'Untitled'}</span>
+        <span className="text-xs text-stone-400">
+          {displayDate} {t.category ? `· ${t.category}` : ''}
         </span>
       </div>
-      <div className={`font-semibold text-base ${isIncome ? 'text-emerald-500' : 'text-gray-900'}`}>
+      <span className={`font-medium text-sm ${isIncome ? 'text-emerald-600/80' : 'text-stone-700'}`}>
         {isIncome ? '+' : '-'}¥{Number(t.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-      </div>
+      </span>
     </div>
   );
 }
 
-function TransactionList({ transactions, loading, error }: { transactions: Transaction[], loading: boolean, error: string | null }) {
+function TransactionList({ transactions, loading, error }: { transactions: Transaction[]; loading: boolean; error: string | null }) {
   if (loading) {
-    return <div className="p-8 text-center text-sm text-gray-400 font-medium">Loading transactions...</div>;
+    return (
+      <div className="flex justify-center py-12">
+        <Spinner size="lg" />
+      </div>
+    );
   }
-  
+
   if (error) {
-    return <div className="p-8 text-center text-sm text-red-500 font-medium">{error}</div>;
+    return (
+      <Card className="mx-5 mb-6 border border-stone-200/70 shadow-none">
+        <CardContent className="text-center py-8 text-rose-400 text-sm">{error}</CardContent>
+      </Card>
+    );
   }
 
   if (transactions.length === 0) {
-    return <div className="p-8 text-center text-sm text-gray-400 font-medium">没有匹配的记录，试试换个关键词或筛选条件。</div>;
+    return (
+      <Card className="mx-5 mb-6 border border-stone-200/70 shadow-none">
+        <CardContent className="text-center py-8 text-stone-400 text-sm">
+          没有匹配的记录，试试换个关键词或筛选条件。
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
-    <div className="bg-white rounded-2xl mx-5 mb-28 shadow-[0_2px_10px_rgba(0,0,0,0.02)] overflow-hidden">
-      <div className="divide-y divide-gray-100">
-        {transactions.map(t => (
-          <TransactionItem key={t.id} t={t} />
+    <Card className="mx-5 mb-28 border border-stone-200/70 shadow-none">
+      <CardContent className="p-0">
+        {transactions.map((t, index) => (
+          <div key={t.id}>
+            <TransactionItem t={t} />
+            {index < transactions.length - 1 && <Separator className="bg-stone-100" />}
+          </div>
         ))}
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -101,73 +124,53 @@ function SearchAndFilterBar({
   selectedCategory: string;
   onCategoryChange: (value: string) => void;
 }) {
-  const filters: Array<{ label: string; value: TransactionTypeFilter }> = [
-    { label: '全部', value: 'all' },
-    { label: '收入', value: 'income' },
-    { label: '支出', value: 'expense' },
-  ];
-
   const categoryFilters = ['全部分类', ...categories];
 
   return (
     <div className="px-5 mb-5 space-y-3">
-      <div className="bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.02)] border border-gray-100 px-4 py-3 flex items-center gap-3">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          width="18"
-          height="18"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-gray-400 shrink-0"
-        >
-          <circle cx="11" cy="11" r="8"></circle>
-          <path d="m21 21-4.3-4.3"></path>
+      <div className="flex items-center gap-3 bg-stone-50 rounded-xl border border-stone-200/70 px-4 py-2.5">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stone-400 shrink-0">
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.3-4.3" />
         </svg>
         <input
+          type="text"
+          placeholder="搜索备注或分类"
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="搜索备注或分类"
-          className="w-full bg-transparent text-sm text-gray-900 placeholder:text-gray-400 outline-none"
+          className="w-full bg-transparent text-sm outline-none placeholder:text-stone-400 text-stone-700"
         />
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {filters.map((filter) => {
-          const isActive = selectedType === filter.value;
-          return (
-            <button
-              key={filter.value}
-              type="button"
-              onClick={() => onTypeChange(filter.value)}
-              className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors whitespace-nowrap ${isActive
-                ? 'bg-[#007AFF] text-white border-[#007AFF]'
-                : 'bg-white text-gray-600 border-gray-200'
-                }`}
-            >
-              {filter.label}
-            </button>
-          );
-        })}
+      <div className="flex gap-1 bg-stone-100 rounded-lg p-1">
+        {([['all', '全部'], ['income', '收入'], ['expense', '支出']] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => onTypeChange(key)}
+            className={`flex-1 py-1.5 text-sm rounded-md font-medium transition-all ${
+              selectedType === key
+                ? 'bg-white text-stone-800 shadow-sm'
+                : 'text-stone-500 hover:text-stone-700'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1">
         {categoryFilters.map((category) => {
           const value = category === '全部分类' ? '' : category;
           const isActive = selectedCategory === value;
-
           return (
             <button
               key={category}
-              type="button"
               onClick={() => onCategoryChange(value)}
-              className={`px-4 py-2 rounded-full text-sm font-medium border transition-colors whitespace-nowrap ${isActive
-                ? 'bg-gray-900 text-white border-gray-900'
-                : 'bg-white text-gray-600 border-gray-200'
-                }`}
+              className={`shrink-0 px-3 py-1 text-xs rounded-full border font-medium transition-all ${
+                isActive
+                  ? 'bg-stone-800 text-stone-50 border-stone-800'
+                  : 'bg-stone-50 text-stone-500 border-stone-200 hover:bg-stone-100'
+              }`}
             >
               {category}
             </button>
@@ -178,7 +181,6 @@ function SearchAndFilterBar({
   );
 }
 
-// Main Page
 export default function Home() {
   const [apiKey, setApiKey] = useState<string | null>(() => {
     if (typeof window === 'undefined') return null;
@@ -222,8 +224,8 @@ export default function Home() {
     return () => window.clearTimeout(timer);
   }, [apiKey, fetchTransactions]);
 
-  const totalIncome = transactions.filter(t => t.type === 'income').reduce((acc, t) => acc + Number(t.amount), 0);
-  const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0);
+  const totalIncome = transactions.filter((t) => t.type === 'income').reduce((acc, t) => acc + Number(t.amount), 0);
+  const totalExpense = transactions.filter((t) => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0);
   const balance = totalIncome - totalExpense;
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const categories = Array.from(
@@ -237,21 +239,19 @@ export default function Home() {
   const filteredTransactions = transactions.filter((t) => {
     const matchesType = selectedType === 'all' || t.type === selectedType;
     const matchesCategory = !selectedCategory || t.category === selectedCategory;
-    const matchesSearch = !normalizedSearch
-      || t.note?.toLowerCase().includes(normalizedSearch)
-      || t.category?.toLowerCase().includes(normalizedSearch);
-
+    const matchesSearch =
+      !normalizedSearch ||
+      t.note?.toLowerCase().includes(normalizedSearch) ||
+      t.category?.toLowerCase().includes(normalizedSearch);
     return matchesType && matchesCategory && matchesSearch;
   });
 
   return (
-    <main className="max-w-xl mx-auto min-h-[100dvh] relative pb-6 antialiased">
-      {/* Minimal Header */}
+    <main className="max-w-xl mx-auto min-h-[100dvh] relative pb-6 antialiased bg-stone-100/60">
       <header className="px-6 pt-safe pb-2">
-        <h1 className="text-[1.35rem] font-semibold tracking-tight text-black pt-4">鱼蛋小账本</h1>
+        <h1 className="text-lg font-medium tracking-tight pt-4 text-stone-700">🐟 鱼蛋小账本</h1>
       </header>
 
-      {/* Balance Section */}
       <BalanceHeader balance={balance} income={totalIncome} expense={totalExpense} />
 
       <SearchAndFilterBar
@@ -264,7 +264,6 @@ export default function Home() {
         onCategoryChange={setSelectedCategory}
       />
 
-      {/* Transaction List */}
       <TransactionList transactions={filteredTransactions} loading={loading} error={error} />
     </main>
   );
