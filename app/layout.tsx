@@ -73,7 +73,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#F7F8FA',
+  themeColor: '#FFFFFF',
 };
 
 export default function RootLayout({
@@ -86,13 +86,9 @@ export default function RootLayout({
       lang="zh-CN"
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
-      <body className="bg-background min-h-screen antialiased">
+      <body className="min-h-screen bg-background font-sans text-foreground">
         <Providers>
-          <div className="flex flex-col min-h-screen">
-            <main className="flex-1 pb-[calc(env(safe-area-inset-bottom)+80px)]">
-              {children}
-            </main>
-          </div>
+          {children}
           <FloatingNav />
         </Providers>
         <RegisterSW />

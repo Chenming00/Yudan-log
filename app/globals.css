@@ -5,8 +5,8 @@
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   
-  /* shadcn/ui Stone 主题配色变量 */
-  --background: 0 0% 98%;
+  /* 纯白 App 风主题 */
+  --background: 0 0% 100%;
   --foreground: 20 14.3% 4.1%;
   
   --card: 0 0% 100%;
@@ -51,13 +51,10 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-@utility page-padding {
-  @apply px-4 sm:px-6 lg:px-8;
-}
-
 @layer base {
   body {
-    -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile iOS */
+    background: hsl(var(--background));
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -87,6 +84,3 @@
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
-
-
-

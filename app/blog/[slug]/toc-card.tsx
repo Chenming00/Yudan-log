@@ -10,7 +10,7 @@ export function TocCard({ headings }: { headings: BlogHeading[] }) {
   if (headings.length === 0) return null;
 
   return (
-    <div className="mb-6 rounded-2xl bg-muted/50 border-0 p-4">
+    <div className="mb-6 rounded-2xl bg-muted/50 p-4">
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}

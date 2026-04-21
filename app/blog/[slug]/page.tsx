@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { getPostBySlug, getAllPosts, getAdjacentPosts } from '@/lib/blog';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Calendar, Clock3 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
 import { MarkdownContent } from './markdown-content';
 import { PostActions } from './post-actions';
 import { TocCard } from './toc-card';
@@ -52,7 +51,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const { previous, next } = getAdjacentPosts(slug);
 
   return (
-    <div className="min-h-screen px-4 py-6">
+    <main className="min-h-screen px-4 py-6 pb-[calc(env(safe-area-inset-bottom)+84px)]">
       <header className="flex items-center gap-3 pt-safe pb-2">
         <Link href="/blog" className="pt-4 text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-5 w-5" />
@@ -68,8 +67,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
         </div>
       </header>
 
-      <Card className="mt-4 rounded-2xl shadow-sm border-0 overflow-hidden">
-        <div className="border-b border-border/50 bg-card px-4 pt-5 pb-4 sm:px-5">
+      <div className="mt-4 rounded-2xl bg-white shadow-sm overflow-hidden">
+        <div className="border-b border-border/50 px-4 pt-5 pb-4 sm:px-5">
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             {post.date && (
               <div className="flex items-center gap-1">
@@ -96,28 +95,28 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <PostActions title={post.title} summary={post.summary} />
           </div>
         </div>
-        <CardContent className="px-4 py-6 sm:px-5">
+        <div className="px-4 py-6 sm:px-5">
           <TocCard headings={post.headings} />
           <MarkdownContent content={post.content} />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {(previous || next) && (
         <div className="mt-4 grid gap-3 md:grid-cols-2">
           {previous ? (
-            <Link href={`/blog/${previous.slug}`} className="rounded-2xl border border-border bg-card px-4 py-4 hover:bg-accent transition-colors">
+            <Link href={`/blog/${previous.slug}`} className="rounded-2xl bg-white shadow-sm px-4 py-4 hover:bg-accent transition-colors">
               <p className="text-xs text-muted-foreground">上一篇</p>
               <p className="mt-1 text-sm font-medium text-foreground">{previous.title}</p>
             </Link>
           ) : <div />}
           {next ? (
-            <Link href={`/blog/${next.slug}`} className="rounded-2xl border border-border bg-card px-4 py-4 hover:bg-accent transition-colors text-left">
+            <Link href={`/blog/${next.slug}`} className="rounded-2xl bg-white shadow-sm px-4 py-4 hover:bg-accent transition-colors text-left">
               <p className="text-xs text-muted-foreground">下一篇</p>
               <p className="mt-1 text-sm font-medium text-foreground">{next.title}</p>
             </Link>
           ) : <div />}
         </div>
       )}
-    </div>
+    </main>
   );
 }

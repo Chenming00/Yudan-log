@@ -1,117 +1,113 @@
 "use client";
 
-import { useMemo, useState } from 'react';
-import Link from 'next/link';
-import { Calendar, ChevronRight, Search } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import type { BlogPost } from '@/lib/blog';
+import Link from "next/link";
+import { Calendar, Clock3 } from "lucide-react";
+import { useState } from "react";
 
-export function BlogListClient({ posts }: { posts: BlogPost[] }) {
-  const [search, setSearch] = useState('');
-  const [selectedTag, setSelectedTag] = useState('');
+interface Post {
+  slug: string;
+  title: string;
+  date: string;
+  summary: string;
+  readingTime: number;
+  tags: string[];
+}
 
-  const tags = useMemo(
-    () => Array.from(new Set(posts.flatMap((post) => post.tags))).filter(Boolean),
-    [posts]
-  );
+interface BlogListClientProps {
+  posts: Post[];
+}
 
-  const filteredPosts = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-    return posts.filter((post) => {
-      const matchesSearch =
-        !keyword ||
-        post.title.toLowerCase().includes(keyword) ||
-        post.summary.toLowerCase().includes(keyword) ||
-        post.tags.some((tag) => tag.toLowerCase().includes(keyword));
-      const matchesTag = !selectedTag || post.tags.includes(selectedTag);
-      return matchesSearch && matchesTag;
-    });
-  }, [posts, search, selectedTag]);
+export function BlogListClient({ posts }: BlogListClientProps) {
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+
+  // 提取所有标签
+  const allTags = Array.from(new Set(posts.flatMap((p) => p.tags)));
+
+  // 根据标签筛选
+  const filteredPosts = selectedTag
+    ? posts.filter((p) => p.tags.includes(selectedTag))
+    : posts;
 
   return (
-    <div className="mt-4 space-y-4">
-      <div className="space-y-3">
-        <div className="flex items-center gap-3 bg-muted rounded-xl border-0 px-4 py-2.5">
-          <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-          <input
-            type="text"
-            placeholder="搜索标题、摘要或标签"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground text-foreground"
-          />
-        </div>
+    <div>
+      {/* 头部 */}
+      <header className="flex items-center justify-between pt-safe pb-2">
+        <h1 className="text-lg font-medium tracking-tight pt-4 text-foreground">
+          🌱 成长 Log
+        </h1>
+      </header>
 
-        {tags.length > 0 && (
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+      {/* 标签筛选 */}
+      {allTags.length > 0 && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedTag(null)}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+              selectedTag === null
+                ? "bg-foreground text-background"
+                : "bg-muted text-muted-foreground hover:bg-accent"
+            }`}
+          >
+            全部
+          </button>
+          {allTags.map((tag) => (
             <button
-              onClick={() => setSelectedTag('')}
-              className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${
-                !selectedTag ? 'bg-primary border-primary text-primary-foreground' : 'bg-muted border-border text-muted-foreground'
+              key={tag}
+              onClick={() => setSelectedTag(tag)}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                selectedTag === tag
+                  ? "bg-foreground text-background"
+                  : "bg-muted text-muted-foreground hover:bg-accent"
               }`}
             >
-              全部标签
+              #{tag}
             </button>
-            {tags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => setSelectedTag(tag)}
-                className={`shrink-0 rounded-full border px-3 py-1 text-xs font-medium ${
-                  selectedTag === tag ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-muted border-border text-muted-foreground'
-                }`}
-              >
-                #{tag}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>共 {filteredPosts.length} 篇日志</span>
-          {(search || selectedTag) && (
-            <button className="text-foreground" onClick={() => { setSearch(''); setSelectedTag(''); }}>
-              清空筛选
-            </button>
-          )}
+          ))}
         </div>
+      )}
+
+      {/* 文章列表 */}
+      <div className="mt-6 space-y-3">
+        {filteredPosts.map((post) => (
+          <Link key={post.slug} href={`/blog/${post.slug}`}>
+            <div className="rounded-2xl bg-white shadow-sm p-4 transition-all hover:bg-accent active:bg-accent/80 cursor-pointer">
+              <h2 className="text-base font-semibold text-foreground leading-tight">
+                {post.title}
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                {post.summary}
+              </p>
+              <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span>{post.date}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Clock3 className="h-3.5 w-3.5" />
+                  <span>{post.readingTime} 分钟</span>
+                </div>
+              </div>
+              {post.tags.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {post.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Link>
+        ))}
       </div>
 
-      {filteredPosts.length === 0 ? (
-        <Card className="rounded-2xl shadow-sm border-0">
-          <CardContent className="text-center py-12 text-muted-foreground text-sm">
-            <p className="text-3xl mb-3">📝</p>
-            没找到匹配的日志，试试换个关键词或标签。
-          </CardContent>
-        </Card>
-      ) : (
-        filteredPosts.map((post) => (
-          <Link key={post.slug} href={`/blog/${post.slug}`}>
-            <Card className="mb-3 rounded-2xl shadow-sm border-0 transition-all hover:bg-accent active:bg-accent/80 cursor-pointer">
-              <CardContent className="flex items-start gap-3 p-4 sm:p-5">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1.5">
-                    <Calendar className="h-3 w-3 text-muted-foreground/50" />
-                    <span>{post.date}</span>
-                    <span>·</span>
-                    <span>{post.readingTime} 分钟阅读</span>
-                  </div>
-                  <h2 className="font-medium text-base text-foreground">{post.title}</h2>
-                  <p className="mt-2 text-sm text-muted-foreground line-clamp-2">{post.summary}</p>
-                  {post.tags.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {post.tags.map((tag) => (
-                        <span key={tag} className="rounded-full bg-muted px-2.5 py-1 text-[11px] text-muted-foreground">
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/50 flex-shrink-0 mt-1" />
-              </CardContent>
-            </Card>
-          </Link>
-        ))
+      {filteredPosts.length === 0 && (
+        <div className="mt-8 rounded-2xl bg-white shadow-sm p-8 text-center">
+          <p className="text-muted-foreground text-sm">暂无文章</p>
+        </div>
       )}
     </div>
   );

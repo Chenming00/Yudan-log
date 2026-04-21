@@ -99,7 +99,7 @@ export default function LedgerPage() {
   }, [transactions]);
 
   return (
-    <div className="min-h-screen px-4 py-6">
+    <main className="min-h-screen px-4 py-6 pb-[calc(env(safe-area-inset-bottom)+84px)]">
       {/* 头部 */}
       <header className="flex items-center justify-between pt-safe pb-2">
         <div className="flex items-center gap-3">
@@ -125,16 +125,16 @@ export default function LedgerPage() {
       {/* 主要内容区 */}
       <div className="mt-4 space-y-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="bg-muted rounded-xl p-1 mb-6 border-0">
+          <TabsList className="bg-muted rounded-xl p-1 mb-6">
             <TabsTrigger
               value="overview"
-              className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-rose-500 rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-rose-500 rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
             >
               概览
             </TabsTrigger>
             <TabsTrigger
               value="detail"
-              className="data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=active]:text-rose-500 rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
+              className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-rose-500 rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
             >
               明细
             </TabsTrigger>
@@ -142,18 +142,14 @@ export default function LedgerPage() {
 
           {/* 概览 Tab */}
           <TabsContent value="overview" className="space-y-4">
-            {/* Summary Cards */}
             <SummaryCards
               currentMonth={currentMonthData}
               lastMonth={lastMonthData}
             />
 
-            {/* Trend Chart */}
             <TrendChart transactions={currentMonthData.transactions} />
 
-            {/* Category Breakdown */}
             <CategoryBreakdown transactions={currentMonthData.transactions} />
-
           </TabsContent>
 
           {/* 明细 Tab */}
@@ -178,7 +174,7 @@ export default function LedgerPage() {
               }
               setAddOpen(true);
             }}
-            className={`rounded-full p-4 shadow-lg transition-all hover:shadow-xl hover:scale-105 ${
+            className={`rounded-full p-4 shadow-lg transition-all hover:shadow-xl ${
               canManageTransactions
                 ? "bg-primary text-primary-foreground hover:bg-primary/90"
                 : "bg-muted text-muted-foreground cursor-not-allowed"
@@ -226,6 +222,6 @@ export default function LedgerPage() {
           }
         }}
       />
-    </div>
+    </main>
   );
 }

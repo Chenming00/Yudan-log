@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 
 interface Transaction {
@@ -32,7 +31,7 @@ const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const entry = payload[0].payload;
     return (
-      <div className="rounded-lg border bg-background p-3 shadow-lg">
+      <div className="rounded-lg bg-white p-3 shadow-lg">
         <p className="text-sm font-medium text-foreground mb-1">{entry.name}</p>
         <p className="text-xs text-muted-foreground">
           ¥{Number(entry.value).toLocaleString()} ({entry.percentage}%)
@@ -61,86 +60,78 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
 
   if (data.length === 0) {
     return (
-    <Card className="rounded-2xl shadow-sm border-0">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
+      <div className="rounded-2xl bg-white shadow-sm p-6">
+        <p className="text-sm font-medium text-muted-foreground mb-4">{title}</p>
         <p className="text-center text-muted-foreground text-sm py-8">暂无数据</p>
-      </CardContent>
-    </Card>
+      </div>
     );
   }
 
   return (
-    <Card className="rounded-2xl shadow-sm border-0">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="pt-2">
-        <div className="flex flex-col sm:flex-row gap-6">
-          {/* 饼图 */}
-          <div className="flex-1 flex items-center justify-center">
-            <div className="h-40 w-full min-h-[160px]">
-              <ResponsiveContainer width="100%" height="100%" minHeight={160}>
-                <PieChart>
-                  <Pie
-                    data={data}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={70}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {data.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={CHART_COLORS[index % CHART_COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip />} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Top 3 列表 */}
-          <div className="flex-1 min-w-0">
-            <h4 className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">
-              Top 3 分类
-            </h4>
-            <div className="space-y-3">
-              {top3.map((item, index) => (
-                <div key={item.name} className="flex items-center gap-3">
-                  <div
-                    className="w-3 h-3 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
-                  />
-                  <span className="text-sm text-foreground flex-1 truncate">{item.name}</span>
-                  <div className="text-right">
-                    <div className="text-sm font-medium text-foreground">
-                      ¥{item.value.toLocaleString()}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {((item.value / total) * 100).toFixed(0)}%
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            {data.length > 3 && (
-              <div className="mt-3 pt-3 border-t border-border">
-                <p className="text-xs text-muted-foreground">
-                  其他 {data.length - 3} 个分类
-                </p>
-              </div>
-            )}
+    <div className="rounded-2xl bg-white shadow-sm p-4">
+      <p className="text-sm font-medium text-muted-foreground mb-4">{title}</p>
+      <div className="flex flex-col sm:flex-row gap-6">
+        {/* 饼图 */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="h-40 w-full min-h-[160px]">
+            <ResponsiveContainer width="100%" height="100%" minHeight={160}>
+              <PieChart>
+                <Pie
+                  data={data}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={70}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  {data.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={CHART_COLORS[index % CHART_COLORS.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Top 3 列表 */}
+        <div className="flex-1 min-w-0">
+          <h4 className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">
+            Top 3 分类
+          </h4>
+          <div className="space-y-3">
+            {top3.map((item, index) => (
+              <div key={item.name} className="flex items-center gap-3">
+                <div
+                  className="w-3 h-3 rounded-full flex-shrink-0"
+                  style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                />
+                <span className="text-sm text-foreground flex-1 truncate">{item.name}</span>
+                <div className="text-right">
+                  <div className="text-sm font-medium text-foreground">
+                    ¥{item.value.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {((item.value / total) * 100).toFixed(0)}%
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {data.length > 3 && (
+            <div className="mt-3 pt-3 border-t border-border/50">
+              <p className="text-xs text-muted-foreground">
+                其他 {data.length - 3} 个分类
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

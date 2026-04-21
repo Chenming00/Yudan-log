@@ -31,9 +31,9 @@ export function FloatingNav() {
   return (
     <nav
       aria-label="全局底部导航"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2 lg:px-6"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-white px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2 lg:px-6"
     >
-      <div className="mx-auto flex w-full items-center justify-around gap-1 lg:justify-center lg:gap-3">
+      <div className="flex w-full items-center justify-around gap-1 lg:justify-center lg:gap-3">
         {items.map((item) => {
           const isActive = item.match(pathname);
           const Icon = item.icon;
@@ -46,14 +46,14 @@ export function FloatingNav() {
               className={[
                 "flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2.5 py-2 text-[11px] font-medium transition-colors duration-200 sm:min-w-[88px] sm:px-3 sm:text-xs lg:max-w-[128px]",
                 isActive
-                  ? "bg-card text-foreground shadow-sm"
+                  ? "bg-muted text-foreground"
                   : "text-muted-foreground hover:bg-accent/50 active:bg-accent",
               ].join(" ")}
             >
               <span
                 className={[
                   "flex h-8.5 w-8.5 items-center justify-center rounded-full transition-colors",
-                  isActive ? "bg-muted text-foreground" : "text-muted-foreground",
+                  isActive ? "bg-white text-foreground" : "text-muted-foreground",
                 ].join(" ")}
               >
                 <Icon className="h-4.5 w-4.5" />

@@ -137,7 +137,7 @@ export function TransactionDialog({
   return (
     <>
       {actionError && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[10000] bg-destructive/10 border border-destructive text-destructive text-sm px-4 py-2 rounded-xl shadow-sm">
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-destructive/10 border border-destructive text-destructive text-sm px-4 py-2 rounded-xl shadow-sm">
           {actionError}
         </div>
       )}
@@ -168,13 +168,13 @@ export function TransactionDialog({
           <DialogHeader className="flex flex-col items-center pt-2 pb-2">
             <DialogTitle className="text-center">
               {editing ? (
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={editForm.amount}
-                  onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
-                  className="text-3xl font-semibold tracking-tight text-center w-full bg-transparent border-b border-border pb-1 text-foreground"
-                />
+              <Input
+                type="number"
+                step="0.01"
+                value={editForm.amount}
+                onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
+                className="text-3xl font-semibold tracking-tight text-center w-full bg-transparent border-b border-border pb-1 text-foreground rounded-none"
+              />
               ) : (
                 <span
                   className={`text-3xl font-semibold tracking-tight ${
@@ -223,7 +223,7 @@ export function TransactionDialog({
                   value={editForm.note}
                   onChange={(e) => setEditForm((f) => ({ ...f, note: e.target.value }))}
                   rows={2}
-                  className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                  className="flex min-h-[60px] w-full rounded-xl bg-muted px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 />
               </div>
               <div className="space-y-1">

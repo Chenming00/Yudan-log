@@ -1,6 +1,5 @@
 "use client";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
@@ -24,7 +23,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const value = payload[0].value;
     return (
-      <div className="rounded-lg border bg-background p-3 shadow-lg">
+      <div className="rounded-lg bg-white p-3 shadow-lg">
         <p className="text-xs font-medium text-muted-foreground mb-1">{label}</p>
         <p className="text-sm font-semibold text-rose-500">
           ¥{Number(value).toLocaleString()}
@@ -74,78 +73,74 @@ export function TrendChart({ transactions, title = "每日支出趋势" }: Trend
   const avgDaily = totalExpense / timeRange;
 
   return (
-    <Card className="rounded-2xl shadow-sm border-0">
-      <CardHeader className="pb-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              平均每日 ¥{avgDaily.toFixed(0)}
-            </p>
-          </div>
-          <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`h-7 px-3 text-xs ${
-                timeRange === 7
-                  ? "bg-background shadow-sm text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              onClick={() => setTimeRange(7)}
-            >
-              7 天
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`h-7 px-3 text-xs ${
-                timeRange === 30
-                  ? "bg-background shadow-sm text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-              onClick={() => setTimeRange(30)}
-            >
-              30 天
-            </Button>
-          </div>
+    <div className="rounded-2xl bg-white shadow-sm p-4">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            平均每日 ¥{avgDaily.toFixed(0)}
+          </p>
         </div>
-      </CardHeader>
-      <CardContent className="pt-2">
-        <div className="h-48 w-full">
-          <ResponsiveContainer width="100%" height="100%" minHeight={180}>
-            <AreaChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-              <defs>
-                <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(350, 85%, 60%)" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="hsl(350, 85%, 60%)" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <XAxis
-                dataKey="date"
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                axisLine={false}
-                tickLine={false}
-                interval={timeRange === 7 ? 0 : 4}
-              />
-              <YAxis
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                axisLine={false}
-                tickLine={false}
-                tickFormatter={(value) => `¥${value}`}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke="hsl(350, 85%, 60%)"
-                strokeWidth={2}
-                fill="url(#colorValue)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`h-7 px-3 text-xs ${
+              timeRange === 7
+                ? "bg-white shadow-sm text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            onClick={() => setTimeRange(7)}
+          >
+            7 天
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`h-7 px-3 text-xs ${
+              timeRange === 30
+                ? "bg-white shadow-sm text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            onClick={() => setTimeRange(30)}
+          >
+            30 天
+          </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+      <div className="h-48 w-full">
+        <ResponsiveContainer width="100%" height="100%" minHeight={180}>
+          <AreaChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+            <defs>
+              <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="hsl(350, 85%, 60%)" stopOpacity={0.25} />
+                <stop offset="95%" stopColor="hsl(350, 85%, 60%)" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <XAxis
+              dataKey="date"
+              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              axisLine={false}
+              tickLine={false}
+              interval={timeRange === 7 ? 0 : 4}
+            />
+            <YAxis
+              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              axisLine={false}
+              tickLine={false}
+              tickFormatter={(value) => `¥${value}`}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke="hsl(350, 85%, 60%)"
+              strokeWidth={2}
+              fill="url(#colorValue)"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   );
 }

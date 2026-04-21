@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { Card, CardContent } from '@/components/ui/card';
 import { BookOpen, Wallet } from 'lucide-react';
 
 const modules = [
@@ -22,7 +21,7 @@ const modules = [
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen px-4 py-6">
+    <main className="min-h-screen px-4 py-6 pb-[calc(env(safe-area-inset-bottom)+84px)]">
       {/* Profile Section */}
       <div className="flex flex-col items-center pt-safe pb-2">
         <div className="mb-3 mt-8 sm:mt-10">
@@ -32,7 +31,7 @@ export default function HomePage() {
             width={80}
             height={80}
             sizes="80px"
-            className="h-20 w-20 rounded-full object-cover shadow-sm ring-2 ring-border scale-110 sm:scale-125"
+            className="h-20 w-20 rounded-full object-cover shadow-sm ring-2 ring-border"
             priority
           />
         </div>
@@ -44,23 +43,21 @@ export default function HomePage() {
       <div className="mt-8 grid gap-3 md:grid-cols-2 md:gap-4">
         {modules.map((mod) => (
           <Link key={mod.href} href={mod.href}>
-            <Card className="h-full rounded-2xl shadow-sm transition-all hover:bg-accent active:bg-accent/80 cursor-pointer">
-              <CardContent className="flex items-center gap-4 p-4 sm:p-5">
-                <div className={`rounded-xl p-2.5 ${mod.color}`}>
-                  <mod.icon className="h-5 w-5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h2 className="font-semibold text-base text-foreground">{mod.title}</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">{mod.description}</p>
-                </div>
-                <svg className="h-4 w-4 text-muted-foreground flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                </svg>
-              </CardContent>
-            </Card>
+            <div className="h-full rounded-2xl bg-white shadow-sm transition-all hover:bg-accent active:bg-accent/80 cursor-pointer p-4 sm:p-5 flex items-center gap-4">
+              <div className={`rounded-xl p-2.5 ${mod.color}`}>
+                <mod.icon className="h-5 w-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-semibold text-base text-foreground">{mod.title}</h2>
+                <p className="text-xs text-muted-foreground mt-0.5">{mod.description}</p>
+              </div>
+              <svg className="h-4 w-4 text-muted-foreground flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </div>
           </Link>
         ))}
       </div>
-    </div>
+    </main>
   );
 }

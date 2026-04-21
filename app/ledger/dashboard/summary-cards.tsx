@@ -1,72 +1,63 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet } from "lucide-react";
 
 interface SummaryCardsProps {
   currentMonth: {
     expense: number;
+    transactions: { type: "expense" | "income"; amount: number }[];
   };
   lastMonth: {
     expense: number;
   };
 }
 
-function calculateChange(current: number, last: number): number {
-  if (last === 0) return current > 0 ? 100 : 0;
-  return ((current - last) / last) * 100;
-}
-
-function TrendIndicator({ value }: { value: number }) {
-  const isPositive = value >= 0;
-  const absValue = Math.abs(value);
-  
-  // 对于支出，负数是好的（减少）
-  const isGood = !isPositive;
-  
-  const colorClass = isGood 
-    ? "text-emerald-500" 
-    : "text-rose-500";
-  
-  return (
-    <div className={`flex items-center gap-1 text-xs font-medium ${colorClass}`}>
-      {isPositive ? (
-        <ArrowUpRight className="h-3 w-3" />
-      ) : (
-        <ArrowDownRight className="h-3 w-3" />
-      )}
-      <span>{absValue.toFixed(1)}%</span>
-    </div>
-  );
-}
-
 export function SummaryCards({ currentMonth, lastMonth }: SummaryCardsProps) {
-  const expenseChange = calculateChange(currentMonth.expense, lastMonth.expense);
+  const currentExpense = currentMonth.expense;
+  const lastExpense = lastMonth.expense;
+  const diff = lastExpense > 0 ? ((currentExpense - lastExpense) / lastExpense) * 100 : 0;
+  const isIncrease = diff > 0;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-      <Card className="group relative overflow-hidden rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border-0 bg-gradient-to-br from-card to-rose-50/50">
-        <CardContent className="p-5">
-          <div className="flex items-start justify-between mb-3">
-            <span className="text-xs font-medium text-muted-foreground tracking-wide uppercase">本月支出</span>
-            <TrendIndicator value={expenseChange} />
-          </div>
-          <div className="text-2xl font-semibold text-rose-500">
-            ¥{currentMonth.expense.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-          </div>
-        </CardContent>
-      </Card>
-      <Card className="group relative overflow-hidden rounded-2xl shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 border-0 bg-gradient-to-br from-card to-muted/50">
-        <CardContent className="p-5">
-          <div className="flex items-start justify-between mb-3">
-            <span className="text-xs font-medium text-muted-foreground tracking-wide uppercase">上月支出</span>
-            <div className="text-xs font-medium text-muted-foreground">对比基准</div>
-          </div>
-          <div className="text-2xl font-semibold text-muted-foreground">
-            ¥{lastMonth.expense.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-          </div>
-        </CardContent>
-      </Card>
+    <div className="grid grid-cols-2 gap-3">
+      {/* 本月支出 */}
+      <div className="rounded-2xl bg-white shadow-sm p-4">
+        <div className="flex items-center gap-2 text-muted-foreground mb-2">
+          <Wallet className="h-4 w-4" />
+          <span className="text-xs font-medium">本月支出</span>
+        </div>
+        <div className="text-2xl font-bold text-rose-500">
+          ¥{currentExpense.toLocaleString()}
+        </div>
+        <div className="mt-1 flex items-center gap-1 text-xs">
+          {isIncrease ? (
+            <>
+              <TrendingUp className="h-3 w-3 text-rose-500" />
+              <span className="text-rose-500">+{diff.toFixed(1)}%</span>
+            </>
+          ) : (
+            <>
+              <TrendingDown className="h-3 w-3 text-emerald-500" />
+              <span className="text-emerald-500">{diff.toFixed(1)}%</span>
+            </>
+          )}
+          <span className="text-muted-foreground">vs 上月</span>
+        </div>
+      </div>
+
+      {/* 交易笔数 */}
+      <div className="rounded-2xl bg-white shadow-sm p-4">
+        <div className="flex items-center gap-2 text-muted-foreground mb-2">
+          <Wallet className="h-4 w-4" />
+          <span className="text-xs font-medium">交易笔数</span>
+        </div>
+        <div className="text-2xl font-bold text-foreground">
+          {currentMonth.transactions.length}
+        </div>
+        <div className="mt-1 text-xs text-muted-foreground">
+          本月记录
+        </div>
+      </div>
     </div>
   );
 }
