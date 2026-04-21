@@ -4,11 +4,26 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Loader2, Search, Settings, ArrowLeft, Plus, CalendarDays, FunnelX } from 'lucide-react';
+import { Loader2, Search, Settings, ArrowLeft, Plus, CalendarDays, FunnelX, List, LayoutGrid, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
+import { CategoryPieChart, CategoryBarChart, DailyTrendChart, MonthlyComparisonChart } from './chart-components';
 
 type TransactionTypeFilter = 'all' | 'income' | 'expense';
 type DateRangeFilter = 'all' | '7d' | '30d' | 'month';
+type ViewMode = 'list' | 'monthly' | 'chart';
+
+function getTransactionDate(transaction: Transaction) {
+  return new Date(transaction.transaction_time || transaction.created_at);
+}
+
+function getMonthKey(date: Date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function formatMonthLabel(monthKey: string) {
+  const [year, month] = monthKey.split('-');
+  return `${year} 年 ${Number(month)} 月`;
+}
 
 interface Transaction {
   id: string;
@@ -113,9 +128,56 @@ function FilterSummary({
   );
 }
 
+function MonthlySummary({
+  monthLabel,
+  count,
+  income,
+  expense,
+}: {
+  monthLabel: string;
+  count: number;
+  income: number;
+  expense: number;
+}) {
+  const balance = income - expense;
+
+  return (
+    <Card className="card-gutter mx-auto mb-4 max-w-4xl border-amber-200/70 bg-amber-50/60 shadow-none">
+      <CardContent className="px-4 py-4">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-amber-700/70">按月统计</p>
+            <h2 className="mt-1 text-base font-semibold text-stone-800">{monthLabel}</h2>
+          </div>
+          <div className="text-right">
+            <p className="text-[11px] text-stone-400">结余</p>
+            <p className={`text-lg font-semibold ${balance >= 0 ? 'text-emerald-600' : 'text-stone-700'}`}>
+              ¥{balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div>
+            <p className="text-[11px] text-stone-400 tracking-wide">记录数</p>
+            <p className="mt-1 text-base font-semibold text-stone-800">{count}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-stone-400 tracking-wide">收入</p>
+            <p className="mt-1 text-base font-semibold text-emerald-600">¥{income.toLocaleString()}</p>
+          </div>
+          <div>
+            <p className="text-[11px] text-stone-400 tracking-wide">支出</p>
+            <p className="mt-1 text-base font-semibold text-stone-700">¥{expense.toLocaleString()}</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function TransactionItem({ t, onClick }: { t: Transaction; onClick?: () => void }) {
   const isIncome = t.type === 'income';
-  const displayDate = new Date(t.transaction_time || t.created_at).toLocaleDateString([], {
+  const displayDate = getTransactionDate(t).toLocaleDateString([], {
     month: 'short',
     day: 'numeric',
   });
@@ -602,17 +664,238 @@ function TransactionList({ transactions, loading, error, onSelect }: { transacti
     );
   }
 
+  const groupedTransactions = transactions.reduce<Record<string, Transaction[]>>((groups, transaction) => {
+    const monthKey = getMonthKey(getTransactionDate(transaction));
+    if (!groups[monthKey]) {
+      groups[monthKey] = [];
+    }
+    groups[monthKey].push(transaction);
+    return groups;
+  }, {});
+
+  const sortedMonthKeys = Object.keys(groupedTransactions).sort((a, b) => b.localeCompare(a));
+
   return (
-    <Card className="card-gutter mx-auto mb-6 max-w-4xl border-stone-200/70 shadow-none">
-      <CardContent className="p-0">
-        {transactions.map((t, index) => (
-          <div key={t.id}>
-            <TransactionItem t={t} onClick={() => onSelect(t)} />
-            {index < transactions.length - 1 && <Separator className="bg-stone-100" />}
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+    <div className="mx-auto mb-6 max-w-4xl space-y-4 px-4 sm:px-6 lg:px-8">
+      {sortedMonthKeys.map((monthKey) => {
+        const monthTransactions = groupedTransactions[monthKey];
+        const income = monthTransactions
+          .filter((transaction) => transaction.type === 'income')
+          .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+        const expense = monthTransactions
+          .filter((transaction) => transaction.type === 'expense')
+          .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+
+        return (
+          <Card key={monthKey} className="border-stone-200/70 shadow-none">
+            <CardContent className="p-0">
+              <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-stone-800">{formatMonthLabel(monthKey)}</h3>
+                  <p className="mt-1 text-xs text-stone-400">{monthTransactions.length} 条记录</p>
+                </div>
+                <div className="text-right text-xs">
+                  <p className="text-emerald-600">+¥{income.toLocaleString()}</p>
+                  <p className="mt-1 text-stone-500">-¥{expense.toLocaleString()}</p>
+                </div>
+              </div>
+              {monthTransactions.map((t, index) => (
+                <div key={t.id}>
+                  <TransactionItem t={t} onClick={() => onSelect(t)} />
+                  {index < monthTransactions.length - 1 && <Separator className="bg-stone-100" />}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
+function MonthlyView({
+  transactions,
+  loading,
+  error,
+  onSelect,
+}: {
+  transactions: Transaction[];
+  loading: boolean;
+  error: string | null;
+  onSelect: (t: Transaction) => void;
+}) {
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-stone-400" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card className="card-gutter mx-auto mb-6 max-w-4xl border-stone-200/70 shadow-none">
+        <CardContent className="text-center py-8 text-rose-400 text-sm">{error}</CardContent>
+      </Card>
+    );
+  }
+
+  if (transactions.length === 0) {
+    return (
+      <Card className="card-gutter mx-auto mb-6 max-w-4xl border-stone-200/70 shadow-none">
+        <CardContent className="text-center py-8 text-stone-400 text-sm">
+          暂无任何记录。
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const groupedTransactions = transactions.reduce<Record<string, Transaction[]>>((groups, transaction) => {
+    const monthKey = getMonthKey(getTransactionDate(transaction));
+    if (!groups[monthKey]) {
+      groups[monthKey] = [];
+    }
+    groups[monthKey].push(transaction);
+    return groups;
+  }, {});
+
+  const sortedMonthKeys = Object.keys(groupedTransactions).sort((a, b) => b.localeCompare(a));
+
+  return (
+    <div className="mx-auto mb-6 max-w-4xl space-y-4 px-4 sm:px-6 lg:px-8">
+      {sortedMonthKeys.map((monthKey) => {
+        const monthTransactions = groupedTransactions[monthKey];
+        const income = monthTransactions
+          .filter((transaction) => transaction.type === 'income')
+          .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+        const expense = monthTransactions
+          .filter((transaction) => transaction.type === 'expense')
+          .reduce((sum, transaction) => sum + Number(transaction.amount), 0);
+        const balance = income - expense;
+
+        return (
+          <Card key={monthKey} className="border-stone-200/70 shadow-none">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-base font-semibold text-stone-800">{formatMonthLabel(monthKey)}</h3>
+                  <p className="text-xs text-stone-400">{monthTransactions.length} 条记录</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-stone-400">结余</p>
+                  <p className={`text-sm font-semibold ${balance >= 0 ? 'text-emerald-600' : 'text-stone-700'}`}>
+                    ¥{balance.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-emerald-50 rounded-lg px-3 py-2">
+                  <p className="text-xs text-emerald-600">收入</p>
+                  <p className="text-sm font-semibold text-emerald-700">¥{income.toLocaleString()}</p>
+                </div>
+                <div className="bg-amber-50 rounded-lg px-3 py-2">
+                  <p className="text-xs text-amber-600">支出</p>
+                  <p className="text-sm font-semibold text-amber-700">¥{expense.toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="space-y-1">
+                {monthTransactions.slice(0, 5).map((t) => (
+                  <div
+                    key={t.id}
+                    className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-stone-50 cursor-pointer transition-colors"
+                    onClick={() => onSelect(t)}
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-sm text-stone-700">{t.note || '未命名'}</span>
+                      <span className="text-xs text-stone-400">{t.category || '未分类'}</span>
+                    </div>
+                    <span className={`text-sm font-medium ${t.type === 'income' ? 'text-emerald-600' : 'text-stone-700'}`}>
+                      {t.type === 'income' ? '+' : '-'}¥{Number(t.amount).toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+                {monthTransactions.length > 5 && (
+                  <button
+                    onClick={() => {}}
+                    className="w-full text-center text-xs text-stone-400 py-2 hover:text-stone-600 transition-colors"
+                  >
+                    查看全部 {monthTransactions.length} 条记录
+                  </button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
+function ChartsView({
+  transactions,
+  allTransactions,
+}: {
+  transactions: Transaction[];
+  allTransactions: Transaction[];
+}) {
+  const monthlyData = useMemo(() => {
+    const grouped = allTransactions.reduce<Record<string, { income: number; expense: number; year: number; month: number }>>((groups, t) => {
+      const monthKey = getMonthKey(getTransactionDate(t));
+      if (!groups[monthKey]) {
+        const [year, month] = monthKey.split('-').map(Number);
+        groups[monthKey] = { income: 0, expense: 0, year, month };
+      }
+      if (t.type === 'income') {
+        groups[monthKey].income += Number(t.amount);
+      } else {
+        groups[monthKey].expense += Number(t.amount);
+      }
+      return groups;
+    }, {});
+
+    return Object.values(grouped)
+      .map((data) => ({
+        month: formatMonthLabel(`${data.year}-${String(data.month).padStart(2, '0')}`),
+        income: data.income,
+        expense: data.expense,
+      }))
+      .sort((a, b) => {
+        const [aYear, aMonthNum] = a.month.replace(' 年', '-').replace(' 月', '').split('-').map(Number);
+        const [bYear, bMonthNum] = b.month.replace(' 年', '-').replace(' 月', '').split('-').map(Number);
+        return new Date(bYear, bMonthNum - 1).getTime() - new Date(aYear, aMonthNum - 1).getTime();
+      })
+      .slice(0, 12);
+  }, [allTransactions]);
+
+  if (transactions.length === 0) {
+    return (
+      <div className="mx-auto mb-6 max-w-4xl px-4 sm:px-6 lg:px-8 space-y-4">
+        <Card className="border-stone-200/70 bg-white/80 shadow-none">
+          <CardContent className="p-6">
+            <p className="text-center text-stone-400 text-sm py-8">暂无数据，请先添加筛选条件或记账记录。</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const expenseTransactions = transactions.filter((t) => t.type === 'expense');
+
+  return (
+    <div className="mx-auto mb-6 max-w-4xl px-4 sm:px-6 lg:px-8 space-y-4">
+      {expenseTransactions.length > 0 && (
+        <>
+          <CategoryPieChart transactions={expenseTransactions} title="支出分类分布" />
+          <CategoryBarChart transactions={expenseTransactions} title="支出分类排行" />
+        </>
+      )}
+      {transactions.length > 0 && (
+        <DailyTrendChart transactions={transactions} title="每日收支趋势" />
+      )}
+      {allTransactions.length > 0 && (
+        <MonthlyComparisonChart monthlyData={monthlyData} title="月度收支对比" />
+      )}
+    </div>
   );
 }
 
@@ -626,6 +909,9 @@ function SearchAndFilterBar({
   onCategoryChange,
   selectedDateRange,
   onDateRangeChange,
+  availableMonths,
+  selectedMonth,
+  onMonthChange,
   resultCount,
   hasActiveFilters,
   onClearFilters,
@@ -639,6 +925,9 @@ function SearchAndFilterBar({
   onCategoryChange: (value: string) => void;
   selectedDateRange: DateRangeFilter;
   onDateRangeChange: (value: DateRangeFilter) => void;
+  availableMonths: string[];
+  selectedMonth: string;
+  onMonthChange: (value: string) => void;
   resultCount: number;
   hasActiveFilters: boolean;
   onClearFilters: () => void;
@@ -723,6 +1012,37 @@ function SearchAndFilterBar({
         })}
       </div>
 
+      {availableMonths.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <button
+            onClick={() => onMonthChange('')}
+            className={`shrink-0 px-3 py-1 text-xs rounded-full border font-medium transition-all ${
+              selectedMonth === ''
+                ? 'bg-stone-800 text-stone-50 border-stone-800'
+                : 'bg-stone-50 text-stone-500 border-stone-200 hover:bg-stone-100'
+            }`}
+          >
+            全部月份
+          </button>
+          {availableMonths.map((month) => {
+            const isActive = selectedMonth === month;
+            return (
+              <button
+                key={month}
+                onClick={() => onMonthChange(month)}
+                className={`shrink-0 px-3 py-1 text-xs rounded-full border font-medium transition-all ${
+                  isActive
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : 'bg-stone-50 text-stone-500 border-stone-200 hover:bg-stone-100'
+                }`}
+              >
+                {formatMonthLabel(month)}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <span className="text-xs text-stone-400">共 {resultCount} 条记录</span>
         {hasActiveFilters && (
@@ -752,6 +1072,8 @@ export default function Home() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRangeFilter>('all');
+  const [selectedMonth, setSelectedMonth] = useState(() => getMonthKey(new Date()));
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   const fetchTransactions = useCallback(async (key: string) => {
     setLoading(true);
@@ -787,10 +1109,16 @@ export default function Home() {
   const totalExpense = transactions.filter((t) => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0);
   const balance = totalIncome - totalExpense;
   const normalizedSearch = searchTerm.trim().toLowerCase();
+  const availableMonths = useMemo(() => Array.from(new Set(
+    transactions.map((transaction) => getMonthKey(getTransactionDate(transaction)))
+  )).sort((a, b) => b.localeCompare(a)), [transactions]);
 
   const isWithinDateRange = useCallback((transaction: Transaction) => {
+    if (selectedMonth) {
+      return getMonthKey(getTransactionDate(transaction)) === selectedMonth;
+    }
     if (selectedDateRange === 'all') return true;
-    const current = new Date(transaction.transaction_time || transaction.created_at).getTime();
+    const current = getTransactionDate(transaction).getTime();
     const now = new Date();
 
     if (selectedDateRange === '7d') {
@@ -802,7 +1130,7 @@ export default function Home() {
     }
 
     return new Date(current).getMonth() === now.getMonth() && new Date(current).getFullYear() === now.getFullYear();
-  }, [selectedDateRange]);
+  }, [selectedDateRange, selectedMonth]);
 
   const filteredTransactions = useMemo(() => transactions
     .filter((t) => {
@@ -823,7 +1151,7 @@ export default function Home() {
   const filteredCategories = Array.from(
     new Set(
       transactions
-        .filter((t) => selectedType === 'all' || t.type === selectedType)
+        .filter((t) => (selectedType === 'all' || t.type === selectedType) && (!selectedMonth || getMonthKey(getTransactionDate(t)) === selectedMonth))
         .map((t) => t.category?.trim())
         .filter((category): category is string => Boolean(category))
     )
@@ -831,7 +1159,8 @@ export default function Home() {
 
   const filteredIncome = filteredTransactions.filter((t) => t.type === 'income').reduce((sum, t) => sum + Number(t.amount), 0);
   const filteredExpense = filteredTransactions.filter((t) => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0);
-  const hasActiveFilters = selectedType !== 'all' || selectedCategory !== '' || normalizedSearch !== '' || selectedDateRange !== 'all';
+  const hasActiveFilters = selectedType !== 'all' || selectedCategory !== '' || normalizedSearch !== '' || selectedDateRange !== 'all' || selectedMonth !== '';
+  const monthSummaryLabel = selectedMonth ? formatMonthLabel(selectedMonth) : '全部月份';
 
   return (
     <main className="page-shell relative pb-6 lg:pb-10">
@@ -875,6 +1204,7 @@ export default function Home() {
             setSelectedType('all');
             setSelectedCategory('');
             setSelectedDateRange('all');
+            setSelectedMonth(getMonthKey(new Date()));
           }}
           className="rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-600 flex items-center justify-center gap-2 transition-colors hover:bg-stone-50 sm:w-auto"
         >
@@ -895,7 +1225,20 @@ export default function Home() {
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
         selectedDateRange={selectedDateRange}
-        onDateRangeChange={setSelectedDateRange}
+        onDateRangeChange={(value) => {
+          setSelectedDateRange(value);
+          if (value !== 'all') {
+            setSelectedMonth('');
+          }
+        }}
+        availableMonths={availableMonths}
+        selectedMonth={selectedMonth}
+        onMonthChange={(value) => {
+          setSelectedMonth(value);
+          if (value) {
+            setSelectedDateRange('all');
+          }
+        }}
         resultCount={filteredTransactions.length}
         hasActiveFilters={hasActiveFilters}
         onClearFilters={() => {
@@ -903,20 +1246,89 @@ export default function Home() {
           setSelectedType('all');
           setSelectedCategory('');
           setSelectedDateRange('all');
+          setSelectedMonth('');
         }}
+      />
+
+      <MonthlySummary
+        monthLabel={monthSummaryLabel}
+        count={filteredTransactions.length}
+        income={filteredIncome}
+        expense={filteredExpense}
       />
 
       <FilterSummary count={filteredTransactions.length} income={filteredIncome} expense={filteredExpense} />
 
-      <TransactionList
-        transactions={filteredTransactions}
-        loading={loading}
-        error={error}
-        onSelect={(t) => {
-          setSelectedTransaction(t);
-          setDialogOpen(true);
-        }}
-      />
+      {/* 视图切换按钮 */}
+      <div className="page-padding mx-auto mb-4 flex max-w-4xl gap-2">
+        <button
+          onClick={() => setViewMode('list')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm rounded-xl font-medium transition-colors ${
+            viewMode === 'list'
+              ? 'bg-stone-800 text-white'
+              : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
+          }`}
+        >
+          <List className="h-4 w-4" />
+          列表
+        </button>
+        <button
+          onClick={() => setViewMode('monthly')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm rounded-xl font-medium transition-colors ${
+            viewMode === 'monthly'
+              ? 'bg-stone-800 text-white'
+              : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
+          }`}
+        >
+          <LayoutGrid className="h-4 w-4" />
+          月度
+        </button>
+        <button
+          onClick={() => setViewMode('chart')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm rounded-xl font-medium transition-colors ${
+            viewMode === 'chart'
+              ? 'bg-stone-800 text-white'
+              : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'
+          }`}
+        >
+          <BarChart3 className="h-4 w-4" />
+          图表
+        </button>
+      </div>
+
+      {/* 列表视图 */}
+      {viewMode === 'list' && (
+        <TransactionList
+          transactions={filteredTransactions}
+          loading={loading}
+          error={error}
+          onSelect={(t) => {
+            setSelectedTransaction(t);
+            setDialogOpen(true);
+          }}
+        />
+      )}
+
+      {/* 月度视图 */}
+      {viewMode === 'monthly' && (
+        <MonthlyView
+          transactions={transactions}
+          loading={loading}
+          error={error}
+          onSelect={(t) => {
+            setSelectedTransaction(t);
+            setDialogOpen(true);
+          }}
+        />
+      )}
+
+      {/* 图表视图 */}
+      {viewMode === 'chart' && (
+        <ChartsView
+          transactions={filteredTransactions}
+          allTransactions={transactions}
+        />
+      )}
 
       <TransactionDetail
         key={`${selectedTransaction?.id ?? 'empty'}-${dialogOpen ? 'open' : 'closed'}`}
