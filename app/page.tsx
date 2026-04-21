@@ -1,14 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Card,
-  CardContent,
-  Spinner,
-  Separator,
-  Modal,
-  useOverlayState,
-} from '@heroui/react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Loader2, Search } from 'lucide-react';
 
 type TransactionTypeFilter = 'all' | 'income' | 'expense';
 
@@ -24,7 +20,7 @@ interface Transaction {
 
 function BalanceHeader({ balance, income, expense }: { balance: number; income: number; expense: number }) {
   return (
-    <Card className="mx-5 mb-5 bg-stone-50 border border-stone-200/70 shadow-none">
+    <Card className="mx-5 mb-5 bg-stone-50 border-stone-200/70 shadow-none">
       <CardContent className="py-8 px-6 text-center">
         <p className="text-[11px] font-medium text-stone-400 mb-1.5 tracking-[0.2em] uppercase">余额</p>
         <h1 className="text-3xl font-semibold tracking-tight text-stone-800 mb-6">
@@ -68,7 +64,7 @@ function TransactionItem({ t, onClick }: { t: Transaction; onClick?: () => void 
   );
 }
 
-function TransactionDetail({ transaction, state }: { transaction: Transaction | null; state: ReturnType<typeof useOverlayState> }) {
+function TransactionDetail({ transaction, open, onOpenChange }: { transaction: Transaction | null; open: boolean; onOpenChange: (open: boolean) => void }) {
   if (!transaction) return null;
   const isIncome = transaction.type === 'income';
   const dateStr = new Date(transaction.transaction_time || transaction.created_at).toLocaleString('zh-CN', {
@@ -80,43 +76,36 @@ function TransactionDetail({ transaction, state }: { transaction: Transaction | 
   });
 
   return (
-    <Modal.Root state={state}>
-      <Modal.Backdrop isDismissable>
-        <Modal.Container placement="center" size="sm">
-          <Modal.Dialog>
-            <Modal.Header className="flex flex-col items-center pt-8 pb-2">
-              <Modal.Heading className="text-center">
-                <span className={`text-3xl font-semibold tracking-tight ${isIncome ? 'text-emerald-600' : 'text-stone-800'}`}>
-                  {isIncome ? '+' : '-'}¥{Number(transaction.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </Modal.Heading>
-              <span className={`mt-2 text-xs px-2.5 py-0.5 rounded-full font-medium ${isIncome ? 'bg-emerald-50 text-emerald-600' : 'bg-stone-100 text-stone-600'}`}>
-                {isIncome ? '收入' : '支出'}
-              </span>
-            </Modal.Header>
-            <Modal.Body className="px-6 pb-8 pt-4">
-              <div className="space-y-3">
-                <div className="flex justify-between text-sm">
-                  <span className="text-stone-400">备注</span>
-                  <span className="text-stone-700 font-medium">{transaction.note || '无'}</span>
-                </div>
-                <Separator className="bg-stone-100" />
-                <div className="flex justify-between text-sm">
-                  <span className="text-stone-400">分类</span>
-                  <span className="text-stone-700 font-medium">{transaction.category || '未分类'}</span>
-                </div>
-                <Separator className="bg-stone-100" />
-                <div className="flex justify-between text-sm">
-                  <span className="text-stone-400">时间</span>
-                  <span className="text-stone-700 font-medium">{dateStr}</span>
-                </div>
-              </div>
-            </Modal.Body>
-            <Modal.CloseTrigger className="absolute top-3 right-3 text-stone-400 hover:text-stone-600" />
-          </Modal.Dialog>
-        </Modal.Container>
-      </Modal.Backdrop>
-    </Modal.Root>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader className="flex flex-col items-center pt-2 pb-2">
+          <DialogTitle className="text-center">
+            <span className={`text-3xl font-semibold tracking-tight ${isIncome ? 'text-emerald-600' : 'text-stone-800'}`}>
+              {isIncome ? '+' : '-'}¥{Number(transaction.amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+          </DialogTitle>
+          <span className={`mt-2 text-xs px-2.5 py-0.5 rounded-full font-medium ${isIncome ? 'bg-emerald-50 text-emerald-600' : 'bg-stone-100 text-stone-600'}`}>
+            {isIncome ? '收入' : '支出'}
+          </span>
+        </DialogHeader>
+        <div className="space-y-3 pt-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-stone-400">备注</span>
+            <span className="text-stone-700 font-medium">{transaction.note || '无'}</span>
+          </div>
+          <Separator className="bg-stone-100" />
+          <div className="flex justify-between text-sm">
+            <span className="text-stone-400">分类</span>
+            <span className="text-stone-700 font-medium">{transaction.category || '未分类'}</span>
+          </div>
+          <Separator className="bg-stone-100" />
+          <div className="flex justify-between text-sm">
+            <span className="text-stone-400">时间</span>
+            <span className="text-stone-700 font-medium">{dateStr}</span>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -124,14 +113,14 @@ function TransactionList({ transactions, loading, error, onSelect }: { transacti
   if (loading) {
     return (
       <div className="flex justify-center py-12">
-        <Spinner size="lg" />
+        <Loader2 className="h-8 w-8 animate-spin text-stone-400" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <Card className="mx-5 mb-6 border border-stone-200/70 shadow-none">
+      <Card className="mx-5 mb-6 border-stone-200/70 shadow-none">
         <CardContent className="text-center py-8 text-rose-400 text-sm">{error}</CardContent>
       </Card>
     );
@@ -139,7 +128,7 @@ function TransactionList({ transactions, loading, error, onSelect }: { transacti
 
   if (transactions.length === 0) {
     return (
-      <Card className="mx-5 mb-6 border border-stone-200/70 shadow-none">
+      <Card className="mx-5 mb-6 border-stone-200/70 shadow-none">
         <CardContent className="text-center py-8 text-stone-400 text-sm">
           没有匹配的记录，试试换个关键词或筛选条件。
         </CardContent>
@@ -148,7 +137,7 @@ function TransactionList({ transactions, loading, error, onSelect }: { transacti
   }
 
   return (
-    <Card className="mx-5 mb-28 border border-stone-200/70 shadow-none">
+    <Card className="mx-5 mb-28 border-stone-200/70 shadow-none">
       <CardContent className="p-0">
         {transactions.map((t, index) => (
           <div key={t.id}>
@@ -183,10 +172,7 @@ function SearchAndFilterBar({
   return (
     <div className="px-5 mb-5 space-y-3">
       <div className="flex items-center gap-3 bg-stone-50 rounded-xl border border-stone-200/70 px-4 py-2.5">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-stone-400 shrink-0">
-          <circle cx="11" cy="11" r="8" />
-          <path d="m21 21-4.3-4.3" />
-        </svg>
+        <Search className="h-4 w-4 text-stone-400 shrink-0" />
         <input
           type="text"
           placeholder="搜索备注或分类"
@@ -247,7 +233,7 @@ export default function Home() {
   const [selectedType, setSelectedType] = useState<TransactionTypeFilter>('all');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const modalState = useOverlayState();
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const fetchTransactions = useCallback(async (key: string) => {
     setLoading(true);
@@ -326,11 +312,15 @@ export default function Home() {
         error={error}
         onSelect={(t) => {
           setSelectedTransaction(t);
-          modalState.open();
+          setDialogOpen(true);
         }}
       />
 
-      <TransactionDetail transaction={selectedTransaction} state={modalState} />
+      <TransactionDetail
+        transaction={selectedTransaction}
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+      />
     </main>
   );
 }
