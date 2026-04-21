@@ -31,7 +31,7 @@ export default function HomePage() {
             alt="头像"
             width={80}
             height={80}
-            className="rounded-full ring-2 ring-stone-200 shadow-sm"
+            className="rounded-full ring-2 ring-stone-200 shadow-sm object-cover scale-125"
             priority
           />
         </div>

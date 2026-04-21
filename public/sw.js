@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yudanhuafei-v2';
+const CACHE_NAME = 'yudanhuafei-v3';
 const PRECACHE_URLS = ['/', '/blog', '/ledger', '/logo.png', '/apple-icon.png', '/offline.html'];
 
 self.addEventListener('install', (event) => {
