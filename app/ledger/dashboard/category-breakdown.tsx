@@ -18,14 +18,14 @@ interface CategoryBreakdownProps {
   title?: string;
 }
 
-// shadcn/ui 风格配色
+// 协调的配色方案 - 从 rose 到 stone 的渐变
 const CHART_COLORS = [
-  "hsl(38, 92%, 55%)", // amber - 主色
-  "hsl(160, 80%, 40%)", // emerald
-  "hsl(217, 91%, 60%)", // blue
-  "hsl(322, 74%, 60%)", // pink
-  "hsl(271, 76%, 60%)", // purple
-  "hsl(14, 87%, 55%)", // orange
+  "hsl(350, 85%, 60%)",  // rose - 主色（支出）
+  "hsl(340, 75%, 55%)",  // darker rose
+  "hsl(25, 85%, 60%)",   // coral/orange
+  "hsl(45, 90%, 55%)",   // amber
+  "hsl(160, 70%, 45%)",  // emerald - 收入
+  "hsl(200, 80%, 55%)",  // sky blue
 ];
 
 const CustomTooltip = ({ active, payload }: any) => {
@@ -61,7 +61,7 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
 
   if (data.length === 0) {
     return (
-      <Card className="rounded-2xl shadow-sm">
+      <Card className="rounded-2xl shadow-sm border-stone-100/60">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         </CardHeader>
@@ -73,7 +73,7 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
   }
 
   return (
-    <Card className="rounded-2xl shadow-sm">
+    <Card className="rounded-2xl shadow-sm border-stone-100/60">
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
       </CardHeader>

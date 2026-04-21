@@ -26,7 +26,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return (
       <div className="rounded-lg border bg-background p-3 shadow-lg">
         <p className="text-xs font-medium text-muted-foreground mb-1">{label}</p>
-        <p className="text-sm font-semibold text-amber-600">
+        <p className="text-sm font-semibold text-rose-500">
           ¥{Number(value).toLocaleString()}
         </p>
       </div>
@@ -74,7 +74,7 @@ export function TrendChart({ transactions, title = "每日支出趋势" }: Trend
   const avgDaily = totalExpense / timeRange;
 
   return (
-    <Card className="rounded-2xl shadow-sm">
+    <Card className="rounded-2xl shadow-sm border-stone-100/60">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
           <div>
@@ -117,8 +117,8 @@ export function TrendChart({ transactions, title = "每日支出趋势" }: Trend
             <AreaChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
               <defs>
                 <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(38, 92%, 55%)" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(38, 92%, 55%)" stopOpacity={0} />
+                  <stop offset="5%" stopColor="hsl(350, 85%, 60%)" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="hsl(350, 85%, 60%)" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis
@@ -138,7 +138,7 @@ export function TrendChart({ transactions, title = "每日支出趋势" }: Trend
               <Area
                 type="monotone"
                 dataKey="value"
-                stroke="hsl(38, 92%, 55%)"
+                stroke="hsl(350, 85%, 60%)"
                 strokeWidth={2}
                 fill="url(#colorValue)"
               />

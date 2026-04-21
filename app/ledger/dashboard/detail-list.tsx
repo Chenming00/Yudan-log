@@ -63,7 +63,7 @@ function TransactionItem({ transaction, onClick }: TransactionItemProps) {
   return (
     <div
       onClick={onClick}
-      className="flex items-center gap-3 py-3 px-2 rounded-xl hover:bg-muted/50 cursor-pointer transition-colors"
+      className="flex items-center gap-3 py-3 px-2 rounded-xl hover:bg-stone-50 cursor-pointer transition-colors"
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
@@ -85,7 +85,7 @@ function TransactionItem({ transaction, onClick }: TransactionItemProps) {
       <div className="flex items-center gap-2">
         <span
           className={`text-sm font-semibold ${
-            isExpense ? "text-amber-600" : "text-emerald-600"
+            isExpense ? "text-rose-500" : "text-emerald-500"
           }`}
         >
           {isExpense ? "-" : "+"}¥{Number(transaction.amount).toLocaleString()}
@@ -164,13 +164,13 @@ export function DetailList({ transactions, onSelect }: DetailListProps) {
         return (
           <Card
             key={groupKey}
-            className="rounded-2xl shadow-sm overflow-hidden"
+            className="rounded-2xl shadow-sm overflow-hidden border-stone-100/60"
           >
             <CardContent className="p-0">
               {/* 组头 */}
               <div
                 onClick={() => toggleGroup(groupKey)}
-                className="flex items-center justify-between px-4 py-3 bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors"
+                className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-stone-50/50 to-stone-100/30 cursor-pointer hover:from-stone-100/50 hover:to-stone-200/30 transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-foreground">{groupKey}</span>

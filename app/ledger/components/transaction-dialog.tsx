@@ -178,7 +178,7 @@ export function TransactionDialog({
               ) : (
                 <span
                   className={`text-3xl font-semibold tracking-tight ${
-                    isIncome ? 'text-emerald-600' : 'text-foreground'
+                    isIncome ? 'text-emerald-500' : 'text-rose-500'
                   }`}
                 >
                   {isIncome ? '+' : '-'}
@@ -207,7 +207,7 @@ export function TransactionDialog({
             ) : (
               <span
                 className={`mt-2 text-xs px-2.5 py-0.5 rounded-full font-medium ${
-                  isIncome ? 'bg-emerald-50 text-emerald-600' : 'bg-muted text-muted-foreground'
+                  isIncome ? 'bg-emerald-50 text-emerald-500' : 'bg-rose-50 text-rose-500'
                 }`}
               >
                 {isIncome ? '收入' : '支出'}

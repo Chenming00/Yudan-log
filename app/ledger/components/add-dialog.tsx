@@ -100,13 +100,17 @@ export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProp
         </DialogHeader>
         <div className="space-y-3 pt-2">
           {/* 类型切换 */}
-          <div className="flex gap-1 bg-muted rounded-lg p-1">
+          <div className="flex gap-1 bg-stone-100 rounded-lg p-1">
             {(['expense', 'income'] as const).map((type) => (
               <button
                 key={type}
                 onClick={() => setForm((prev) => ({ ...prev, type }))}
                 className={`flex-1 py-1.5 text-sm rounded-md font-medium transition-all ${
-                  form.type === type ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'
+                  form.type === type 
+                    ? type === 'income' 
+                      ? 'bg-emerald-50 text-emerald-600 shadow-sm' 
+                      : 'bg-rose-50 text-rose-500 shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {type === 'income' ? '收入' : '支出'}
