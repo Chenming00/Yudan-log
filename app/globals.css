@@ -51,33 +51,13 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-@utility page-shell {
-  min-height: 100%;
-  width: 100%;
-  background-color: hsl(var(--background));
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
 @utility page-padding {
   @apply px-4 sm:px-6 lg:px-8;
-}
-
-@utility card-gutter {
-  @apply mx-4 sm:mx-6 lg:mx-8;
 }
 
 @layer base {
   body {
     -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile iOS */
-  }
-
-  html {
-    overflow-x: hidden;
-  }
-
-  body {
-    overflow-x: hidden;
   }
 }
 
