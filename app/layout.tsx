@@ -88,10 +88,10 @@ export default function RootLayout({
     >
       <body className="bg-[#F7F8FA] text-black w-full min-h-screen font-sans">
         <Providers>
-          <div className="flex min-h-screen flex-col bg-[#F7F8FA]">
-            <div className="flex-1">{children}</div>
-            <FloatingNav />
+          <div className="min-h-screen bg-[#F7F8FA] pb-[calc(env(safe-area-inset-bottom)+76px)]">
+            {children}
           </div>
+          <FloatingNav />
         </Providers>
         <RegisterSW />
       </body>

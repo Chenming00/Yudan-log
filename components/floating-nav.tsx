@@ -31,7 +31,7 @@ export function FloatingNav() {
   return (
     <nav
       aria-label="全局底部导航"
-      className="border-t border-stone-200/80 bg-stone-50/95 px-4 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2 backdrop-blur-sm"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-stone-200/80 bg-stone-50/95 px-4 pb-[calc(env(safe-area-inset-bottom)+10px)] pt-2 backdrop-blur-sm"
     >
       <div className="mx-auto flex w-full max-w-xl items-center justify-around gap-1">
         {items.map((item) => {

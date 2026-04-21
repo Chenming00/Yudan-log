@@ -52,7 +52,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const { previous, next } = getAdjacentPosts(slug);
 
   return (
-    <main className="max-w-xl mx-auto min-h-[100dvh] pb-6 antialiased bg-stone-100/60">
+    <main className="max-w-xl mx-auto min-h-full pb-6 antialiased bg-stone-100/60">
       <header className="px-6 pt-safe pb-2 flex items-center gap-3">
         <Link href="/blog" className="pt-4 text-stone-500 hover:text-stone-700 transition-colors">
           <ArrowLeft className="h-5 w-5" />
