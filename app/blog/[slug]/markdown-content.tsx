@@ -78,7 +78,7 @@ export function MarkdownContent({ content }: { content: string }) {
             return !isInline ? (
               <code className={className} {...props}>{children}</code>
             ) : (
-              <code className="px-1.5 py-0.5 rounded-md bg-muted text-sm font-mono text-foreground/90 border border-border/30" {...props}>
+              <code className="px-2 py-0.5 rounded-full bg-muted/60 text-sm text-foreground/80" {...props}>
                 {children}
               </code>
             );
