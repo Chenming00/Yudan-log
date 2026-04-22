@@ -128,13 +128,13 @@ export default function LedgerPage() {
           <TabsList className="bg-muted rounded-xl p-1 mb-6">
             <TabsTrigger
               value="overview"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-rose-500 rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
+              className="data-[state=active]:bg-gray-100 data-[state=active]:text-black rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
             >
               概览
             </TabsTrigger>
             <TabsTrigger
               value="detail"
-              className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-rose-500 rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
+              className="data-[state=active]:bg-gray-100 data-[state=active]:text-black rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
             >
               明细
             </TabsTrigger>

@@ -23,9 +23,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
     const value = payload[0].value;
     return (
-      <div className="rounded-lg bg-white p-3 shadow-lg">
-        <p className="text-xs font-medium text-muted-foreground mb-1">{label}</p>
-        <p className="text-sm font-semibold text-rose-500">
+      <div className="rounded-lg bg-white p-3 shadow-sm border border-gray-100">
+        <p className="text-xs text-muted-foreground mb-1">{label}</p>
+        <p className="text-sm font-medium text-[#FF6B6B]">
           ¥{Number(value).toLocaleString()}
         </p>
       </div>
@@ -73,11 +73,11 @@ export function TrendChart({ transactions, title = "每日支出趋势" }: Trend
   const avgDaily = totalExpense / timeRange;
 
   return (
-    <div className="rounded-2xl bg-white shadow-sm p-4">
+    <div className="rounded-2xl bg-white shadow-sm p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">{title}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">
+          <p className="text-sm text-muted-foreground">{title}</p>
+          <p className="text-xs text-muted-foreground mt-1">
             平均每日 ¥{avgDaily.toFixed(0)}
           </p>
         </div>
@@ -108,13 +108,13 @@ export function TrendChart({ transactions, title = "每日支出趋势" }: Trend
           </Button>
         </div>
       </div>
-      <div className="h-48 w-full">
-        <ResponsiveContainer width="100%" height="100%" minHeight={180}>
+      <div className="h-44 w-full">
+        <ResponsiveContainer width="100%" height="100%" minHeight={176}>
           <AreaChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
             <defs>
               <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="hsl(350, 85%, 60%)" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="hsl(350, 85%, 60%)" stopOpacity={0} />
+                <stop offset="5%" stopColor="#FF6B6B" stopOpacity={0.15} />
+                <stop offset="95%" stopColor="#FF6B6B" stopOpacity={0} />
               </linearGradient>
             </defs>
             <XAxis
@@ -134,8 +134,8 @@ export function TrendChart({ transactions, title = "每日支出趋势" }: Trend
             <Area
               type="monotone"
               dataKey="value"
-              stroke="hsl(350, 85%, 60%)"
-              strokeWidth={2}
+              stroke="#FF6B6B"
+              strokeWidth={1.5}
               fill="url(#colorValue)"
             />
           </AreaChart>
