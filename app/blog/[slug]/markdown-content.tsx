@@ -25,23 +25,23 @@ function toText(children: ReactNode): string {
 
 export function MarkdownContent({ content }: { content: string }) {
   return (
-    <div className="prose prose-base max-w-none text-foreground/90 leading-[1.8]
+    <div className="prose prose-lg max-w-none text-foreground/90 leading-[1.9]
       prose-headings:text-foreground prose-headings:font-bold prose-headings:tracking-tight
-      prose-h1:text-2xl prose-h1:mt-10 prose-h1:mb-6 prose-h1:border-b prose-h1:border-border prose-h1:pb-3
-      prose-h2:text-xl prose-h2:mt-8 prose-h2:mb-4 prose-h2:text-foreground
-      prose-h3:text-lg prose-h3:mt-6 prose-h3:mb-3 prose-h3:text-foreground
-      prose-h4:text-base prose-h4:mt-5 prose-h4:mb-2 prose-h4:text-muted-foreground prose-h4:font-semibold
-      prose-p:my-4 prose-p:text-base
-      prose-a:text-primary prose-a:underline prose-a:underline-offset-4 prose-a:font-medium
+      prose-h1:text-3xl prose-h1:mt-12 prose-h1:mb-8 prose-h1:border-b-2 prose-h1:border-border prose-h1:pb-4
+      prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-6 prose-h2:text-foreground prose-h2:relative prose-h2:pl-5 prose-h2:before:absolute prose-h2:before:left-0 prose-h2:before:top-2 prose-h2:before:w-1.5 prose-h2:before:h-6 prose-h2:before:bg-gradient-to-b prose-h2:before:from-primary prose-h2:before:to-primary/50 prose-h2:before:rounded-full
+      prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-4 prose-h3:text-foreground
+      prose-h4:text-lg prose-h4:mt-6 prose-h4:mb-3 prose-h4:text-muted-foreground prose-h4:font-semibold
+      prose-p:my-5 prose-p:text-base
+      prose-a:text-primary prose-a:no-underline hover:prose-a:underline prose-a:underline-offset-4 prose-a:font-medium prose-a:transition-all
       prose-strong:text-foreground prose-strong:font-semibold
       prose-em:text-foreground/80 prose-em:italic
-      prose-ul:my-4 prose-ol:my-4 prose-li:my-2 prose-li:text-base
-      prose-blockquote:border-l-2 prose-blockquote:border-border prose-blockquote:text-muted-foreground prose-blockquote:not-italic prose-blockquote:bg-transparent prose-blockquote:pl-4 prose-blockquote:py-0 prose-blockquote:my-6
-      prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-code:text-foreground prose-code:font-mono
-      prose-pre:rounded-xl prose-pre:text-sm prose-pre:p-0 prose-pre:bg-transparent prose-pre:my-6
-      prose-hr:border-border prose-hr:my-8
-      prose-img:rounded-xl prose-img:shadow-md prose-img:my-6
-      prose-table:text-sm prose-th:bg-muted prose-th:text-foreground prose-th:font-semibold prose-td:text-foreground/80 prose-table:my-6
+      prose-ul:my-5 prose-ol:my-5 prose-li:my-2.5 prose-li:text-base
+      prose-blockquote:border-l-4 prose-blockquote:border-primary/30 prose-blockquote:text-muted-foreground prose-blockquote:not-italic prose-blockquote:bg-muted/40 prose-blockquote:pl-6 prose-blockquote:pr-4 prose-blockquote:py-4 prose-blockquote:my-8 prose-blockquote:rounded-r-xl
+      prose-code:bg-muted/70 prose-code:px-2.5 prose-code:py-1 prose-code:rounded-lg prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-code:text-foreground prose-code:font-mono prose-code:border prose-code:border-border/40
+      prose-pre:rounded-2xl prose-pre:text-sm prose-pre:p-0 prose-pre:bg-transparent prose-pre:my-8 prose-pre:shadow-lg prose-pre:border prose-pre:border-border/30
+      prose-hr:border-border prose-hr:my-10 prose-hr:h-px
+      prose-img:rounded-2xl prose-img:shadow-xl prose-img:my-8 prose-img:border prose-img:border-border/20
+      prose-table:text-sm prose-th:bg-muted/60 prose-th:text-foreground prose-th:font-semibold prose-td:text-foreground/80 prose-table:my-8 prose-table:rounded-xl prose-table:overflow-hidden prose-table:border prose-table:border-border/30
       prose-del:text-muted-foreground prose-del:line-through">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
