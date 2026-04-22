@@ -1,3 +1,4 @@
+"use client";
 
 import Link from "next/link";
 import { Calendar, Clock3, Search } from "lucide-react";
