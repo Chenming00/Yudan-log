@@ -38,7 +38,7 @@ export function MarkdownContent({ content }: { content: string }) {
       prose-ul:my-5 prose-ol:my-5 prose-li:my-2.5 prose-li:text-base
       prose-blockquote:border-l-4 prose-blockquote:border-primary/30 prose-blockquote:text-muted-foreground prose-blockquote:not-italic prose-blockquote:bg-muted/40 prose-blockquote:pl-6 prose-blockquote:pr-4 prose-blockquote:py-4 prose-blockquote:my-8 prose-blockquote:rounded-r-xl
       prose-code:bg-muted/70 prose-code:px-2.5 prose-code:py-1 prose-code:rounded-lg prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-code:text-foreground prose-code:font-mono prose-code:border prose-code:border-border/40
-      prose-pre:rounded-2xl prose-pre:text-sm prose-pre:p-0 prose-pre:bg-transparent prose-pre:my-8 prose-pre:shadow-lg prose-pre:border prose-pre:border-border/30
+      prose-pre:rounded-2xl prose-pre:text-sm prose-pre:p-0 prose-pre:bg-transparent prose-pre:my-8 prose-pre:shadow-lg
       prose-hr:border-border prose-hr:my-10 prose-hr:h-px
       prose-img:rounded-2xl prose-img:shadow-xl prose-img:my-8 prose-img:border prose-img:border-border/20
       prose-table:text-sm prose-th:bg-muted/60 prose-th:text-foreground prose-th:font-semibold prose-td:text-foreground/80 prose-table:my-8 prose-table:rounded-xl prose-table:overflow-hidden prose-table:border prose-table:border-border/30
