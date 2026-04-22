@@ -89,7 +89,7 @@ tags:
 ---
 
 *P.S. 这篇文章是在两杯美式咖啡的陪伴下写完的。咖啡因含量：约 300mg。Bug 产生率：暂时为零。*
-
+![](https://yudan-1251832332.cos.ap-singapore.myqcloud.com/IMAGE%202026-04-16%2023%3A13%3A20.jpg?imageSlim)
 ---
 
 ## 附录：关于这篇文章的「生产成本」
