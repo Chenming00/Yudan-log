@@ -1,4 +1,3 @@
-"use client";
 
 import Link from "next/link";
 import { Calendar, Clock3, Search } from "lucide-react";
@@ -18,22 +17,11 @@ interface BlogListClientProps {
 }
 
 export function BlogListClient({ posts }: BlogListClientProps) {
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // 提取所有标签
-  const allTags = useMemo(() => {
-    return Array.from(new Set(posts.flatMap((p) => p.tags)));
-  }, [posts]);
-
-  // 根据标签和搜索筛选
+  // 根据搜索筛选
   const filteredPosts = useMemo(() => {
     let result = posts;
-    
-    // 标签筛选
-    if (selectedTag) {
-      result = result.filter((p) => p.tags.includes(selectedTag));
-    }
     
     // 搜索筛选
     if (searchQuery.trim()) {
@@ -45,7 +33,7 @@ export function BlogListClient({ posts }: BlogListClientProps) {
     }
     
     return result;
-  }, [posts, selectedTag, searchQuery]);
+  }, [posts, searchQuery]);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -62,8 +50,8 @@ export function BlogListClient({ posts }: BlogListClientProps) {
         </div>
       </header>
 
-      {/* 搜索和筛选区域 */}
-      <div className="space-y-6 mb-10">
+      {/* 搜索区域 */}
+      <div className="mb-10">
         {/* 搜索框 */}
         <div className="relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -75,39 +63,10 @@ export function BlogListClient({ posts }: BlogListClientProps) {
             className="w-full h-12 pl-12 pr-5 rounded-2xl border-2 border-border/60 bg-white text-base placeholder:text-muted-foreground/60 focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary transition-all shadow-sm"
           />
         </div>
-
-        {/* 标签筛选 */}
-        {allTags.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setSelectedTag(null)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${
-                selectedTag === null
-                  ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-md shadow-primary/20"
-                  : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
-              }`}
-            >
-              全部
-            </button>
-            {allTags.map((tag) => (
-              <button
-                key={tag}
-                onClick={() => setSelectedTag(tag)}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition-all ${
-                  selectedTag === tag
-                    ? "bg-gradient-to-r from-primary to-primary/80 text-white shadow-md shadow-primary/20"
-                    : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
-                }`}
-              >
-                #{tag}
-              </button>
-            ))}
-          </div>
-        )}
       </div>
 
       {/* 文章列表 */}
-      <div className="space-y-5">
+      <div className="space-y-8">
         {filteredPosts.map((post, index) => (
           <Link key={post.slug} href={`/blog/${post.slug}`}>
             <article className="group relative rounded-3xl bg-white border border-border/40 p-7 transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/30 hover:-translate-y-1 cursor-pointer overflow-hidden">

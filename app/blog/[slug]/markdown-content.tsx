@@ -36,8 +36,6 @@ export function MarkdownContent({ content }: { content: string }) {
       prose-strong:text-foreground prose-strong:font-semibold
       prose-em:text-foreground/80 prose-em:italic
       prose-ul:my-5 prose-ol:my-5 prose-li:my-2.5 prose-li:text-base
-      prose-blockquote:border-l-4 prose-blockquote:border-primary/30 prose-blockquote:text-muted-foreground prose-blockquote:not-italic prose-blockquote:bg-muted/40 prose-blockquote:pl-6 prose-blockquote:pr-4 prose-blockquote:py-4 prose-blockquote:my-8 prose-blockquote:rounded-r-xl
-      prose-code:bg-muted/70 prose-code:px-2.5 prose-code:py-1 prose-code:rounded-lg prose-code:text-sm prose-code:before:content-none prose-code:after:content-none prose-code:text-foreground prose-code:font-mono prose-code:border prose-code:border-border/40
       prose-pre:rounded-2xl prose-pre:text-sm prose-pre:p-0 prose-pre:bg-transparent prose-pre:my-8 prose-pre:shadow-lg
       prose-hr:border-border prose-hr:my-10 prose-hr:h-px
       prose-img:rounded-2xl prose-img:shadow-xl prose-img:my-8 prose-img:border prose-img:border-border/20
@@ -64,6 +62,27 @@ export function MarkdownContent({ content }: { content: string }) {
               {children}
             </a>
           ),
+          blockquote: ({ children, ...props }) => {
+            // 过滤掉不适合 div 的 props
+            const { cite, ...divProps } = props as any;
+            return (
+              <div className="bg-muted/50 rounded-xl p-4 border border-border/50 flex gap-3 my-8 leading-7" {...divProps}>
+                <span className="text-2xl shrink-0">💡</span>
+                <div className="text-foreground/80">{children}</div>
+              </div>
+            );
+          },
+          code: ({ className, children, ...props }) => {
+            const match = /language-(\w+)/.exec(className || '');
+            const isInline = !match && !className?.includes('language-');
+            return !isInline ? (
+              <code className={className} {...props}>{children}</code>
+            ) : (
+              <code className="px-1.5 py-0.5 rounded-md bg-muted text-sm font-mono text-foreground/90 border border-border/30" {...props}>
+                {children}
+              </code>
+            );
+          },
         }}
       >
         {content}
