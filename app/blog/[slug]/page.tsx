@@ -115,9 +115,9 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               </div>
             </header>
 
-            {/* 目录 - 仅在小屏幕显示 */}
+            {/* 目录 - 仅在小屏幕显示，默认折叠 */}
             <div className="lg:hidden mb-8">
-              <TocCard headings={post.headings} />
+              <TocCard headings={post.headings} defaultOpen={false} />
             </div>
 
             {/* 正文内容 */}

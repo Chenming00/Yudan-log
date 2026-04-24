@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { ChevronDown, BookOpen } from 'lucide-react';
 import type { BlogHeading } from '@/lib/blog';
 
-export function TocCard({ headings }: { headings: BlogHeading[] }) {
-  const [isOpen, setIsOpen] = useState(true);
+export function TocCard({ headings, defaultOpen = true }: { headings: BlogHeading[]; defaultOpen?: boolean }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const [activeId, setActiveId] = useState<string>('');
 
   // 监听滚动，高亮当前激活的标题
