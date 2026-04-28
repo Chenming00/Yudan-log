@@ -61,7 +61,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           <Link href="/blog" className="text-muted-foreground hover:text-foreground transition-colors p-2 -ml-2 rounded-xl hover:bg-muted/80 active:bg-muted">
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <div className="flex-1 min-w-0 hidden sm:block">
+          <div className="flex-1 min-w-0">
             <h1 className="text-sm font-semibold text-foreground truncate">{post.title}</h1>
           </div>
         </div>
@@ -110,9 +110,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 </p>
               </div>
 
-              <div className="mt-6">
-                <PostActions title={post.title} summary={post.summary} />
-              </div>
             </header>
 
             {/* 目录 - 仅在小屏幕显示，默认折叠 */}
@@ -123,6 +120,12 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             {/* 正文内容 */}
             <div className="max-w-full sm:max-w-3xl">
               <MarkdownContent content={post.content} />
+            </div>
+
+            {/* 分享与复制 */}
+            <div className="mt-12 sm:mt-16 pt-8 sm:pt-10 border-t border-border/40 max-w-full sm:max-w-3xl">
+              <p className="text-sm font-medium text-muted-foreground mb-4">分享文章</p>
+              <PostActions title={post.title} summary={post.summary} />
             </div>
 
             {/* 文章底部导航 */}
