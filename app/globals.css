@@ -6,41 +6,41 @@
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   
   /* Notion/Linear 风格主题 */
-  --background: 0 0% 96.9%; /* #F7F7F7 */
-  --foreground: 20 14.3% 4.1%;
+  --background: hsl(0 0% 96.9%); /* #F7F7F7 */
+  --foreground: hsl(20 14.3% 4.1%);
   
-  --card: 0 0% 100%;
-  --card-foreground: 20 14.3% 4.1%;
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(20 14.3% 4.1%);
   
-  --popover: 0 0% 100%;
-  --popover-foreground: 20 14.3% 4.1%;
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(20 14.3% 4.1%);
   
-  --primary: 142.1 76.2% 36.3%; /* #6CBF84 */
-  --primary-foreground: 355.7 100% 97.3%;
+  --primary: hsl(142.1 76.2% 36.3%); /* #6CBF84 */
+  --primary-foreground: hsl(355.7 100% 97.3%);
   
-  --secondary: 60 4.8% 95.9%;
-  --secondary-foreground: 24 9.8% 10%;
+  --secondary: hsl(60 4.8% 95.9%);
+  --secondary-foreground: hsl(24 9.8% 10%);
   
-  --muted: 60 4.8% 95.9%;
-  --muted-foreground: 25 5.3% 44.7%;
+  --muted: hsl(60 4.8% 95.9%);
+  --muted-foreground: hsl(25 5.3% 44.7%);
   
-  --accent: 60 4.8% 95.9%;
-  --accent-foreground: 24 9.8% 10%;
+  --accent: hsl(60 4.8% 95.9%);
+  --accent-foreground: hsl(24 9.8% 10%);
   
-  --destructive: 0 84.2% 60.2%; /* #FF6B6B */
-  --destructive-foreground: 0 0% 98%;
+  --destructive: hsl(0 84.2% 60.2%); /* #FF6B6B */
+  --destructive-foreground: hsl(0 0% 98%);
   
-  --border: 60 4.8% 95.9%;
-  --input: 60 4.8% 95.9%;
-  --ring: 20 14.3% 4.1%;
+  --border: hsl(60 4.8% 95.9%);
+  --input: hsl(60 4.8% 95.9%);
+  --ring: hsl(20 14.3% 4.1%);
   
   --radius: 0.75rem;
   
-  --chart-1: 142.1 76.2% 36.3%;
-  --chart-2: 0 84.2% 60.2%;
-  --chart-3: 197 37% 24%;
-  --chart-4: 43 74% 66%;
-  --chart-5: 27 87% 67%;
+  --chart-1: hsl(142.1 76.2% 36.3%);
+  --chart-2: hsl(0 84.2% 60.2%);
+  --chart-3: hsl(197 37% 24%);
+  --chart-4: hsl(43 74% 66%);
+  --chart-5: hsl(27 87% 67%);
 }
 
 @utility pt-safe {
@@ -53,7 +53,7 @@
 
 @layer base {
   body {
-    background: hsl(var(--background));
+    background: var(--background);
     -webkit-tap-highlight-color: transparent;
   }
 
