@@ -57,31 +57,31 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       
       {/* 顶部导航栏 */}
       <header className="sticky top-0 z-50 bg-white/85 backdrop-blur-xl border-b border-border/30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center gap-3">
-          <Link href="/blog" className="text-muted-foreground hover:text-foreground transition-colors p-2 -ml-2 rounded-xl hover:bg-muted/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center gap-3">
+          <Link href="/blog" className="text-muted-foreground hover:text-foreground transition-colors p-2 -ml-2 rounded-xl hover:bg-muted/80 active:bg-muted">
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 hidden sm:block">
             <h1 className="text-sm font-semibold text-foreground truncate">{post.title}</h1>
           </div>
         </div>
       </header>
 
       {/* 文章内容区域 - 带侧边目录布局 */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <div className="max-w-7xl mx-auto px-5 sm:px-6">
         <div className="flex gap-8 lg:gap-12">
           {/* 主内容区 */}
-          <article className="flex-1 min-w-0 py-10 pb-[calc(env(safe-area-inset-bottom)+84px)]">
+          <article className="flex-1 min-w-0 py-6 sm:py-10 pb-[calc(env(safe-area-inset-bottom)+84px)]">
             {/* 文章头部信息 */}
-            <header className="mb-10">
+            <header className="mb-8 sm:mb-10">
               <div className="relative">
-                <div className="absolute -left-6 top-2 w-1 h-16 bg-gradient-to-b from-primary to-primary/50 rounded-full" />
-                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground leading-tight">
+                <div className="hidden sm:block absolute -left-6 top-2 w-1 h-16 bg-gradient-to-b from-primary to-primary/50 rounded-full" />
+                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-foreground leading-tight">
                   {post.title}
                 </h1>
               </div>
               
-              <div className="mt-6 flex flex-wrap items-center gap-5 text-sm text-muted-foreground">
+              <div className="mt-4 sm:mt-6 flex flex-wrap items-center gap-3 sm:gap-5 text-xs sm:text-sm text-muted-foreground">
                 {post.date && (
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4.5 w-4.5" />
@@ -95,16 +95,16 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               </div>
 
               {post.tags.length > 0 && (
-                <div className="mt-5 flex flex-wrap gap-2">
+                <div className="mt-4 sm:mt-5 flex flex-wrap gap-1.5 sm:gap-2">
                   {post.tags.map((tag) => (
-                    <span key={tag} className="rounded-full bg-gradient-to-r from-muted to-muted/80 px-3.5 py-1.5 text-xs font-medium text-muted-foreground/80">
+                    <span key={tag} className="rounded-full bg-gradient-to-r from-muted to-muted/80 px-3 py-1 sm:px-3.5 sm:py-1.5 text-xs font-medium text-muted-foreground/80">
                       #{tag}
                     </span>
                   ))}
                 </div>
               )}
 
-              <div className="mt-8 p-6 bg-gradient-to-r from-muted/60 to-muted/30 rounded-2xl border border-border/30">
+              <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-gradient-to-r from-muted/60 to-muted/30 rounded-2xl border border-border/30">
                 <p className="text-base text-muted-foreground leading-relaxed">
                   {post.summary}
                 </p>
@@ -121,24 +121,24 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             </div>
 
             {/* 正文内容 */}
-            <div className="max-w-3xl">
+            <div className="max-w-full sm:max-w-3xl">
               <MarkdownContent content={post.content} />
             </div>
 
             {/* 文章底部导航 */}
             {(previous || next) && (
-              <nav className="mt-16 pt-10 border-t border-border/40 max-w-3xl">
-                <div className="grid gap-5 sm:grid-cols-2">
+              <nav className="mt-12 sm:mt-16 pt-8 sm:pt-10 border-t border-border/40 max-w-full sm:max-w-3xl">
+                <div className="grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2">
                   {previous ? (
-                    <Link href={`/blog/${previous.slug}`} className="group p-5 rounded-2xl border-2 border-border/40 hover:border-primary/30 hover:bg-muted/30 transition-all">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">← 上一篇</p>
-                      <p className="text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">{previous.title}</p>
+                    <Link href={`/blog/${previous.slug}`} className="group p-4 sm:p-5 rounded-2xl border-2 border-border/40 hover:border-primary/30 hover:bg-muted/30 active:bg-muted/40 transition-all">
+                      <p className="text-xs font-medium text-muted-foreground mb-1.5 sm:mb-2">← 上一篇</p>
+                      <p className="text-sm sm:text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">{previous.title}</p>
                     </Link>
                   ) : <div />}
                   {next ? (
-                    <Link href={`/blog/${next.slug}`} className="group p-5 rounded-2xl border-2 border-border/40 hover:border-primary/30 hover:bg-muted/30 transition-all text-left sm:text-right">
-                      <p className="text-xs font-medium text-muted-foreground mb-2">下一篇 →</p>
-                      <p className="text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">{next.title}</p>
+                    <Link href={`/blog/${next.slug}`} className="group p-4 sm:p-5 rounded-2xl border-2 border-border/40 hover:border-primary/30 hover:bg-muted/30 active:bg-muted/40 transition-all text-left sm:text-right">
+                      <p className="text-xs font-medium text-muted-foreground mb-1.5 sm:mb-2">下一篇 →</p>
+                      <p className="text-sm sm:text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2">{next.title}</p>
                     </Link>
                   ) : <div />}
                 </div>

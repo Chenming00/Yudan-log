@@ -58,9 +58,23 @@
   }
 }
 
+/* Markdown content overflow protection */
+.prose img,
+.prose video {
+  max-width: 100%;
+  height: auto;
+}
+
+.prose table {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Markdown code block (highlight.js github-dark) */
 .prose pre {
   overflow-x: auto;
+  max-width: 100%;
 }
 .prose pre code.hljs {
   display: block;
@@ -83,4 +97,15 @@
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Blog article content: prevent horizontal overflow on small screens */
+@media (max-width: 640px) {
+  .blog-content pre {
+    border-radius: 0;
+    margin-left: -20px;
+    margin-right: -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
 }

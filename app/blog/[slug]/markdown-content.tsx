@@ -40,7 +40,7 @@ function CopyButton({ text }: { text: string }) {
 // --- 主组件 ---
 export function MarkdownContent({ content }: { content: string }) {
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-10">
+    <div className="w-full">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
@@ -87,7 +87,7 @@ export function MarkdownContent({ content }: { content: string }) {
           // 图片
           img: ({ alt, ...props }) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img alt={alt} className="rounded-lg my-6 w-full object-cover" {...props} />
+            <img alt={alt} className="rounded-lg my-6 w-full max-w-full object-cover" {...props} />
           ),
 
           hr: ({ ...props }) => <hr className="my-6 border-border" {...props} />,
@@ -144,7 +144,7 @@ export function MarkdownContent({ content }: { content: string }) {
              const language = codeChild?.className?.replace('language-', '') || 'text';
 
             return (
-              <div className="my-6 rounded-lg overflow-hidden border border-border bg-[#f6f8fa] dark:bg-[#0d1117]">
+              <div className="my-6 rounded-lg overflow-hidden border border-border bg-[#f6f8fa] dark:bg-[#0d1117] max-w-full">
                 {/* 顶部栏 */}
                 <div className="flex items-center justify-between px-3 py-2 text-xs text-gray-600 dark:text-muted-foreground bg-gray-100 dark:bg-muted/10">
                   <span className="uppercase tracking-wide">{language}</span>
