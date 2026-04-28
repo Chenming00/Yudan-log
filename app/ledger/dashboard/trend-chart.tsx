@@ -3,23 +3,24 @@
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
-
-interface Transaction {
-  id: string;
-  amount: number;
-  note: string;
-  category: string;
-  type: "expense" | "income";
-  transaction_time?: string;
-  created_at: string;
-}
+import { Transaction } from "../types";
 
 interface TrendChartProps {
   transactions: Transaction[];
   title?: string;
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface TooltipPayloadItem {
+  value: number;
+}
+
+interface TooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  label?: string;
+}
+
+const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
   if (active && payload && payload.length) {
     const value = payload[0].value;
     return (

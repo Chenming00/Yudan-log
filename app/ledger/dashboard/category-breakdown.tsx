@@ -1,16 +1,7 @@
 "use client";
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-
-interface Transaction {
-  id: string;
-  amount: number;
-  note: string;
-  category: string;
-  type: "expense" | "income";
-  transaction_time?: string;
-  created_at: string;
-}
+import { Transaction } from "../types";
 
 interface CategoryBreakdownProps {
   transactions: Transaction[];
@@ -27,7 +18,16 @@ const CHART_COLORS = [
   "hsl(200, 80%, 55%)",  // sky blue
 ];
 
-const CustomTooltip = ({ active, payload }: any) => {
+interface TooltipPayloadEntry {
+  payload: { name: string; value: number; percentage: number };
+}
+
+interface PieTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadEntry[];
+}
+
+const CustomTooltip = ({ active, payload }: PieTooltipProps) => {
   if (active && payload && payload.length) {
     const entry = payload[0].payload;
     return (

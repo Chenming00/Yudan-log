@@ -6,15 +6,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github.css';
 import { useState } from 'react';
-
-// --- 辅助函数 ---
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[`~!@#$%^&*()+=,[\]{}\\|;:'",.<>/?]/g, '')
-    .replace(/\s+/g, '-');
-}
+import { slugify } from '@/lib/utils';
 
 function toText(children: ReactNode): string {
   if (typeof children === 'string' || typeof children === 'number') return String(children);
