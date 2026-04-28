@@ -88,7 +88,7 @@ export default async function HomePage() {
               <div
                 className={`group rounded-2xl border ${mod.borderColor} ${mod.bgGradient} p-4 flex flex-col gap-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer`}
               >
-                <div className="w-10 h-10 rounded-xl bg-card/80 shadow-sm flex items-center justify-center border border-border/30">
+                <div className="w-10 h-10 rounded-xl bg-card shadow-sm flex items-center justify-center border border-border/30">
                 <mod.icon className={`h-5 w-5 ${mod.color}`} />
               </div>
               <div>

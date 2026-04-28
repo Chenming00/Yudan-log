@@ -75,7 +75,7 @@
 
 /* 毛玻璃效果 */
 .glass-effect {
-  @apply bg-white/80 backdrop-blur-xl;
+  @apply bg-white;
 }
 
 /* Markdown content overflow protection */

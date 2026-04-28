@@ -98,7 +98,7 @@ export default function LedgerPage() {
   }, [transactions]);
 
   return (
-    <main className="min-h-screen px-5 py-6 pb-[calc(env(safe-area-inset-bottom)+84px)] bg-muted/30">
+    <main className="min-h-screen px-5 py-6 pb-[calc(env(safe-area-inset-bottom)+84px)] bg-background">
       {/* Hero Banner */}
       <div className="relative rounded-2xl bg-gradient-to-br from-[#FF6B6B]/10 via-orange-50 to-amber-50 p-6 mb-6 overflow-hidden pt-safe">
         {/* 装饰性圆形 */}
