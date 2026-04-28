@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Settings, ArrowLeft, Plus } from "lucide-react";
-import Link from "next/link";
+import { Settings, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SummaryCards, TrendChart, CategoryBreakdown, DetailList } from "./dashboard";
 import { TransactionDialog } from "./components/transaction-dialog";
@@ -99,28 +98,33 @@ export default function LedgerPage() {
   }, [transactions]);
 
   return (
-    <main className="min-h-screen px-4 py-6 pb-[calc(env(safe-area-inset-bottom)+84px)]">
-      {/* 头部 */}
-      <header className="flex items-center justify-between pt-safe pb-2">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            className="pt-4 text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <h1 className="text-lg font-medium tracking-tight pt-4 text-foreground">
-            🐟 鱼蛋小账本
-          </h1>
+    <main className="min-h-screen px-5 py-6 pb-[calc(env(safe-area-inset-bottom)+84px)] bg-muted/30">
+      {/* Hero Banner */}
+      <div className="relative rounded-2xl bg-gradient-to-br from-[#FF6B6B]/10 via-orange-50 to-amber-50 p-6 mb-6 overflow-hidden pt-safe">
+        {/* 装饰性圆形 */}
+        <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-[#FF6B6B]/5" />
+        <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-orange-100/40" />
+
+        <div className="relative">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
+                🐟 鱼蛋小账本
+              </h1>
+              <p className="mt-2 text-base text-muted-foreground">
+                记录每一笔收支
+              </p>
+            </div>
+            <button
+              onClick={() => setSettingsOpen(true)}
+              className="text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="设置"
+            >
+              <Settings className="h-5 w-5" />
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setSettingsOpen(true)}
-          className="pt-4 text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="设置"
-        >
-          <Settings className="h-5 w-5" />
-        </button>
-      </header>
+      </div>
 
       {/* 主要内容区 */}
       <div className="mt-4 space-y-4">

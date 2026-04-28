@@ -20,8 +20,14 @@ function formatDate(dateStr: string) {
 export function DetailList({ transactions, onSelect }: DetailListProps) {
   if (transactions.length === 0) {
     return (
-      <div className="rounded-2xl bg-white shadow-sm p-8 text-center">
-        <p className="text-muted-foreground text-sm">暂无交易记录</p>
+      <div className="rounded-2xl bg-card border border-dashed border-border p-10 text-center">
+        <div className="w-14 h-14 rounded-full bg-[#FF6B6B]/10 mx-auto flex items-center justify-center mb-4">
+          <span className="text-2xl">📭</span>
+        </div>
+        <p className="font-medium text-foreground text-sm">暂无交易记录</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          点击右下角 + 号开始记账吧
+        </p>
       </div>
     );
   }
@@ -47,7 +53,7 @@ export function DetailList({ transactions, onSelect }: DetailListProps) {
               <button
                 key={t.id}
                 onClick={() => onSelect(t)}
-                className="w-full flex items-center justify-between rounded-2xl bg-white shadow-sm p-4 hover:bg-accent transition-colors text-left"
+                className="w-full flex items-center justify-between rounded-2xl bg-card border border-border p-4 hover:bg-accent transition-colors text-left"
               >
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-foreground truncate">

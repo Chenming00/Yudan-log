@@ -74,7 +74,7 @@ export function TrendChart({ transactions, title = "每日支出趋势" }: Trend
   const avgDaily = totalExpense / timeRange;
 
   return (
-    <div className="rounded-2xl bg-white shadow-sm p-5">
+    <div className="rounded-2xl bg-card border border-border p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
           <p className="text-sm text-muted-foreground">{title}</p>

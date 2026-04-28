@@ -89,15 +89,10 @@ export function BlogListClient({ posts }: BlogListClientProps) {
       {/* 文章列表 - 双列网格 */}
       {filteredPosts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {filteredPosts.map((post, index) => (
+          {filteredPosts.map((post) => (
             <Link key={post.slug} href={`/blog/${post.slug}`}>
               <article className="group relative h-full rounded-2xl bg-card border border-border p-5 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 cursor-pointer">
-                {/* 序号装饰 */}
-                <span className="absolute top-4 right-4 text-5xl font-bold text-foreground/[0.04] leading-none select-none">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-
-                <div className="relative">
+                <div>
                   <h2 className="text-base sm:text-lg font-semibold text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors">
                     {post.title}
                   </h2>

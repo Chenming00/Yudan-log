@@ -60,7 +60,7 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
 
   if (data.length === 0) {
     return (
-      <div className="rounded-2xl bg-white shadow-sm p-6">
+      <div className="rounded-2xl bg-card border border-border p-6">
         <p className="text-sm font-medium text-muted-foreground mb-4">{title}</p>
         <p className="text-center text-muted-foreground text-sm py-8">暂无数据</p>
       </div>
@@ -68,7 +68,7 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
   }
 
   return (
-    <div className="rounded-2xl bg-white shadow-sm p-4">
+    <div className="rounded-2xl bg-card border border-border p-4">
       <p className="text-sm font-medium text-muted-foreground mb-4">{title}</p>
       <div className="flex flex-col sm:flex-row gap-6">
         {/* 饼图 */}
