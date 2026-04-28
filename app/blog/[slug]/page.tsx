@@ -74,38 +74,39 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           <article className="flex-1 min-w-0 py-6 sm:py-10 pb-[calc(env(safe-area-inset-bottom)+84px)]">
             {/* 文章头部信息 */}
             <header className="mb-8 sm:mb-10">
-              <div className="relative">
-                <div className="hidden sm:block absolute -left-6 top-2 w-1 h-16 bg-gradient-to-b from-primary to-primary/50 rounded-full" />
-                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-bold text-foreground leading-tight">
-                  {post.title}
-                </h1>
-              </div>
+              <h1 className="text-[26px] sm:text-3xl lg:text-[40px] font-bold text-foreground leading-tight tracking-tight">
+                {post.title}
+              </h1>
               
-              <div className="mt-4 sm:mt-6 flex flex-wrap items-center gap-3 sm:gap-5 text-xs sm:text-sm text-muted-foreground">
+              <div className="mt-4 sm:mt-5 flex flex-wrap items-center gap-3 sm:gap-5 text-xs sm:text-sm text-muted-foreground">
                 {post.date && (
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4.5 w-4.5" />
-                    <span className="font-medium">{post.date}</span>
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="h-4 w-4" />
+                    <span>{post.date}</span>
                   </div>
                 )}
-                <div className="flex items-center gap-2">
-                  <Clock3 className="h-4.5 w-4.5" />
-                  <span className="font-medium">{post.readingTime} 分钟阅读</span>
+                <div className="flex items-center gap-1.5">
+                  <Clock3 className="h-4 w-4" />
+                  <span>{post.readingTime} 分钟阅读</span>
                 </div>
               </div>
 
               {post.tags.length > 0 && (
-                <div className="mt-4 sm:mt-5 flex flex-wrap gap-1.5 sm:gap-2">
+                <div className="mt-3 sm:mt-4 flex flex-wrap gap-1.5 sm:gap-2">
                   {post.tags.map((tag) => (
-                    <span key={tag} className="rounded-full bg-muted/80 px-3 py-1 sm:px-3.5 sm:py-1.5 text-xs font-medium text-muted-foreground/80 border border-border/30">
+                    <span key={tag} className="rounded-full bg-muted/80 px-2.5 py-1 text-xs font-medium text-muted-foreground/80 border border-border/30">
                       #{tag}
                     </span>
                   ))}
                 </div>
               )}
 
-              <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-muted/40 rounded-2xl border border-border/30">
-                <p className="text-base text-muted-foreground leading-relaxed">
+              {/* 摘要 - 明确区分 */}
+              <div className="mt-6 sm:mt-8 border-l-[3px] border-primary/40 pl-4 sm:pl-5 py-1">
+                <p className="text-[11px] uppercase tracking-widest font-semibold text-primary/70 mb-2">
+                  摘要
+                </p>
+                <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
                   {post.summary}
                 </p>
               </div>

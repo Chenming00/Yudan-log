@@ -55,26 +55,22 @@ export default async function HomePage() {
   return (
     <main className="min-h-screen px-5 py-6 pb-[calc(env(safe-area-inset-bottom)+100px)]">
       {/* Hero Banner */}
-      <div className="relative rounded-2xl bg-gradient-to-br from-primary/10 via-emerald-50 to-teal-50 p-5 mb-8 overflow-hidden pt-safe">
-        {/* Decorative circles */}
-        <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-primary/5" />
-        <div className="absolute -bottom-4 -left-4 w-20 h-20 rounded-full bg-emerald-100/40" />
-
-        <div className="relative flex items-center gap-4">
+      <div className="relative mb-8 pt-safe">
+        <div className="relative flex items-center gap-4 px-1 py-2">
           <div className="relative shrink-0">
             <Image
               src="/apple-home-logo.png"
               alt="头像"
-              width={56}
-              height={56}
-              sizes="56px"
-              className="h-14 w-14 rounded-full object-cover shadow-md ring-2 ring-white"
+              width={52}
+              height={52}
+              sizes="52px"
+              className="h-[52px] w-[52px] rounded-2xl object-cover shadow-sm"
               priority
             />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-foreground">
-              {greeting.text} {greeting.emoji}
+            <h1 className="text-[22px] font-bold tracking-tight text-foreground">
+              {greeting.text}，{greeting.emoji}
             </h1>
             <p className="text-sm text-muted-foreground mt-0.5">{greeting.sub}</p>
           </div>

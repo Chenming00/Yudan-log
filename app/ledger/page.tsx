@@ -100,29 +100,23 @@ export default function LedgerPage() {
   return (
     <main className="min-h-screen px-5 py-6 pb-[calc(env(safe-area-inset-bottom)+84px)] bg-background">
       {/* Hero Banner */}
-      <div className="relative rounded-2xl bg-gradient-to-br from-[#FF6B6B]/10 via-orange-50 to-amber-50 p-6 mb-6 overflow-hidden pt-safe">
-        {/* 装饰性圆形 */}
-        <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-[#FF6B6B]/5" />
-        <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-orange-100/40" />
-
-        <div className="relative">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-                🐟 鱼蛋小账本
-              </h1>
-              <p className="mt-2 text-base text-muted-foreground">
-                记录每一笔收支
-              </p>
-            </div>
-            <button
-              onClick={() => setSettingsOpen(true)}
-              className="text-muted-foreground hover:text-foreground transition-colors"
-              aria-label="设置"
-            >
-              <Settings className="h-5 w-5" />
-            </button>
+      <div className="relative mb-6 pt-safe">
+        <div className="flex items-center justify-between py-2">
+          <div>
+            <h1 className="text-[26px] sm:text-3xl font-bold tracking-tight text-foreground">
+              🐟 鱼蛋小账本
+            </h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              记录每一笔收支
+            </p>
           </div>
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+            aria-label="设置"
+          >
+            <Settings className="h-[18px] w-[18px]" />
+          </button>
         </div>
       </div>
 

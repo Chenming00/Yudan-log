@@ -53,22 +53,16 @@ export function BlogListClient({ posts }: BlogListClientProps) {
     <div className="max-w-4xl mx-auto">
       {/* 头部区域 */}
       <header className="pt-safe pb-8">
-        <div className="relative rounded-2xl bg-gradient-to-br from-primary/10 via-emerald-50 to-teal-50 p-6 overflow-hidden">
-          {/* 装饰性圆形 */}
-          <div className="absolute -top-10 -right-10 w-36 h-36 rounded-full bg-primary/5" />
-          <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-emerald-100/40" />
-
-          <div className="relative">
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
-              🌱 成长 Log
-            </h1>
-            <p className="mt-2 text-base text-muted-foreground">
-              用文字记录成长的每一步
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground/70">
-              共 {posts.length} 篇文章
-            </p>
-          </div>
+        <div className="relative py-4">
+          <h1 className="text-[26px] sm:text-3xl font-bold tracking-tight text-foreground">
+            🌱 成长 Log
+          </h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            用文字记录成长的每一步
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground/60">
+            共 {posts.length} 篇文章
+          </p>
         </div>
       </header>
 
