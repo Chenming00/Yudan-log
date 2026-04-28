@@ -120,13 +120,13 @@ export function TrendChart({ transactions, title = "每日支出趋势" }: Trend
             </defs>
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
               axisLine={false}
               tickLine={false}
               interval={timeRange === 7 ? 0 : 4}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(value) => `¥${value}`}
