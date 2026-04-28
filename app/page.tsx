@@ -85,10 +85,10 @@ export default async function HomePage() {
       <div className="grid grid-cols-2 gap-3 mb-8">
         {modules.map((mod) => (
           <Link key={mod.href} href={mod.href}>
-            <div
-              className={`group rounded-2xl border ${mod.borderColor} ${mod.bgGradient} p-4 flex flex-col gap-3 transition-all hover:shadow-md active:scale-[0.98] cursor-pointer`}
-            >
-              <div className="w-10 h-10 rounded-xl bg-white/80 shadow-sm flex items-center justify-center">
+              <div
+                className={`group rounded-2xl border ${mod.borderColor} ${mod.bgGradient} p-4 flex flex-col gap-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer`}
+              >
+                <div className="w-10 h-10 rounded-xl bg-card/80 shadow-sm flex items-center justify-center border border-border/30">
                 <mod.icon className={`h-5 w-5 ${mod.color}`} />
               </div>
               <div>
@@ -117,7 +117,7 @@ export default async function HomePage() {
           <div className="space-y-3">
             {posts.map((post) => (
               <Link key={post.slug} href={`/blog/${post.slug}`}>
-                <article className="rounded-xl bg-white shadow-sm border border-gray-100 p-4 transition-all hover:shadow-md active:scale-[0.99] cursor-pointer">
+                <article className="rounded-xl bg-card shadow-sm border border-border/50 p-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer">
                   <h3 className="font-medium text-sm text-foreground leading-snug">
                     {post.title}
                   </h3>
@@ -147,7 +147,7 @@ export default async function HomePage() {
           </div>
         ) : (
           /* Empty State */
-          <div className="rounded-xl bg-white border border-dashed border-gray-200 p-8 text-center">
+          <div className="rounded-xl bg-card border border-dashed border-border p-8 text-center">
             <div className="w-12 h-12 rounded-full bg-primary/10 mx-auto flex items-center justify-center mb-3">
               <BookOpen className="h-5 w-5 text-primary" />
             </div>

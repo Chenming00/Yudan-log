@@ -32,7 +32,7 @@ export function TocCard({ headings, defaultOpen = true }: { headings: BlogHeadin
   if (headings.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-border/40 bg-gradient-to-br from-white to-muted/20 p-5 shadow-sm">
+    <div className="rounded-2xl border border-border/50 bg-card p-5">
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
@@ -53,7 +53,7 @@ export function TocCard({ headings, defaultOpen = true }: { headings: BlogHeadin
             <a
               key={heading.id}
               href={`#${heading.id}`}
-              className={`block text-sm py-2 min-h-[40px] flex items-center rounded-lg transition-all duration-200 ${
+              className={`block text-sm py-2 min-h-[40px] flex items-center rounded-xl transition-all duration-200 ${
                 activeId === heading.id
                   ? 'bg-primary/10 text-primary font-medium'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 active:bg-muted/60'

@@ -81,7 +81,7 @@ export function BlogListClient({ posts }: BlogListClientProps) {
             placeholder="搜索文章..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-12 pl-12 pr-5 rounded-xl bg-card text-base placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all shadow-sm border border-border"
+            className="w-full h-12 pl-12 pr-5 rounded-xl bg-card text-base placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all shadow-sm border border-border"
           />
         </div>
       </div>
@@ -91,7 +91,7 @@ export function BlogListClient({ posts }: BlogListClientProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {filteredPosts.map((post) => (
             <Link key={post.slug} href={`/blog/${post.slug}`}>
-              <article className="group relative h-full rounded-2xl bg-card border border-border p-5 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 cursor-pointer">
+              <article className="group relative h-full rounded-2xl bg-card border border-border/50 p-5 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer">
                 <div>
                   <h2 className="text-base sm:text-lg font-semibold text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors">
                     {post.title}
@@ -129,7 +129,7 @@ export function BlogListClient({ posts }: BlogListClientProps) {
           ))}
         </div>
       ) : (
-        <div className="mt-10 rounded-2xl bg-card border border-dashed border-border p-10 text-center">
+        <div className="mt-10 rounded-2xl bg-card border border-dashed border-border/50 p-10 text-center">
           <div className="w-14 h-14 rounded-full bg-primary/10 mx-auto flex items-center justify-center mb-4">
             <span className="text-2xl">
               {searchQuery ? "🔍" : "📭"}

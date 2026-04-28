@@ -52,11 +52,11 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const { previous, next } = getAdjacentPosts(slug);
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-background">
       <ReadingProgress />
       
       {/* 顶部导航栏 */}
-      <header className="sticky top-0 z-50 bg-white/85 backdrop-blur-xl border-b border-border/30">
+      <header className="sticky top-0 z-50 glass-effect border-b border-border/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center gap-3">
           <Link href="/blog" className="text-muted-foreground hover:text-foreground transition-colors p-2 -ml-2 rounded-xl hover:bg-muted/80 active:bg-muted">
             <ArrowLeft className="h-5 w-5" />
@@ -97,14 +97,14 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               {post.tags.length > 0 && (
                 <div className="mt-4 sm:mt-5 flex flex-wrap gap-1.5 sm:gap-2">
                   {post.tags.map((tag) => (
-                    <span key={tag} className="rounded-full bg-gradient-to-r from-muted to-muted/80 px-3 py-1 sm:px-3.5 sm:py-1.5 text-xs font-medium text-muted-foreground/80">
+                    <span key={tag} className="rounded-full bg-muted/80 px-3 py-1 sm:px-3.5 sm:py-1.5 text-xs font-medium text-muted-foreground/80 border border-border/30">
                       #{tag}
                     </span>
                   ))}
                 </div>
               )}
 
-              <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-gradient-to-r from-muted/60 to-muted/30 rounded-2xl border border-border/30">
+              <div className="mt-6 sm:mt-8 p-4 sm:p-6 bg-muted/40 rounded-2xl border border-border/30">
                 <p className="text-base text-muted-foreground leading-relaxed">
                   {post.summary}
                 </p>

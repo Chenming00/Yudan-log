@@ -56,6 +56,26 @@
     background: hsl(var(--background));
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* 统一过渡动画 */
+  * {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* 统一卡片悬浮效果 */
+.card-hover {
+  @apply transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99];
+}
+
+/* 统一按钮按压效果 */
+.btn-press {
+  @apply transition-all duration-150 active:scale-[0.97];
+}
+
+/* 毛玻璃效果 */
+.glass-effect {
+  @apply bg-white/80 backdrop-blur-xl;
 }
 
 /* Markdown content overflow protection */
