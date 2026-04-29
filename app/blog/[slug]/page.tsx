@@ -7,6 +7,8 @@ import { MarkdownContent } from './markdown-content';
 import { PostActions } from './post-actions';
 import { TocCard } from './toc-card';
 import { ReadingProgress } from './reading-progress';
+import { AiSummary } from './ai-summary';
+import { AiChat } from './ai-chat';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.BASE_URL || 'http://localhost:3000';
 
@@ -103,7 +105,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       <div className="max-w-7xl mx-auto px-5 sm:px-6">
         <div className="flex gap-8 lg:gap-12">
           {/* 主内容区 */}
-          <article className="flex-1 min-w-0 py-6 sm:py-10 pb-[calc(env(safe-area-inset-bottom)+84px)]">
+          <article className="flex-1 min-w-0 py-6 sm:py-10 pb-[calc(env(safe-area-inset-bottom)+120px)]">
             {/* 文章头部信息 */}
             <header className="mb-8 sm:mb-10">
               <h1 className="text-[26px] sm:text-3xl lg:text-[40px] font-bold text-foreground leading-tight tracking-tight">
@@ -143,6 +145,9 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 </p>
               </div>
 
+              {/* AI 总结 */}
+              <AiSummary slug={post.slug} />
+
             </header>
 
             {/* 目录 - 仅在小屏幕显示，默认折叠 */}
@@ -154,6 +159,9 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             <div className="max-w-full sm:max-w-3xl">
               <MarkdownContent content={post.content} />
             </div>
+
+            {/* 文章问答 */}
+            <AiChat slug={post.slug} />
 
             {/* 分享与复制 */}
             <div className="mt-12 sm:mt-16 pt-8 sm:pt-10 border-t border-border/40 max-w-full sm:max-w-3xl">
@@ -180,6 +188,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 </div>
               </nav>
             )}
+
           </article>
 
           {/* 侧边目录 - 仅在大屏幕显示 */}

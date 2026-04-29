@@ -28,7 +28,7 @@ export interface BlogPost {
   content: string;
 }
 
-function stripMarkdown(markdown: string) {
+export function stripMarkdown(markdown: string) {
   return markdown
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/`([^`]+)`/g, '$1')
