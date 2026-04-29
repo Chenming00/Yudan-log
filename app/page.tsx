@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import Image from 'next/image';
 import { BookOpen, Wallet, ArrowRight } from 'lucide-react';
 import { getAllPosts } from '@/lib/blog';
+import { Greeting } from './greeting';
 
 export const metadata: Metadata = {
   title: '鱼蛋宝宝 - 记录生活的每一面',
@@ -17,16 +17,6 @@ export const metadata: Metadata = {
     url: '/',
   },
 };
-
-function getGreeting() {
-  const hour = new Date().getHours();
-  if (hour < 6) return { text: '夜深了', emoji: '🌙', sub: '注意休息哦' };
-  if (hour < 11) return { text: '早安', emoji: '☀️', sub: '新的一天，元气满满' };
-  if (hour < 14) return { text: '午安', emoji: '🌤', sub: '吃好午饭，小憩一下' };
-  if (hour < 18) return { text: '下午好', emoji: '☕', sub: '来杯咖啡提提神' };
-  if (hour < 22) return { text: '晚上好', emoji: '🌆', sub: '放松心情，享受夜晚' };
-  return { text: '夜深了', emoji: '🌙', sub: '早点休息，晚安好梦' };
-}
 
 function getRelativeTime(dateStr: string): string {
   const now = new Date();
@@ -65,115 +55,98 @@ const modules = [
 
 export default async function HomePage() {
   const posts = getAllPosts().slice(0, 3);
-  const greeting = getGreeting();
 
   return (
-    <main className="min-h-screen px-5 py-6 pb-[calc(env(safe-area-inset-bottom)+100px)]">
-      {/* Hero Banner */}
-      <div className="relative mb-8 pt-safe">
-        <div className="relative flex items-center gap-4 px-1 py-2">
-          <div className="relative shrink-0">
-            <Image
-              src="/apple-home-logo.png"
-              alt="头像"
-              width={52}
-              height={52}
-              sizes="52px"
-              className="h-[52px] w-[52px] rounded-2xl object-cover shadow-sm"
-              priority
-            />
-          </div>
-          <div>
-            <h1 className="text-[22px] font-bold tracking-tight text-foreground">
-              {greeting.text}，{greeting.emoji}
-            </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">{greeting.sub}</p>
-          </div>
+    <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8 pb-[calc(env(safe-area-inset-bottom)+100px)]">
+      <div className="max-w-5xl mx-auto">
+        {/* Hero Banner */}
+        <div className="relative mb-10 pt-safe">
+          <Greeting />
         </div>
-      </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-3 mb-8">
-        {modules.map((mod) => (
-          <Link key={mod.href} href={mod.href}>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 gap-3 mb-10 sm:gap-4 lg:grid-cols-2">
+          {modules.map((mod) => (
+            <Link key={mod.href} href={mod.href}>
               <div
-                className={`group rounded-2xl border ${mod.borderColor} ${mod.bgGradient} p-4 flex flex-col gap-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer`}
+                className={`group rounded-2xl border ${mod.borderColor} ${mod.bgGradient} p-4 flex flex-col gap-3 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.98] cursor-pointer sm:p-5 lg:p-6`}
               >
-                <div className="w-10 h-10 rounded-xl bg-card shadow-sm flex items-center justify-center border border-border/30">
-                <mod.icon className={`h-5 w-5 ${mod.color}`} />
+                <div className="w-10 h-10 rounded-xl bg-card shadow-sm flex items-center justify-center border border-border/30 sm:w-12 sm:h-12">
+                  <mod.icon className={`h-5 w-5 ${mod.color} sm:h-6 sm:w-6`} />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-sm text-foreground sm:text-base">{mod.title}</h2>
+                  <p className="text-xs text-muted-foreground mt-0.5 sm:text-sm">{mod.description}</p>
+                </div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground transition-colors sm:text-sm">
+                  <span>进入</span>
+                  <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5 sm:h-4 sm:w-4" />
+                </div>
               </div>
-              <div>
-                <h2 className="font-semibold text-sm text-foreground">{mod.title}</h2>
-                <p className="text-xs text-muted-foreground mt-0.5">{mod.description}</p>
-              </div>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground transition-colors">
-                <span>进入</span>
-                <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
-
-      {/* Recent Posts */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-foreground">最近动态</h2>
-          <Link href="/blog" className="text-xs text-primary hover:underline">
-            查看全部
-          </Link>
+            </Link>
+          ))}
         </div>
 
-        {posts.length > 0 ? (
-          <div className="space-y-3">
-            {posts.map((post) => (
-              <Link key={post.slug} href={`/blog/${post.slug}`}>
-                <article className="rounded-xl bg-card shadow-sm border border-border/50 p-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer">
-                  <h3 className="font-medium text-sm text-foreground leading-snug">
-                    {post.title}
-                  </h3>
-                  {post.summary && (
-                    <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">
-                      {post.summary}
-                    </p>
-                  )}
-                  <div className="mt-3 flex items-center justify-between">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {post.tags.slice(0, 2).map((tag) => (
-                        <span
-                          key={tag}
-                          className="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full bg-primary/10 text-primary"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                    <span className="text-[11px] text-muted-foreground shrink-0">
-                      {getRelativeTime(post.date)}
-                    </span>
-                  </div>
-                </article>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          /* Empty State */
-          <div className="rounded-xl bg-card border border-dashed border-border p-8 text-center">
-            <div className="w-12 h-12 rounded-full bg-primary/10 mx-auto flex items-center justify-center mb-3">
-              <BookOpen className="h-5 w-5 text-primary" />
-            </div>
-            <p className="text-sm font-medium text-foreground">还没有动态</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              去写第一篇成长日志吧 ✍️
-            </p>
-            <Link
-              href="/blog"
-              className="inline-block mt-4 px-4 py-2 text-xs font-medium rounded-full bg-primary text-white hover:bg-primary/90 transition-colors"
-            >
-              去写日志
+        {/* Recent Posts */}
+        <div className="space-y-4 sm:space-y-5">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-foreground sm:text-base">最近动态</h2>
+            <Link href="/blog" className="text-xs text-primary hover:underline sm:text-sm">
+              查看全部
             </Link>
           </div>
-        )}
+
+          {posts.length > 0 ? (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+              {posts.map((post) => (
+                <Link key={post.slug} href={`/blog/${post.slug}`}>
+                  <article className="rounded-xl bg-card shadow-sm border border-border/50 p-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer sm:p-5 h-full flex flex-col">
+                    <h3 className="font-medium text-sm text-foreground leading-snug sm:text-base">
+                      {post.title}
+                    </h3>
+                    {post.summary && (
+                      <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed sm:text-sm flex-1">
+                        {post.summary}
+                      </p>
+                    )}
+                    <div className="mt-3 flex items-center justify-between">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {post.tags.slice(0, 2).map((tag) => (
+                          <span
+                            key={tag}
+                            className="inline-block px-2 py-0.5 text-[10px] font-medium rounded-full bg-primary/10 text-primary sm:text-xs"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                      <span className="text-[11px] text-muted-foreground shrink-0 sm:text-xs">
+                        {getRelativeTime(post.date)}
+                      </span>
+                    </div>
+                  </article>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            /* Empty State */
+            <div className="rounded-xl bg-card border border-dashed border-border p-8 text-center sm:p-12">
+              <div className="w-12 h-12 rounded-full bg-primary/10 mx-auto flex items-center justify-center mb-3 sm:w-16 sm:h-16">
+                <BookOpen className="h-5 w-5 text-primary sm:h-6 sm:w-6" />
+              </div>
+              <p className="text-sm font-medium text-foreground sm:text-base">还没有动态</p>
+              <p className="text-xs text-muted-foreground mt-1 sm:text-sm">
+                去写第一篇成长日志吧 ✍️
+              </p>
+              <Link
+                href="/blog"
+                className="inline-block mt-4 px-4 py-2 text-xs font-medium rounded-full bg-primary text-white hover:bg-primary/90 transition-colors sm:text-sm sm:px-6 sm:py-3"
+              >
+                去写日志
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
     </main>
   );
