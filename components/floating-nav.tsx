@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BookOpen, Home, Wallet } from "lucide-react";
+import { BookOpen, Home, MessageSquare, Wallet } from "lucide-react";
 
 const items = [
   {
@@ -22,6 +22,12 @@ const items = [
     label: "Log",
     icon: BookOpen,
     match: (pathname: string) => pathname.startsWith("/blog"),
+  },
+  {
+    href: "/chat",
+    label: "AI",
+    icon: MessageSquare,
+    match: (pathname: string) => pathname.startsWith("/chat"),
   },
 ];
 
