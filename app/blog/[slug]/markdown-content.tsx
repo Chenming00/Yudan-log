@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
+import rehypeRaw from 'rehype-raw';
 import 'highlight.js/styles/github.css';
 import { useState, useEffect, useCallback } from 'react';
 import { slugify } from '@/lib/utils';
@@ -123,7 +124,7 @@ export function MarkdownContent({ content }: { content: string }) {
     <div className="w-full">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeHighlight]}
+        rehypePlugins={[rehypeHighlight, rehypeRaw]}
         components={{
           // 标题
           h1: ({ children, ...props }) => (
@@ -261,7 +262,7 @@ export function MarkdownContent({ content }: { content: string }) {
 
             if (isInline) {
               return (
-                <code className="bg-muted px-1.5 py-0.5 rounded text-sm" {...props}>
+                <code className="bg-muted/80 px-1.5 py-0.5 rounded text-[0.85em] font-mono text-primary/90 border border-border/40" {...props}>
                   {children}
                 </code>
               );
