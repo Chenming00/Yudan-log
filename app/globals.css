@@ -4,43 +4,63 @@
 @theme {
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  
-  /* Notion/Linear 风格主题 */
-  --background: 0 0% 96.9%; /* #F7F7F7 */
-  --foreground: 20 14.3% 4.1%;
-  
-  --card: 0 0% 100%;
-  --card-foreground: 20 14.3% 4.1%;
-  
-  --popover: 0 0% 100%;
-  --popover-foreground: 20 14.3% 4.1%;
-  
-  --primary: 142.1 76.2% 36.3%; /* #6CBF84 */
-  --primary-foreground: 355.7 100% 97.3%;
-  
-  --secondary: 60 4.8% 95.9%;
-  --secondary-foreground: 24 9.8% 10%;
-  
-  --muted: 60 4.8% 95.9%;
-  --muted-foreground: 25 5.3% 44.7%;
-  
-  --accent: 60 4.8% 95.9%;
-  --accent-foreground: 24 9.8% 10%;
-  
-  --destructive: 0 84.2% 60.2%; /* #FF6B6B */
-  --destructive-foreground: 0 0% 98%;
-  
-  --border: 60 4.8% 95.9%;
-  --input: 60 4.8% 95.9%;
-  --ring: 20 14.3% 4.1%;
-  
   --radius: 0.75rem;
-  
-  --chart-1: 142.1 76.2% 36.3%;
-  --chart-2: 0 84.2% 60.2%;
-  --chart-3: 197 37% 24%;
-  --chart-4: 43 74% 66%;
-  --chart-5: 27 87% 67%;
+}
+
+/* Notion/Linear 风格主题 - CSS 自定义属性 */
+:root {
+  --background: oklch(0.973 0 0); /* #F7F7F7 */
+  --foreground: oklch(0.145 0.005 49.25);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0.005 49.25);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0.005 49.25);
+  --primary: oklch(0.6 0.14 155); /* #6CBF84 */
+  --primary-foreground: oklch(0.97 0.01 355);
+  --secondary: oklch(0.965 0.001 106);
+  --secondary-foreground: oklch(0.145 0.005 49.25);
+  --muted: oklch(0.965 0.001 106);
+  --muted-foreground: oklch(0.48 0.015 70);
+  --accent: oklch(0.965 0.001 106);
+  --accent-foreground: oklch(0.145 0.005 49.25);
+  --destructive: oklch(0.637 0.237 25.331); /* #FF6B6B */
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.922 0.004 286.32);
+  --input: oklch(0.922 0.004 286.32);
+  --ring: oklch(0.145 0.005 49.25);
+  --chart-1: oklch(0.6 0.14 155);
+  --chart-2: oklch(0.637 0.237 25.331);
+  --chart-3: oklch(0.398 0.07 227.37);
+  --chart-4: oklch(0.82 0.12 80);
+  --chart-5: oklch(0.77 0.12 55);
+}
+
+/* 注册为 Tailwind 颜色工具类 */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
 }
 
 @utility pt-safe {
@@ -53,14 +73,48 @@
 
 @layer base {
   body {
-    background: hsl(var(--background));
+    background: var(--color-background);
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* 统一过渡动画 */
+  * {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* 统一卡片悬浮效果 */
+.card-hover {
+  @apply transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99];
+}
+
+/* 统一按钮按压效果 */
+.btn-press {
+  @apply transition-all duration-150 active:scale-[0.97];
+}
+
+/* 毛玻璃效果 */
+.glass-effect {
+  @apply bg-white;
+}
+
+/* Markdown content overflow protection */
+.prose img,
+.prose video {
+  max-width: 100%;
+  height: auto;
+}
+
+.prose table {
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Markdown code block (highlight.js github-dark) */
 .prose pre {
   overflow-x: auto;
+  max-width: 100%;
 }
 .prose pre code.hljs {
   display: block;
@@ -83,4 +137,15 @@
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Blog article content: prevent horizontal overflow on small screens */
+@media (max-width: 640px) {
+  .blog-content pre {
+    border-radius: 0;
+    margin-left: -20px;
+    margin-right: -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+  }
 }

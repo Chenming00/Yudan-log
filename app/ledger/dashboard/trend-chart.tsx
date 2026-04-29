@@ -3,23 +3,24 @@
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
-
-interface Transaction {
-  id: string;
-  amount: number;
-  note: string;
-  category: string;
-  type: "expense" | "income";
-  transaction_time?: string;
-  created_at: string;
-}
+import { Transaction } from "../types";
 
 interface TrendChartProps {
   transactions: Transaction[];
   title?: string;
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface TooltipPayloadItem {
+  value: number;
+}
+
+interface TooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadItem[];
+  label?: string;
+}
+
+const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
   if (active && payload && payload.length) {
     const value = payload[0].value;
     return (
@@ -73,7 +74,7 @@ export function TrendChart({ transactions, title = "每日支出趋势" }: Trend
   const avgDaily = totalExpense / timeRange;
 
   return (
-    <div className="rounded-2xl bg-white shadow-sm p-5">
+    <div className="rounded-2xl bg-card border border-border p-5">
       <div className="flex items-center justify-between mb-4">
         <div>
           <p className="text-sm text-muted-foreground">{title}</p>
@@ -119,13 +120,13 @@ export function TrendChart({ transactions, title = "每日支出趋势" }: Trend
             </defs>
             <XAxis
               dataKey="date"
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
               axisLine={false}
               tickLine={false}
               interval={timeRange === 7 ? 0 : 4}
             />
             <YAxis
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
               axisLine={false}
               tickLine={false}
               tickFormatter={(value) => `¥${value}`}

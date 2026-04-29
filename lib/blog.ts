@@ -1,8 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
+import { slugify } from '@/lib/utils';
 
 const blogDir = path.join(process.cwd(), 'content', 'blog');
+
+// Simple in-memory cache for blog posts (avoids fs reads on every request)
+let cachedPosts: BlogPost[] | null = null;
+let cacheTimestamp = 0;
+const CACHE_TTL = 60_000; // 60 seconds
 
 export interface BlogHeading {
   level: number;
@@ -20,14 +26,6 @@ export interface BlogPost {
   readingTime: number;
   headings: BlogHeading[];
   content: string;
-}
-
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[`~!@#$%^&*()+=,[\]{}\\|;:'",.<>/?]/g, '')
-    .replace(/\s+/g, '-');
 }
 
 function stripMarkdown(markdown: string) {
@@ -124,11 +122,18 @@ function normalizePost(file: string, raw: string): BlogPost {
 }
 
 export function getAllPosts(): BlogPost[] {
+  const now = Date.now();
+  if (cachedPosts && now - cacheTimestamp < CACHE_TTL) {
+    return cachedPosts;
+  }
+
   if (!fs.existsSync(blogDir)) return [];
   const files = fs.readdirSync(blogDir).filter((f) => f.endsWith('.md'));
-  return files
+  cachedPosts = files
     .map((file) => normalizePost(file, fs.readFileSync(path.join(blogDir, file), 'utf-8')))
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  cacheTimestamp = now;
+  return cachedPosts;
 }
 
 export function getPostBySlug(slug: string): BlogPost | null {

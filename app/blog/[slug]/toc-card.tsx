@@ -32,7 +32,7 @@ export function TocCard({ headings, defaultOpen = true }: { headings: BlogHeadin
   if (headings.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-border/40 bg-gradient-to-br from-white to-muted/20 p-5 shadow-sm">
+    <div className="rounded-2xl border border-border/50 bg-card p-5">
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
@@ -48,17 +48,17 @@ export function TocCard({ headings, defaultOpen = true }: { headings: BlogHeadin
       </button>
 
       {isOpen && (
-        <div id="blog-toc-content" className="mt-4 space-y-1.5 border-t border-border/30 pt-4">
+        <div id="blog-toc-content" className="mt-4 space-y-0.5 border-t border-border/30 pt-3">
           {headings.map((heading) => (
             <a
               key={heading.id}
               href={`#${heading.id}`}
-              className={`block text-sm py-1.5 rounded-lg transition-all duration-200 ${
+              className={`block text-sm py-2 min-h-[40px] flex items-center rounded-xl transition-all duration-200 ${
                 activeId === heading.id
-                  ? 'bg-primary/10 text-primary font-medium pl-3'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
+                  ? 'bg-primary/10 text-primary font-medium'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/50 active:bg-muted/60'
               }`}
-              style={{ paddingLeft: `${(heading.level - 2) * 16 + (activeId === heading.id ? 0 : 12)}px` }}
+              style={{ paddingLeft: `${(heading.level - 2) * 16 + (activeId === heading.id ? 8 : 12)}px`, paddingRight: '8px' }}
               onClick={() => setIsOpen(true)}
             >
               {heading.text}

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Settings, ArrowLeft, Plus } from "lucide-react";
-import Link from "next/link";
+import { Settings, Plus } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SummaryCards, TrendChart, CategoryBreakdown, DetailList } from "./dashboard";
 import { TransactionDialog } from "./components/transaction-dialog";
@@ -99,28 +98,27 @@ export default function LedgerPage() {
   }, [transactions]);
 
   return (
-    <main className="min-h-screen px-4 py-6 pb-[calc(env(safe-area-inset-bottom)+84px)]">
-      {/* 头部 */}
-      <header className="flex items-center justify-between pt-safe pb-2">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            className="pt-4 text-muted-foreground hover:text-foreground transition-colors"
+    <main className="min-h-screen px-5 py-6 pb-[calc(env(safe-area-inset-bottom)+84px)] bg-background">
+      {/* Hero Banner */}
+      <div className="relative mb-6 pt-safe">
+        <div className="flex items-center justify-between py-2">
+          <div>
+            <h1 className="text-[26px] sm:text-3xl font-bold tracking-tight text-foreground">
+              🐟 鱼蛋小账本
+            </h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              记录每一笔收支
+            </p>
+          </div>
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
+            aria-label="设置"
           >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <h1 className="text-lg font-medium tracking-tight pt-4 text-foreground">
-            🐟 鱼蛋小账本
-          </h1>
+            <Settings className="h-[18px] w-[18px]" />
+          </button>
         </div>
-        <button
-          onClick={() => setSettingsOpen(true)}
-          className="pt-4 text-muted-foreground hover:text-foreground transition-colors"
-          aria-label="设置"
-        >
-          <Settings className="h-5 w-5" />
-        </button>
-      </header>
+      </div>
 
       {/* 主要内容区 */}
       <div className="mt-4 space-y-4">

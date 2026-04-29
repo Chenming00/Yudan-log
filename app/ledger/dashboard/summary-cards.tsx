@@ -21,7 +21,7 @@ export function SummaryCards({ currentMonth, lastMonth }: SummaryCardsProps) {
   return (
     <div className="grid grid-cols-2 gap-4">
       {/* 本月支出 */}
-      <div className="rounded-2xl bg-white shadow-sm p-5">
+      <div className="rounded-2xl bg-card border border-border p-5">
         <div className="flex items-center gap-2 text-muted-foreground mb-3">
           <Wallet className="h-4 w-4" />
           <span className="text-sm">本月支出</span>
@@ -46,7 +46,7 @@ export function SummaryCards({ currentMonth, lastMonth }: SummaryCardsProps) {
       </div>
 
       {/* 交易笔数 */}
-      <div className="rounded-2xl bg-white shadow-sm p-5">
+      <div className="rounded-2xl bg-card border border-border p-5">
         <div className="flex items-center gap-2 text-muted-foreground mb-3">
           <Wallet className="h-4 w-4" />
           <span className="text-sm">交易笔数</span>

@@ -1,16 +1,7 @@
 "use client";
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
-
-interface Transaction {
-  id: string;
-  amount: number;
-  note: string;
-  category: string;
-  type: "expense" | "income";
-  transaction_time?: string;
-  created_at: string;
-}
+import { Transaction } from "../types";
 
 interface CategoryBreakdownProps {
   transactions: Transaction[];
@@ -27,7 +18,16 @@ const CHART_COLORS = [
   "hsl(200, 80%, 55%)",  // sky blue
 ];
 
-const CustomTooltip = ({ active, payload }: any) => {
+interface TooltipPayloadEntry {
+  payload: { name: string; value: number; percentage: number };
+}
+
+interface PieTooltipProps {
+  active?: boolean;
+  payload?: TooltipPayloadEntry[];
+}
+
+const CustomTooltip = ({ active, payload }: PieTooltipProps) => {
   if (active && payload && payload.length) {
     const entry = payload[0].payload;
     return (
@@ -60,7 +60,7 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
 
   if (data.length === 0) {
     return (
-      <div className="rounded-2xl bg-white shadow-sm p-6">
+      <div className="rounded-2xl bg-card border border-border p-6">
         <p className="text-sm font-medium text-muted-foreground mb-4">{title}</p>
         <p className="text-center text-muted-foreground text-sm py-8">暂无数据</p>
       </div>
@@ -68,7 +68,7 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
   }
 
   return (
-    <div className="rounded-2xl bg-white shadow-sm p-4">
+    <div className="rounded-2xl bg-card border border-border p-4">
       <p className="text-sm font-medium text-muted-foreground mb-4">{title}</p>
       <div className="flex flex-col sm:flex-row gap-6">
         {/* 饼图 */}

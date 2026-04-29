@@ -10,7 +10,7 @@ interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentKey: string | null;
-  onSave: (key: string) => void;
+  onSave: (key: string | null) => void;
 }
 
 export function SettingsDialog({ open, onOpenChange, currentKey, onSave }: SettingsDialogProps) {
@@ -22,13 +22,13 @@ export function SettingsDialog({ open, onOpenChange, currentKey, onSave }: Setti
 
   const handleSave = () => {
     const trimmed = value.trim();
-    onSave(trimmed);
+    onSave(trimmed || null);
     onOpenChange(false);
   };
 
   const handleClear = () => {
     setValue('');
-    onSave('');
+    onSave(null);
     onOpenChange(false);
   };
 

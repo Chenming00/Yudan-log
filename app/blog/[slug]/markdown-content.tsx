@@ -6,15 +6,7 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import 'highlight.js/styles/github.css';
 import { useState } from 'react';
-
-// --- 辅助函数 ---
-function slugify(text: string) {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[`~!@#$%^&*()+=,[\]{}\\|;:'",.<>/?]/g, '')
-    .replace(/\s+/g, '-');
-}
+import { slugify } from '@/lib/utils';
 
 function toText(children: ReactNode): string {
   if (typeof children === 'string' || typeof children === 'number') return String(children);
@@ -38,7 +30,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="text-xs px-2 py-1 rounded-md bg-muted hover:bg-muted/80 transition"
+      className="text-xs px-2.5 py-1 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
     >
       {copied ? 'Copied' : 'Copy'}
     </button>
@@ -48,7 +40,7 @@ function CopyButton({ text }: { text: string }) {
 // --- 主组件 ---
 export function MarkdownContent({ content }: { content: string }) {
   return (
-    <div className="mx-auto w-full max-w-2xl px-6 py-10">
+    <div className="w-full">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
@@ -95,7 +87,7 @@ export function MarkdownContent({ content }: { content: string }) {
           // 图片
           img: ({ alt, ...props }) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img alt={alt} className="rounded-lg my-6 w-full object-cover" {...props} />
+            <img alt={alt} className="rounded-lg my-6 w-full max-w-full object-cover" {...props} />
           ),
 
           hr: ({ ...props }) => <hr className="my-6 border-border" {...props} />,
@@ -152,9 +144,9 @@ export function MarkdownContent({ content }: { content: string }) {
              const language = codeChild?.className?.replace('language-', '') || 'text';
 
             return (
-              <div className="my-6 rounded-lg overflow-hidden border border-border bg-[#f6f8fa] dark:bg-[#0d1117]">
+              <div className="my-6 rounded-xl overflow-hidden border border-border bg-muted/50 max-w-full">
                 {/* 顶部栏 */}
-                <div className="flex items-center justify-between px-3 py-2 text-xs text-gray-600 dark:text-muted-foreground bg-gray-100 dark:bg-muted/10">
+                <div className="flex items-center justify-between px-3 py-2 text-xs text-muted-foreground bg-muted/80">
                   <span className="uppercase tracking-wide">{language}</span>
                   <CopyButton text={rawCode} />
                 </div>
