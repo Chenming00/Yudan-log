@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
-import { BookOpen, Wallet, ArrowRight, MessageSquare } from 'lucide-react';
+import { BookOpen, Wallet, ArrowRight } from 'lucide-react';
 import { getAllPosts } from '@/lib/blog';
 
 export const metadata: Metadata = {
@@ -60,15 +60,6 @@ const modules = [
     color: 'text-primary',
     bgGradient: 'bg-gradient-to-br from-primary/15 to-emerald-400/5',
     borderColor: 'border-primary/10',
-  },
-  {
-    title: 'AI 助手',
-    description: '和鱼蛋小助手聊天',
-    href: '/chat',
-    icon: MessageSquare,
-    color: 'text-[#7C5CFC]',
-    bgGradient: 'bg-gradient-to-br from-[#7C5CFC]/15 to-[#9B7DFF]/5',
-    borderColor: 'border-[#7C5CFC]/10',
   },
 ];
 
