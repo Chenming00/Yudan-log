@@ -3,15 +3,21 @@
 import { useState } from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
 
-export function AiSummary({ slug }: { slug: string }) {
+export function AiSummary({ slug, initialSummary }: { slug: string; initialSummary?: string }) {
   const [summary, setSummary] = useState('');
   const [loading, setLoading] = useState(false);
-  const [cached, setCached] = useState(false);
+  const [visible, setVisible] = useState(false);
 
   const handleSummarize = async () => {
-    if (cached) return;
+    if (initialSummary) {
+      setSummary(initialSummary);
+      setVisible(true);
+      return;
+    }
+
     setLoading(true);
     setSummary('');
+    setVisible(true);
 
     try {
       const res = await fetch('/api/blog/summary', {
@@ -23,6 +29,14 @@ export function AiSummary({ slug }: { slug: string }) {
       if (!res.ok) {
         const data = await res.json();
         setSummary(data.error || '生成失败，请稍后再试');
+        return;
+      }
+
+      const contentType = res.headers.get('content-type') || '';
+
+      if (contentType.includes('application/json')) {
+        const data = await res.json();
+        setSummary(data.summary || '生成失败');
         return;
       }
 
@@ -57,8 +71,6 @@ export function AiSummary({ slug }: { slug: string }) {
           }
         }
       }
-
-      setCached(true);
     } catch {
       setSummary('网络错误，请稍后再试');
     } finally {
@@ -68,7 +80,7 @@ export function AiSummary({ slug }: { slug: string }) {
 
   return (
     <div className="mt-6 sm:mt-8">
-      {!cached && !loading && (
+      {!visible && (
         <button
           onClick={handleSummarize}
           className="inline-flex items-center gap-2 rounded-xl bg-primary/10 px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/15 active:bg-primary/20 active:scale-[0.97] transition-all"

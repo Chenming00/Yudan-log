@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPostBySlug, stripMarkdown } from '@/lib/blog';
+import { getCachedSummary } from '@/lib/blog-summaries';
 
 const MIMO_BASE_URL = process.env.MIMO_BASE_URL || '';
 const MIMO_API_KEY = process.env.MIMO_API_KEY || '';
@@ -16,6 +17,11 @@ export async function POST(req: NextRequest) {
     const { slug } = await req.json();
     if (!slug || typeof slug !== 'string') {
       return NextResponse.json({ error: 'Missing slug' }, { status: 400 });
+    }
+
+    const cached = getCachedSummary(slug);
+    if (cached) {
+      return NextResponse.json({ cached: true, summary: cached.summary });
     }
 
     const post = getPostBySlug(slug);
