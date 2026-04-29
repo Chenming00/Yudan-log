@@ -86,7 +86,7 @@ export default function RootLayout({
       lang="zh-CN"
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
-      <body className="min-h-screen bg-background font-sans text-foreground">
+      <body className="bg-background font-sans text-foreground">
         <Providers>
           {children}
           <FloatingNav />

@@ -57,7 +57,7 @@ export default async function HomePage() {
   const posts = getAllPosts().slice(0, 3);
 
   return (
-    <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8 pb-[var(--nav-height)]">
+    <main className="min-h-screen px-4 py-6 sm:px-6 lg:px-8" style={{ paddingBottom: "var(--nav-height)" }}>
       <div className="max-w-5xl mx-auto">
         {/* Hero Banner */}
         <div className="relative mb-10 pt-safe">

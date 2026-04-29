@@ -98,7 +98,7 @@ export default function LedgerPage() {
   }, [transactions]);
 
   return (
-    <main className="min-h-screen px-5 py-6 pb-[var(--nav-height)] bg-background">
+    <main className="min-h-screen px-5 py-6 bg-background" style={{ paddingBottom: "var(--nav-height)" }}>
       {/* Hero Banner */}
       <div className="relative mb-6 pt-safe">
         <div className="flex items-center justify-between py-2">

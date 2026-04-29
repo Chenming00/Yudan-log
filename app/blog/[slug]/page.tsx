@@ -107,7 +107,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       <div className="max-w-7xl mx-auto px-5 sm:px-6">
         <div className="flex gap-8 lg:gap-12">
           {/* 主内容区 */}
-          <article className="flex-1 min-w-0 py-6 sm:py-10 pb-[calc(var(--nav-height)+40px)]">
+          <article className="flex-1 min-w-0 py-6 sm:py-10" style={{ paddingBottom: "var(--nav-height)" }}>
             {/* 文章头部信息 */}
             <header className="mb-8 sm:mb-10">
               <h1 className="text-[26px] sm:text-3xl lg:text-[40px] font-bold text-foreground leading-tight tracking-tight">
