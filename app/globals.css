@@ -81,6 +81,9 @@
   * {
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
+
+  /* 底部导航栏高度变量 - 动态计算 */
+  --nav-height: calc(70px + env(safe-area-inset-bottom));
 }
 
 /* 统一卡片悬浮效果 */

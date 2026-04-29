@@ -77,6 +77,22 @@ async function main() {
   }
 
   console.log(`\n📊 Summary generation complete: ${generated} generated, ${skipped} skipped, ${failed} failed`);
+
+  if (generated > 0) {
+    try {
+      const { execSync } = await import('child_process');
+      execSync('git add content/blog-summaries/', { cwd: process.cwd(), stdio: 'pipe' });
+      execSync(`git commit -m "chore: auto-generate ${generated} blog summary(ies)"`, { cwd: process.cwd(), stdio: 'pipe' });
+      try {
+        execSync('git push', { cwd: process.cwd(), stdio: 'pipe' });
+        console.log('🚀 Committed and pushed summaries to git');
+      } catch {
+        console.log('📝 Committed summaries to git (push skipped — may need manual push)');
+      }
+    } catch (err) {
+      console.warn('⚠️  Failed to commit summaries:', err instanceof Error ? err.message : err);
+    }
+  }
 }
 
 main();

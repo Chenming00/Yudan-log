@@ -20,7 +20,7 @@ export default function BlogPage() {
   const posts = getAllPosts();
 
   return (
-    <main className="min-h-screen px-4 sm:px-6 py-8 pb-[calc(env(safe-area-inset-bottom)+120px)] bg-background">
+    <main className="min-h-screen px-4 sm:px-6 py-8 pb-[var(--nav-height)] bg-background">
       <BlogListClient posts={posts} />
     </main>
   );
