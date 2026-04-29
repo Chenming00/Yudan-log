@@ -29,7 +29,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="sticky bottom-0 border-t border-border/50 bg-white/80 backdrop-blur-lg px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+12px)]"
+      className="border-t border-border/50 bg-white/80 backdrop-blur-lg px-4 py-3"
     >
       <div className="flex items-center gap-2 max-w-2xl mx-auto">
         <input

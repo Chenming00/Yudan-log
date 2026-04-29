@@ -8,15 +8,20 @@ const mimo = createOpenAI({
 });
 
 export async function POST(req: Request) {
-  const { messages } = await req.json();
+  try {
+    const { messages } = await req.json();
 
-  const systemPrompt = await buildSystemPrompt();
+    const systemPrompt = await buildSystemPrompt();
 
-  const result = streamText({
-    model: mimo('MiMo-V2.5-Pro'),
-    system: systemPrompt,
-    messages,
-  });
+    const result = streamText({
+      model: mimo('MiMo-V2.5-Pro'),
+      system: systemPrompt,
+      messages,
+    });
 
-  return result.toTextStreamResponse();
+    return result.toTextStreamResponse();
+  } catch (error) {
+    console.error('Chat API error:', error);
+    return new Response('Internal server error', { status: 500 });
+  }
 }

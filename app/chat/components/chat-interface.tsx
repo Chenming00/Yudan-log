@@ -38,7 +38,7 @@ export function ChatInterface() {
   const allMessages = [WELCOME_MESSAGE, ...messages];
 
   return (
-    <div className="flex flex-col h-[100dvh]">
+    <div className="flex flex-col h-[100dvh] pb-[calc(env(safe-area-inset-bottom)+80px)]">
       {/* Header */}
       <header className="shrink-0 border-b border-border/50 bg-white/80 backdrop-blur-lg px-4 py-3">
         <div className="flex items-center gap-2.5 max-w-2xl mx-auto">
