@@ -1,7 +1,22 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { BookOpen, Wallet, ArrowRight } from 'lucide-react';
 import { getAllPosts } from '@/lib/blog';
+
+export const metadata: Metadata = {
+  title: '鱼蛋宝宝 - 记录生活的每一面',
+  description: '鱼蛋宝宝是一个集记账、成长日志于一体的个人生活记录平台，帮你记录每一笔收支，沉淀日常、复盘成长。',
+  alternates: {
+    canonical: '/',
+  },
+  openGraph: {
+    type: 'website',
+    title: '鱼蛋宝宝 - 记录生活的每一面',
+    description: '鱼蛋宝宝是一个集记账、成长日志于一体的个人生活记录平台，帮你记录每一笔收支，沉淀日常、复盘成长。',
+    url: '/',
+  },
+};
 
 function getGreeting() {
   const hour = new Date().getHours();
