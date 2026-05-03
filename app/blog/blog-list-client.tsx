@@ -33,9 +33,20 @@ function getRelativeTime(dateStr: string): string {
 
 export function BlogListClient({ posts }: BlogListClientProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+
+  const allTags = useMemo(() => {
+    const tagSet = new Set<string>();
+    posts.forEach((p) => p.tags.forEach((t) => tagSet.add(t)));
+    return Array.from(tagSet);
+  }, [posts]);
 
   const filteredPosts = useMemo(() => {
     let result = posts;
+
+    if (selectedTag) {
+      result = result.filter((p) => p.tags.includes(selectedTag));
+    }
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
@@ -47,7 +58,7 @@ export function BlogListClient({ posts }: BlogListClientProps) {
     }
 
     return result;
-  }, [posts, searchQuery]);
+  }, [posts, searchQuery, selectedTag]);
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -65,6 +76,35 @@ export function BlogListClient({ posts }: BlogListClientProps) {
           </p>
         </div>
       </header>
+
+      {/* 标签筛选 */}
+      {allTags.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedTag(null)}
+            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+              selectedTag === null
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            全部
+          </button>
+          {allTags.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
+                selectedTag === tag
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* 搜索区域 */}
       <div className="mb-8">
@@ -130,11 +170,11 @@ export function BlogListClient({ posts }: BlogListClientProps) {
             </span>
           </div>
           <p className="font-medium text-foreground text-sm">
-            {searchQuery ? "没有找到匹配的文章" : "还没有文章"}
+            {searchQuery || selectedTag ? "没有找到匹配的文章" : "还没有文章"}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {searchQuery
-              ? "试试换个关键词搜索吧"
+            {searchQuery || selectedTag
+              ? "试试换个关键词或标签吧"
               : "去写第一篇成长日志吧 ✍️"}
           </p>
         </div>

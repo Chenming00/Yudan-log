@@ -7,6 +7,7 @@ import rehypeHighlight from 'rehype-highlight';
 import rehypeRaw from 'rehype-raw';
 import 'highlight.js/styles/github.css';
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { slugify } from '@/lib/utils';
 
 function toText(children: ReactNode): string {
@@ -92,15 +93,24 @@ function ImageLightbox({ src, alt }: { src?: string; alt?: string }) {
     return () => document.removeEventListener('keydown', handleKey);
   }, [open]);
 
+  if (!src) return null;
+
   return (
     <>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        alt={alt}
-        src={src}
-        className="rounded-lg my-6 w-full max-w-full object-cover cursor-zoom-in hover:opacity-90 transition-opacity"
+      <button
+        type="button"
         onClick={() => setOpen(true)}
-      />
+        className="relative w-full my-6 rounded-lg overflow-hidden cursor-zoom-in hover:opacity-90 transition-opacity"
+        style={{ aspectRatio: '16/10' }}
+      >
+        <Image
+          src={src}
+          alt={alt || ''}
+          fill
+          className="object-cover"
+          sizes="(max-width: 768px) 100vw, 672px"
+        />
+      </button>
       {open && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 sm:p-8 cursor-zoom-out"
@@ -147,9 +157,16 @@ export function MarkdownContent({ content }: { content: string }) {
           ),
 
           // 段落
-          p: ({ children, ...props }) => (
-            <p className="leading-7 text-muted-foreground mt-4" {...props}>{children}</p>
-          ),
+          p: ({ node, children, ...props }) => {
+            // Check if paragraph contains block-level children (e.g. images rendered as lightbox)
+            const hasBlockChild = node?.children?.some(
+              (child) => 'tagName' in child && child.tagName === 'img'
+            );
+            if (hasBlockChild) {
+              return <div className="leading-7 text-muted-foreground mt-4" {...props}>{children}</div>;
+            }
+            return <p className="leading-7 text-muted-foreground mt-4" {...props}>{children}</p>;
+          },
 
           // 链接
           a: ({ href, children, ...props }) => (

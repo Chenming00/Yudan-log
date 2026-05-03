@@ -35,6 +35,7 @@
   --chart-5: oklch(0.77 0.12 55);
 }
 
+
 /* 注册为 Tailwind 颜色工具类 */
 @theme inline {
   --color-background: var(--background);
@@ -71,6 +72,10 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+:root {
+  --nav-height: calc(70px + env(safe-area-inset-bottom));
+}
+
 @layer base {
   body {
     background: var(--color-background);
@@ -81,9 +86,6 @@
   * {
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
-
-  /* 底部导航栏高度变量 - 动态计算 */
-  --nav-height: calc(70px + env(safe-area-inset-bottom));
 }
 
 /* 统一卡片悬浮效果 */

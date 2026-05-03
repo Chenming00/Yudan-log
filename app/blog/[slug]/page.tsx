@@ -1,14 +1,12 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getPostBySlug, getAllPosts, getAdjacentPosts } from '@/lib/blog';
-import { getCachedSummary } from '@/lib/blog-summaries';
 import { notFound } from 'next/navigation';
 import { ArrowLeft, Calendar, Clock3 } from 'lucide-react';
 import { MarkdownContent } from './markdown-content';
 import { PostActions } from './post-actions';
 import { TocCard } from './toc-card';
 import { ReadingProgress } from './reading-progress';
-import { AiSummary } from './ai-summary';
 import { AiChat } from './ai-chat';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.BASE_URL || 'http://localhost:3000';
@@ -55,7 +53,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   const post = getPostBySlug(slug);
   if (!post) notFound();
   const { previous, next } = getAdjacentPosts(slug);
-  const cachedSummary = getCachedSummary(slug);
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -146,9 +143,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                   {post.summary}
                 </p>
               </div>
-
-              {/* AI 总结 */}
-              <AiSummary slug={post.slug} initialSummary={cachedSummary?.summary} />
 
             </header>
 

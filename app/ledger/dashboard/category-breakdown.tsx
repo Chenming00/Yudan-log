@@ -1,6 +1,9 @@
 "use client";
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Transaction } from "../types";
 
 interface CategoryBreakdownProps {
@@ -43,22 +46,28 @@ const CustomTooltip = ({ active, payload }: PieTooltipProps) => {
 };
 
 export function CategoryBreakdown({ transactions, title = "支出分类" }: CategoryBreakdownProps) {
-  const categoryData = transactions
-    .filter((t) => t.type === "expense")
-    .reduce<Record<string, number>>((groups, t) => {
-      const category = t.category || "未分类";
-      groups[category] = (groups[category] || 0) + Number(t.amount);
-      return groups;
-    }, {});
+  const [expanded, setExpanded] = useState(false);
 
-  const data = Object.entries(categoryData)
+  const { groups, countByCategory } = transactions
+    .filter((t) => t.type === "expense")
+    .reduce<{ groups: Record<string, number>; countByCategory: Record<string, number> }>(
+      (acc, t) => {
+        const category = t.category || "未分类";
+        acc.groups[category] = (acc.groups[category] || 0) + Number(t.amount);
+        acc.countByCategory[category] = (acc.countByCategory[category] || 0) + 1;
+        return acc;
+      },
+      { groups: {}, countByCategory: {} }
+    );
+
+  const categoryList = Object.entries(groups)
     .map(([name, value]) => ({ name, value }))
     .sort((a, b) => b.value - a.value);
 
-  const total = data.reduce((sum, item) => sum + item.value, 0);
-  const top3 = data.slice(0, 3);
+  const total = categoryList.reduce((sum, item) => sum + item.value, 0);
+  const visibleCategories = expanded ? categoryList : categoryList.slice(0, 5);
 
-  if (data.length === 0) {
+  if (categoryList.length === 0) {
     return (
       <div className="rounded-2xl bg-card border border-border p-6">
         <p className="text-sm font-medium text-muted-foreground mb-4">{title}</p>
@@ -68,7 +77,12 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
   }
 
   return (
-    <div className="rounded-2xl bg-card border border-border p-4">
+    <motion.div
+      className="rounded-2xl bg-card border border-border p-4"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3, duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+    >
       <p className="text-sm font-medium text-muted-foreground mb-4">{title}</p>
       <div className="flex flex-col sm:flex-row gap-6">
         {/* 饼图 */}
@@ -77,7 +91,7 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
             <ResponsiveContainer width="100%" height="100%" minHeight={160}>
               <PieChart>
                 <Pie
-                  data={data}
+                  data={categoryList}
                   cx="50%"
                   cy="50%"
                   innerRadius={50}
@@ -85,7 +99,7 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
                   paddingAngle={2}
                   dataKey="value"
                 >
-                  {data.map((entry, index) => (
+                  {categoryList.map((_, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={CHART_COLORS[index % CHART_COLORS.length]}
@@ -98,40 +112,69 @@ export function CategoryBreakdown({ transactions, title = "支出分类" }: Cate
           </div>
         </div>
 
-        {/* Top 3 列表 */}
+        {/* 分类排行列表 */}
         <div className="flex-1 min-w-0">
           <h4 className="text-xs font-medium text-muted-foreground mb-3 uppercase tracking-wide">
-            Top 3 分类
+            分类排行
           </h4>
           <div className="space-y-3">
-            {top3.map((item, index) => (
-              <div key={item.name} className="flex items-center gap-3">
-                <div
-                  className="w-3 h-3 rounded-full flex-shrink-0"
-                  style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
-                />
-                <span className="text-sm text-foreground flex-1 truncate">{item.name}</span>
-                <div className="text-right">
-                  <div className="text-sm font-medium text-foreground">
-                    ¥{item.value.toLocaleString()}
+            {visibleCategories.map((item, index) => {
+              const percentage = total > 0 ? (item.value / total) * 100 : 0;
+              const count = countByCategory[item.name] || 0;
+              return (
+                <div key={item.name} className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                      />
+                      <span className="text-sm text-foreground truncate">{item.name}</span>
+                      <span className="text-xs text-muted-foreground flex-shrink-0">{count}笔</span>
+                    </div>
+                    <span className="text-sm font-medium text-foreground flex-shrink-0 ml-2">
+                      ¥{item.value.toLocaleString()}
+                    </span>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    {((item.value / total) * 100).toFixed(0)}%
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${percentage}%`,
+                          backgroundColor: CHART_COLORS[index % CHART_COLORS.length],
+                        }}
+                      />
+                    </div>
+                    <span className="text-xs text-muted-foreground w-8 text-right flex-shrink-0">
+                      {percentage.toFixed(0)}%
+                    </span>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-          
-          {data.length > 3 && (
-            <div className="mt-3 pt-3 border-t border-border/50">
-              <p className="text-xs text-muted-foreground">
-                其他 {data.length - 3} 个分类
-              </p>
-            </div>
+
+          {categoryList.length > 5 && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="mt-3 pt-3 border-t border-border/50 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
+            >
+              {expanded ? (
+                <>
+                  <ChevronUp className="h-3 w-3" />
+                  收起
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3 w-3" />
+                  展开更多 ({categoryList.length - 5})
+                </>
+              )}
+            </button>
           )}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

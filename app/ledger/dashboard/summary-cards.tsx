@@ -1,6 +1,8 @@
 "use client";
 
-import { TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { TrendingUp, TrendingDown, Wallet, CalendarDays, Hash } from "lucide-react";
+import { motion } from "framer-motion";
+import { AnimatedCounter } from "@/components/animated-counter";
 
 interface SummaryCardsProps {
   currentMonth: {
@@ -10,24 +12,41 @@ interface SummaryCardsProps {
   lastMonth: {
     expense: number;
   };
+  daysPassed: number;
 }
 
-export function SummaryCards({ currentMonth, lastMonth }: SummaryCardsProps) {
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.1, duration: 0.4, ease: [0.4, 0, 0.2, 1] as const },
+  }),
+};
+
+export function SummaryCards({ currentMonth, lastMonth, daysPassed }: SummaryCardsProps) {
   const currentExpense = currentMonth.expense;
   const lastExpense = lastMonth.expense;
   const diff = lastExpense > 0 ? ((currentExpense - lastExpense) / lastExpense) * 100 : 0;
   const isIncrease = diff > 0;
+  const dailyAvg = daysPassed > 0 ? currentExpense / daysPassed : 0;
 
   return (
     <div className="grid grid-cols-2 gap-4">
       {/* 本月支出 */}
-      <div className="rounded-2xl bg-card border border-border p-5">
+      <motion.div
+        className="rounded-2xl bg-card border border-border p-5"
+        custom={0}
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+      >
         <div className="flex items-center gap-2 text-muted-foreground mb-3">
           <Wallet className="h-4 w-4" />
           <span className="text-sm">本月支出</span>
         </div>
         <div className="text-xl font-bold text-[#FF6B6B]">
-          ¥{currentExpense.toLocaleString()}
+          <AnimatedCounter value={currentExpense} prefix="¥" />
         </div>
         <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
           {isIncrease ? (
@@ -43,21 +62,28 @@ export function SummaryCards({ currentMonth, lastMonth }: SummaryCardsProps) {
           )}
           <span>vs 上月</span>
         </div>
-      </div>
+      </motion.div>
 
-      {/* 交易笔数 */}
-      <div className="rounded-2xl bg-card border border-border p-5">
+      {/* 日均支出 */}
+      <motion.div
+        className="rounded-2xl bg-card border border-border p-5"
+        custom={1}
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+      >
         <div className="flex items-center gap-2 text-muted-foreground mb-3">
-          <Wallet className="h-4 w-4" />
-          <span className="text-sm">交易笔数</span>
+          <CalendarDays className="h-4 w-4" />
+          <span className="text-sm">日均支出</span>
         </div>
         <div className="text-xl font-bold text-foreground">
-          {currentMonth.transactions.length}
+          <AnimatedCounter value={dailyAvg} prefix="¥" decimals={0} />
         </div>
-        <div className="mt-2 text-xs text-muted-foreground">
-          本月记录
+        <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+          <Hash className="h-3 w-3" />
+          <span>{currentMonth.transactions.length} 笔记录</span>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

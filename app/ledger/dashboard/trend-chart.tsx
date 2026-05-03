@@ -3,6 +3,7 @@
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
+import { motion } from "framer-motion";
 import { Transaction } from "../types";
 
 interface TrendChartProps {
@@ -74,7 +75,12 @@ export function TrendChart({ transactions, title = "每日支出趋势" }: Trend
   const avgDaily = totalExpense / timeRange;
 
   return (
-    <div className="rounded-2xl bg-card border border-border p-5">
+    <motion.div
+      className="rounded-2xl bg-card border border-border p-5"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.2, duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+    >
       <div className="flex items-center justify-between mb-4">
         <div>
           <p className="text-sm text-muted-foreground">{title}</p>
@@ -142,6 +148,6 @@ export function TrendChart({ transactions, title = "每日支出趋势" }: Trend
           </AreaChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </motion.div>
   );
 }

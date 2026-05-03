@@ -107,8 +107,8 @@ export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProp
                 onClick={() => setForm((prev) => ({ ...prev, type }))}
                 className={`flex-1 py-1.5 text-sm rounded-md font-medium transition-all ${
                   form.type === type 
-                    ? type === 'income' 
-                      ? 'bg-emerald-50 text-emerald-600 shadow-sm' 
+                    ? type === 'income'
+                      ? 'bg-emerald-50 text-emerald-600 shadow-sm'
                       : 'bg-rose-50 text-rose-500 shadow-sm'
                     : 'text-muted-foreground hover:text-foreground'
                 }`}

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { Transaction } from "../types";
+import { useState, useMemo, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Download } from "lucide-react";
+import { Transaction, TransactionTypeFilter } from "../types";
 
 interface DetailListProps {
   transactions: Transaction[];
@@ -18,19 +20,69 @@ function formatDate(dateStr: string) {
   });
 }
 
+const TYPE_FILTERS: { value: TransactionTypeFilter; label: string }[] = [
+  { value: "all", label: "全部" },
+  { value: "expense", label: "支出" },
+  { value: "income", label: "收入" },
+];
+
 export function DetailList({ transactions, onSelect }: DetailListProps) {
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<TransactionTypeFilter>("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+
+  // 动态提取所有分类
+  const categories = useMemo(() => {
+    const cats = new Set(transactions.map((t) => t.category || "未分类"));
+    return Array.from(cats).sort();
+  }, [transactions]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return transactions;
-    const keyword = search.trim().toLowerCase();
-    return transactions.filter(
-      (t) =>
-        (t.note && t.note.toLowerCase().includes(keyword)) ||
-        (t.category && t.category.toLowerCase().includes(keyword)) ||
-        String(t.amount).includes(keyword)
-    );
-  }, [transactions, search]);
+    let result = transactions;
+
+    // 类型筛选
+    if (typeFilter !== "all") {
+      result = result.filter((t) => t.type === typeFilter);
+    }
+
+    // 分类筛选
+    if (categoryFilter !== "all") {
+      result = result.filter((t) => (t.category || "未分类") === categoryFilter);
+    }
+
+    // 搜索筛选
+    if (search.trim()) {
+      const keyword = search.trim().toLowerCase();
+      result = result.filter(
+        (t) =>
+          (t.note && t.note.toLowerCase().includes(keyword)) ||
+          (t.category && t.category.toLowerCase().includes(keyword)) ||
+          String(t.amount).includes(keyword)
+      );
+    }
+
+    return result;
+  }, [transactions, search, typeFilter, categoryFilter]);
+
+  const handleExport = useCallback(() => {
+    const header = "日期,类型,金额,分类,备注";
+    const rows = filtered.map((t) => {
+      const date = new Date(t.transaction_time || t.created_at).toLocaleString("zh-CN");
+      const type = t.type === "income" ? "收入" : "支出";
+      const amount = Number(t.amount);
+      const category = (t.category || "未分类").replace(/,/g, "，");
+      const note = (t.note || "").replace(/,/g, "，").replace(/\n/g, " ");
+      return `${date},${type},${amount},${category},${note}`;
+    });
+    const csv = "﻿" + header + "\n" + rows.join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `记账导出_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [filtered]);
 
   if (transactions.length === 0) {
     return (
@@ -101,6 +153,59 @@ export function DetailList({ transactions, onSelect }: DetailListProps) {
         )}
       </div>
 
+      {/* 筛选器 */}
+      <div className="flex flex-wrap gap-2">
+        {/* 类型筛选 */}
+        <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+          {TYPE_FILTERS.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => setTypeFilter(value)}
+              className={`px-3 py-1.5 text-xs rounded-md transition-all ${
+                typeFilter === value
+                  ? "bg-white shadow-sm text-foreground font-medium"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {/* 分类筛选 */}
+        {categories.length > 1 && (
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="px-3 py-1.5 text-xs rounded-lg bg-muted border-0 text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+          >
+            <option value="all">全部分类</option>
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        )}
+
+        {/* 清除筛选 */}
+        {(typeFilter !== "all" || categoryFilter !== "all") && (
+          <button
+            onClick={() => { setTypeFilter("all"); setCategoryFilter("all"); }}
+            className="px-3 py-1.5 text-xs rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            清除筛选
+          </button>
+        )}
+
+        {/* 导出按钮 */}
+        <button
+          onClick={handleExport}
+          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+          <Download className="h-3.5 w-3.5" />
+          导出 CSV
+        </button>
+      </div>
+
       {/* 搜索结果为空 */}
       {search.trim() && filtered.length === 0 ? (
         <div className="rounded-2xl bg-card border border-dashed border-border p-10 text-center">
@@ -132,9 +237,12 @@ export function DetailList({ transactions, onSelect }: DetailListProps) {
                 <span className="text-xs font-medium text-muted-foreground">{date}</span>
               </div>
               <div className="space-y-3">
-                {items.map((t) => (
-                  <button
+                {items.map((t, index) => (
+                  <motion.button
                     key={t.id}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
                     onClick={() => onSelect(t)}
                     className="w-full flex items-center justify-between rounded-2xl bg-card border border-border p-4 hover:bg-accent transition-colors text-left"
                   >
@@ -153,7 +261,7 @@ export function DetailList({ transactions, onSelect }: DetailListProps) {
                     >
                       {t.type === "income" ? "+" : "-"}¥{Number(t.amount).toLocaleString()}
                     </span>
-                  </button>
+                  </motion.button>
                 ))}
               </div>
             </div>
