@@ -25,7 +25,7 @@ cover: /logo.png
 
 ## 🛒 山姆 App 下单
 
-![Boori 婴儿床山姆订单](https://yudan-1251832332.cos.ap-singapore.myqcloud.com/IMAGE%202026-05-03%2014%3A03%3A05.jpg?imageSlim)
+![Boori 婴儿床山姆订单](https://yudan-1251832332.cos.ap-singapore.myqcloud.com/IMAGE%202026-05-03%2014%3A03%3A05.jpg)
 
 **1499 元**，山姆 App 直接下单。
 
