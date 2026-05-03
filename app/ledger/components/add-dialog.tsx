@@ -1,28 +1,20 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Transaction, TransactionFormState } from '../types';
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { TransactionFormState } from '../types';
 
 const CATEGORIES = [
-  { label: '喂养用品', value: 'feeding' },
-  { label: '护理清洁', value: 'care' },
-  { label: '辅食零食', value: 'food' },
-  { label: '医疗健康', value: 'medical' },
-  { label: '衣物穿戴', value: 'clothing' },
-  { label: '大件用品', value: 'gear' },
-  { label: '外出相关', value: 'outing' },
-  { label: '其他', value: 'other' },
+  { label: '喂养用品', value: 'feeding', emoji: '🍼' },
+  { label: '护理清洁', value: 'care', emoji: '🧴' },
+  { label: '辅食零食', value: 'food', emoji: '🍪' },
+  { label: '医疗健康', value: 'medical', emoji: '🏥' },
+  { label: '衣物穿戴', value: 'clothing', emoji: '👶' },
+  { label: '大件用品', value: 'gear', emoji: '🛒' },
+  { label: '外出相关', value: 'outing', emoji: '🚗' },
+  { label: '其他', value: 'other', emoji: '📦' },
 ];
 
 interface AddDialogProps {
@@ -32,22 +24,33 @@ interface AddDialogProps {
   onAdded: () => void;
 }
 
-function createDefaultTransactionForm(): TransactionFormState {
-  const now = new Date();
-  const localString = now.toLocaleString('sv-SE').replace(',', '');
+function createDefaultForm(): TransactionFormState {
   return {
     amount: '',
     note: '',
-    category: '',
-    type: 'expense' as const,
-    transaction_time: localString,
+    category: typeof window !== 'undefined' ? (localStorage.getItem('last_category') || '') : '',
   };
 }
 
 export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState(createDefaultTransactionForm);
+  const [form, setForm] = useState(createDefaultForm);
+  const [showOptional, setShowOptional] = useState(false);
+  const [transactionTime, setTransactionTime] = useState('');
+  const amountRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (open) {
+      setForm(createDefaultForm());
+      setError(null);
+      setShowOptional(false);
+      const now = new Date();
+      setTransactionTime(now.toLocaleString('sv-SE').replace(',', ''));
+      // 自动聚焦金额输入
+      setTimeout(() => amountRef.current?.focus(), 100);
+    }
+  }, [open]);
 
   const handleSubmit = async () => {
     if (!apiKey) {
@@ -63,7 +66,6 @@ export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProp
     setSaving(true);
     setError(null);
     try {
-      // 将分类代码转换为中文标签
       const categoryLabel = CATEGORIES.find(c => c.value === form.category)?.label || form.category;
       const res = await fetch('/api/add', {
         method: 'POST',
@@ -72,16 +74,21 @@ export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProp
           Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          ...form,
-          category: categoryLabel,
           amount: Number(form.amount),
-          transaction_time: form.transaction_time ? new Date(form.transaction_time).toISOString() : undefined,
+          category: categoryLabel,
+          note: form.note,
+          type: 'expense',
+          transaction_time: transactionTime ? new Date(transactionTime).toISOString() : undefined,
         }),
       });
       const data = await res.json();
       if (!data.success) {
         setError(data.error || '新增失败');
         return;
+      }
+      // 记住上次分类
+      if (form.category) {
+        localStorage.setItem('last_category', form.category);
       }
       onOpenChange(false);
       onAdded();
@@ -94,80 +101,75 @@ export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle className="text-center">新增记账记录</DialogTitle>
+          <DialogTitle className="text-center text-base">记一笔</DialogTitle>
         </DialogHeader>
-        <div className="space-y-3 pt-2">
-          {/* 类型切换 */}
-          <div className="flex gap-1 bg-muted rounded-lg p-1">
-            {(['expense', 'income'] as const).map((type) => (
+
+        <div className="space-y-5 pt-2">
+          {/* 金额输入 — 大字体居中 */}
+          <div className="relative">
+            <span className="absolute left-1/2 -translate-x-full top-1/2 -translate-y-1/2 text-2xl font-bold text-muted-foreground pr-1">¥</span>
+            <input
+              ref={amountRef}
+              type="number"
+              step="0.01"
+              inputMode="decimal"
+              value={form.amount}
+              onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
+              placeholder="0.00"
+              className="w-full text-center text-3xl font-bold text-foreground bg-transparent border-b border-border pb-2 focus:outline-none focus:border-[#FF6B6B] transition-colors placeholder:text-muted-foreground/40"
+            />
+          </div>
+
+          {/* 分类胶囊标签 */}
+          <div className="flex flex-wrap gap-2 justify-center">
+            {CATEGORIES.map((cat) => (
               <button
-                key={type}
-                onClick={() => setForm((prev) => ({ ...prev, type }))}
-                className={`flex-1 py-1.5 text-sm rounded-md font-medium transition-all ${
-                  form.type === type 
-                    ? type === 'income'
-                      ? 'bg-emerald-50 text-emerald-600 shadow-sm'
-                      : 'bg-rose-50 text-rose-500 shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
+                key={cat.value}
+                type="button"
+                onClick={() => setForm((prev) => ({ ...prev, category: prev.category === cat.value ? '' : cat.value }))}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 ${
+                  form.category === cat.value
+                    ? 'bg-[#FF6B6B]/10 text-[#FF6B6B] border border-[#FF6B6B]/30'
+                    : 'bg-muted text-muted-foreground border border-transparent hover:bg-muted/80'
                 }`}
               >
-                {type === 'income' ? '收入' : '支出'}
+                {cat.emoji} {cat.label}
               </button>
             ))}
           </div>
 
-          {/* 金额 */}
-          <div className="space-y-1">
-            <Label>金额</Label>
-            <Input
-              type="number"
-              step="0.01"
-              value={form.amount}
-              onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
-              placeholder="例如 88.80"
-            />
-          </div>
+          {/* 可选字段展开/收起 */}
+          <button
+            type="button"
+            onClick={() => setShowOptional(!showOptional)}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mx-auto"
+          >
+            {showOptional ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            {showOptional ? '收起' : '更多选项'}
+          </button>
 
-          {/* 备注 */}
-          <div className="space-y-1">
-            <Label>备注</Label>
-            <textarea
-              rows={2}
-              value={form.note}
-              onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
-              placeholder="这笔钱花在了哪里？"
-              className="flex min-h-[60px] w-full rounded-xl bg-muted px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
-            />
-          </div>
+          {showOptional && (
+            <div className="space-y-3">
+              {/* 备注 */}
+              <textarea
+                rows={2}
+                value={form.note}
+                onChange={(e) => setForm((prev) => ({ ...prev, note: e.target.value }))}
+                placeholder="备注（可选）"
+                className="flex min-h-[50px] w-full rounded-xl bg-muted px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+              />
 
-          {/* 分类 */}
-          <div className="space-y-1">
-            <Label>分类</Label>
-            <Select value={form.category} onValueChange={(value) => setForm((prev) => ({ ...prev, category: value }))}>
-              <SelectTrigger>
-                <SelectValue placeholder="选择分类" />
-              </SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((cat) => (
-                  <SelectItem key={cat.value} value={cat.value}>
-                    {cat.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* 时间 */}
-          <div className="space-y-1">
-            <Label>时间</Label>
-            <Input
-              type="datetime-local"
-              value={form.transaction_time}
-              onChange={(e) => setForm((prev) => ({ ...prev, transaction_time: e.target.value }))}
-            />
-          </div>
+              {/* 时间 */}
+              <input
+                type="datetime-local"
+                value={transactionTime}
+                onChange={(e) => setTransactionTime(e.target.value)}
+                className="w-full rounded-xl bg-muted px-3 py-2 text-sm border border-border focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+              />
+            </div>
+          )}
 
           {/* 错误提示 */}
           {error && (
@@ -177,12 +179,16 @@ export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProp
           )}
 
           {/* 按钮 */}
-          <div className="flex gap-2 pt-2">
+          <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)} className="flex-1">
               取消
             </Button>
-            <Button onClick={handleSubmit} disabled={saving} className="flex-1">
-              {saving ? '保存中...' : '确认新增'}
+            <Button
+              onClick={handleSubmit}
+              disabled={saving}
+              className="flex-1 bg-[#FF6B6B] hover:bg-[#FF6B6B]/90 text-white"
+            >
+              {saving ? '保存中...' : '确认'}
             </Button>
           </div>
         </div>

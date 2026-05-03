@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { Download } from "lucide-react";
-import { Transaction, TransactionTypeFilter } from "../types";
+import { Transaction } from "../types";
 
 interface DetailListProps {
   transactions: Transaction[];
@@ -23,18 +23,10 @@ function formatDate(dateStr: string) {
   });
 }
 
-const TYPE_FILTERS: { value: TransactionTypeFilter; label: string }[] = [
-  { value: "all", label: "全部" },
-  { value: "expense", label: "支出" },
-  { value: "income", label: "收入" },
-];
-
 export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoadMore }: DetailListProps) {
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<TransactionTypeFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
-  // 动态提取所有分类
   const categories = useMemo(() => {
     const cats = new Set(transactions.map((t) => t.category || "未分类"));
     return Array.from(cats).sort();
@@ -43,17 +35,10 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
   const filtered = useMemo(() => {
     let result = transactions;
 
-    // 类型筛选
-    if (typeFilter !== "all") {
-      result = result.filter((t) => t.type === typeFilter);
-    }
-
-    // 分类筛选
     if (categoryFilter !== "all") {
       result = result.filter((t) => (t.category || "未分类") === categoryFilter);
     }
 
-    // 搜索筛选
     if (search.trim()) {
       const keyword = search.trim().toLowerCase();
       result = result.filter(
@@ -65,17 +50,16 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
     }
 
     return result;
-  }, [transactions, search, typeFilter, categoryFilter]);
+  }, [transactions, search, categoryFilter]);
 
   const handleExport = useCallback(() => {
     const header = "日期,类型,金额,分类,备注";
     const rows = filtered.map((t) => {
       const date = new Date(t.transaction_time || t.created_at).toLocaleString("zh-CN");
-      const type = t.type === "income" ? "收入" : "支出";
       const amount = Number(t.amount);
       const category = (t.category || "未分类").replace(/,/g, "，");
       const note = (t.note || "").replace(/,/g, "，").replace(/\n/g, " ");
-      return `${date},${type},${amount},${category},${note}`;
+      return `${date},支出,${amount},${category},${note}`;
     });
     const csv = "﻿" + header + "\n" + rows.join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -95,14 +79,22 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
         </div>
         <p className="font-medium text-foreground text-sm">暂无交易记录</p>
         <p className="mt-1 text-xs text-muted-foreground">
-          点击右下角 + 号开始记账吧
+          点击 + 号开始记账吧
         </p>
       </div>
     );
   }
 
-  // 按日期分组
-  const grouped = filtered.reduce<Record<string, Transaction[]>>((acc, t) => {
+  // 按交易时间排序（降序），确保分组顺序正确
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const dateA = new Date(a.transaction_time || a.created_at).getTime();
+      const dateB = new Date(b.transaction_time || b.created_at).getTime();
+      return dateB - dateA;
+    });
+  }, [filtered]);
+
+  const grouped = sorted.reduce<Record<string, Transaction[]>>((acc, t) => {
     const date = new Date(t.transaction_time || t.created_at);
     const key = date.toLocaleDateString("zh-CN", { month: "long", day: "numeric", weekday: "short" });
     if (!acc[key]) acc[key] = [];
@@ -158,24 +150,6 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
 
       {/* 筛选器 */}
       <div className="flex flex-wrap gap-2">
-        {/* 类型筛选 */}
-        <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
-          {TYPE_FILTERS.map(({ value, label }) => (
-            <button
-              key={value}
-              onClick={() => setTypeFilter(value)}
-              className={`px-3 py-1.5 text-xs rounded-md transition-all ${
-                typeFilter === value
-                  ? "bg-white shadow-sm text-foreground font-medium"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* 分类筛选 */}
         {categories.length > 1 && (
           <select
             value={categoryFilter}
@@ -189,17 +163,15 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
           </select>
         )}
 
-        {/* 清除筛选 */}
-        {(typeFilter !== "all" || categoryFilter !== "all") && (
+        {categoryFilter !== "all" && (
           <button
-            onClick={() => { setTypeFilter("all"); setCategoryFilter("all"); }}
+            onClick={() => setCategoryFilter("all")}
             className="px-3 py-1.5 text-xs rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             清除筛选
           </button>
         )}
 
-        {/* 导出按钮 */}
         <button
           onClick={handleExport}
           className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
@@ -257,12 +229,8 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
                         {t.category || "未分类"} · {formatDate(t.transaction_time || t.created_at)}
                       </p>
                     </div>
-                    <span
-                      className={`text-sm font-semibold ml-2 ${
-                        t.type === "income" ? "text-emerald-500" : "text-[#FF6B6B]"
-                      }`}
-                    >
-                      {t.type === "income" ? "+" : "-"}¥{Number(t.amount).toLocaleString()}
+                    <span className="text-sm font-semibold ml-2 text-[#FF6B6B]">
+                      -¥{Number(t.amount).toLocaleString()}
                     </span>
                   </motion.button>
                 ))}

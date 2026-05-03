@@ -50,15 +50,16 @@ export async function GET(req: NextRequest) {
 
     // 聚合计算
     let totalExpense = 0;
-    let totalIncome = 0;
     const dailyMap: Record<string, number> = {};
     const categoryMap: Record<string, { amount: number; count: number }> = {};
     const calendarMap: Record<number, number> = {};
+    let lastExpenseTx: typeof currentTx[0] | null = null;
 
     for (const t of currentTx) {
       const amount = Number(t.amount);
       if (t.type === 'expense') {
         totalExpense += amount;
+        if (!lastExpenseTx) lastExpenseTx = t;
         // 每日支出
         const d = new Date(t.transaction_time || t.created_at);
         const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -71,10 +72,16 @@ export async function GET(req: NextRequest) {
         // 日历
         const day = d.getDate();
         calendarMap[day] = (calendarMap[day] || 0) + amount;
-      } else {
-        totalIncome += amount;
       }
     }
+
+    // 最近一笔支出
+    const lastTransaction = lastExpenseTx ? {
+      amount: Number(lastExpenseTx.amount),
+      category: lastExpenseTx.category || '未分类',
+      note: lastExpenseTx.note || '',
+      transaction_time: lastExpenseTx.transaction_time || lastExpenseTx.created_at,
+    } : null;
 
     // 上月总支出
     const prevMonthExpense = prevTx
@@ -105,13 +112,13 @@ export async function GET(req: NextRequest) {
         year,
         month,
         totalExpense,
-        totalIncome,
         transactionCount: currentTx.length,
         dailyExpenses,
         categoryBreakdown,
         calendarData: calendarMap,
         prevMonthExpense,
         allTimeExpense,
+        lastTransaction,
       },
     });
   } catch (error: unknown) {

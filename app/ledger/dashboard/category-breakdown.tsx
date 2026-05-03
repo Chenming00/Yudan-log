@@ -54,13 +54,9 @@ export function CategoryBreakdown({ categoryBreakdown, title = "支出分类" }:
   const total = categoryList.reduce((sum, item) => sum + item.value, 0);
   const visibleCategories = expanded ? categoryList : categoryList.slice(0, 5);
 
-  if (categoryList.length === 0) {
-    return (
-      <div className="rounded-2xl bg-card border border-border p-6">
-        <p className="text-sm font-medium text-muted-foreground mb-4">{title}</p>
-        <p className="text-center text-muted-foreground text-sm py-8">暂无数据</p>
-      </div>
-    );
+  // 单分类或无数据时不显示饼图
+  if (categoryList.length <= 1) {
+    return null;
   }
 
   return (

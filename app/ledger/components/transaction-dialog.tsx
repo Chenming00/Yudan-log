@@ -16,9 +16,9 @@ interface TransactionDetailProps {
   onUpdated: () => void;
 }
 
-function createTransactionEditForm(transaction: Transaction | null) {
+function createEditForm(transaction: Transaction | null) {
   if (!transaction) {
-    return { amount: "", note: "", category: "", type: "expense" as const, transaction_time: "" };
+    return { amount: "", note: "", category: "", transaction_time: "" };
   }
   const dt = transaction.transaction_time || transaction.created_at;
   const date = new Date(dt);
@@ -27,26 +27,17 @@ function createTransactionEditForm(transaction: Transaction | null) {
     amount: String(transaction.amount),
     note: transaction.note || "",
     category: transaction.category || "",
-    type: transaction.type,
     transaction_time: localString,
   };
 }
 
 function DetailRow({ label, value, multiline = false }: { label: string; value: string; multiline?: boolean }) {
-  if (multiline) {
-    return (
-      <div className="flex flex-col gap-1">
-        <span className="text-muted-foreground text-xs">{label}</span>
-        <span className="text-foreground font-medium whitespace-pre-wrap break-words leading-relaxed">
-          {value}
-        </span>
-      </div>
-    );
-  }
   return (
     <div className="flex flex-col gap-1">
       <span className="text-muted-foreground text-xs">{label}</span>
-      <span className="text-foreground font-medium break-words min-w-0">{value}</span>
+      <span className={`text-foreground font-medium break-words min-w-0 ${multiline ? "whitespace-pre-wrap leading-relaxed" : ""}`}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -63,11 +54,10 @@ export function TransactionDialog({
   const [deleting, setDeleting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [editForm, setEditForm] = useState(() => createTransactionEditForm(transaction));
+  const [editForm, setEditForm] = useState(() => createEditForm(transaction));
 
   if (!transaction) return null;
 
-  const isIncome = transaction.type === "income";
   const dateStr = new Date(transaction.transaction_time || transaction.created_at).toLocaleString("zh-CN", {
     year: "numeric",
     month: "long",
@@ -91,7 +81,7 @@ export function TransactionDialog({
           amount: parseFloat(editForm.amount),
           note: editForm.note,
           category: editForm.category,
-          type: editForm.type,
+          type: 'expense',
           transaction_time: editForm.transaction_time ? new Date(editForm.transaction_time).toISOString() : undefined,
         }),
       });
@@ -167,7 +157,7 @@ export function TransactionDialog({
         <DialogContent className="sm:max-w-[425px]">
           <button
             onClick={() => onOpenChange(false)}
-            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground"
+            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
           >
             <X className="h-4 w-4 text-muted-foreground" />
             <span className="sr-only">Close</span>
@@ -184,43 +174,17 @@ export function TransactionDialog({
                   className="text-2xl font-bold tracking-tight text-center w-full bg-transparent border-b border-border pb-1 text-foreground rounded-none"
                 />
               ) : (
-                <span
-                  className={`text-2xl font-bold ${
-                    isIncome ? "text-emerald-500" : "text-[#FF6B6B]"
-                  }`}
-                >
-                  {isIncome ? "+" : "-"}
-                  ¥
-                  {Number(transaction.amount).toLocaleString(undefined, {
+                <span className="text-2xl font-bold text-[#FF6B6B]">
+                  -¥{Number(transaction.amount).toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
                   })}
                 </span>
               )}
             </DialogTitle>
-            {editing ? (
-              <div className="flex gap-1 bg-muted rounded-lg p-0.5 mt-3 mx-auto w-fit">
-                {(["expense", "income"] as const).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setEditForm((f) => ({ ...f, type: t }))}
-                    className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all ${
-                      editForm.type === t ? "bg-white shadow-sm text-foreground" : "text-muted-foreground"
-                    }`}
-                  >
-                    {t === "income" ? "收入" : "支出"}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <span
-                className={`mt-3 text-xs px-3 py-1.5 rounded-full font-medium ${
-                  isIncome ? "bg-emerald-50 text-emerald-500" : "bg-red-50 text-[#FF6B6B]"
-                }`}
-              >
-                {isIncome ? "收入" : "支出"}
-              </span>
-            )}
+            <span className="mt-3 text-xs px-3 py-1.5 rounded-full font-medium bg-red-50 text-[#FF6B6B] mx-auto w-fit">
+              支出
+            </span>
           </DialogHeader>
 
           {editing ? (
@@ -231,7 +195,7 @@ export function TransactionDialog({
                   value={editForm.note}
                   onChange={(e) => setEditForm((f) => ({ ...f, note: e.target.value }))}
                   rows={2}
-                  className="flex min-h-[60px] w-full rounded-xl bg-muted px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+                  className="flex min-h-[60px] w-full rounded-xl bg-muted px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
                 />
               </div>
               <div className="space-y-2">

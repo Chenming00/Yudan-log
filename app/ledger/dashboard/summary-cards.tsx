@@ -1,108 +1,61 @@
 "use client";
 
-import { TrendingUp, TrendingDown, Wallet, CalendarDays, Hash, PiggyBank } from "lucide-react";
 import { motion } from "framer-motion";
 import { AnimatedCounter } from "@/components/animated-counter";
+import { LastTransaction } from "../types";
 
 interface SummaryCardsProps {
-  totalExpense: number;
-  totalIncome: number;
-  transactionCount: number;
-  prevMonthExpense: number;
-  daysPassed: number;
   allTimeExpense: number;
+  totalExpense: number;
+  lastTransaction: LastTransaction | null;
 }
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: (i: number) => ({
-    opacity: 1,
-    y: 0,
-    transition: { delay: i * 0.1, duration: 0.4, ease: [0.4, 0, 0.2, 1] as const },
-  }),
-};
+function formatRelativeDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-export function SummaryCards({ totalExpense, transactionCount, prevMonthExpense, daysPassed, allTimeExpense }: SummaryCardsProps) {
-  const currentExpense = totalExpense;
-  const lastExpense = prevMonthExpense;
-  const diff = lastExpense > 0 ? ((currentExpense - lastExpense) / lastExpense) * 100 : 0;
-  const isIncrease = diff > 0;
-  const dailyAvg = daysPassed > 0 ? currentExpense / daysPassed : 0;
+  if (diffDays === 0) return "今天";
+  if (diffDays === 1) return "昨天";
+  if (diffDays < 7) return `${diffDays}天前`;
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+}
 
+export function SummaryCards({ allTimeExpense, totalExpense, lastTransaction }: SummaryCardsProps) {
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
-        {/* 本月支出 */}
-        <motion.div
-          className="rounded-2xl bg-card border border-border p-5"
-          custom={0}
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <div className="flex items-center gap-2 text-muted-foreground mb-3">
-            <Wallet className="h-4 w-4" />
-            <span className="text-sm">本月支出</span>
-          </div>
-          <div className="text-xl font-bold text-[#FF6B6B]">
-            <AnimatedCounter value={currentExpense} prefix="¥" />
-          </div>
-          <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-            {isIncrease ? (
-              <>
-                <TrendingUp className="h-3 w-3 text-[#FF6B6B]" />
-                <span className="text-[#FF6B6B]">+{diff.toFixed(1)}%</span>
-              </>
-            ) : (
-              <>
-                <TrendingDown className="h-3 w-3 text-emerald-500" />
-                <span className="text-emerald-500">{diff.toFixed(1)}%</span>
-              </>
-            )}
-            <span>vs 上月</span>
-          </div>
-        </motion.div>
-
-        {/* 日均支出 */}
-        <motion.div
-          className="rounded-2xl bg-card border border-border p-5"
-          custom={1}
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-        >
-          <div className="flex items-center gap-2 text-muted-foreground mb-3">
-            <CalendarDays className="h-4 w-4" />
-            <span className="text-sm">日均支出</span>
-          </div>
-          <div className="text-xl font-bold text-foreground">
-            <AnimatedCounter value={dailyAvg} prefix="¥" decimals={0} />
-          </div>
-          <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
-            <Hash className="h-3 w-3" />
-            <span>{transactionCount} 笔记录</span>
-          </div>
-        </motion.div>
+    <motion.div
+      className="rounded-2xl bg-card border border-border p-6 shadow-sm"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
+    >
+      {/* 总累计支出 — 最大字体 */}
+      <p className="text-sm text-muted-foreground mb-1">总支出</p>
+      <div className="text-3xl sm:text-4xl font-bold text-[#FF6B6B] tracking-tight">
+        <AnimatedCounter value={allTimeExpense} prefix="¥" />
       </div>
 
-      {/* 总共支出 */}
-      <motion.div
-        className="rounded-2xl bg-card border border-border p-5"
-        custom={2}
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <PiggyBank className="h-4 w-4" />
-            <span className="text-sm">总共支出</span>
-          </div>
-          <div className="text-xl font-bold text-[#FF6B6B]">
-            <AnimatedCounter value={allTimeExpense} prefix="¥" />
-          </div>
+      {/* 分隔线 */}
+      <div className="h-px bg-border my-4" />
+
+      {/* 本月支出 */}
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-muted-foreground">本月</span>
+        <span className="text-lg font-semibold text-foreground">
+          ¥{totalExpense.toLocaleString()}
+        </span>
+      </div>
+
+      {/* 最近一笔 */}
+      {lastTransaction && (
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-xs text-muted-foreground">最近一笔</span>
+          <span className="text-xs text-muted-foreground">
+            ¥{lastTransaction.amount.toLocaleString()} · {lastTransaction.category} · {formatRelativeDate(lastTransaction.transaction_time)}
+          </span>
         </div>
-      </motion.div>
-    </div>
+      )}
+    </motion.div>
   );
 }
