@@ -8,6 +8,9 @@ import { Transaction, TransactionTypeFilter } from "../types";
 interface DetailListProps {
   transactions: Transaction[];
   onSelect: (t: Transaction) => void;
+  hasMore: boolean;
+  loadingMore: boolean;
+  onLoadMore: () => void;
 }
 
 function formatDate(dateStr: string) {
@@ -26,7 +29,7 @@ const TYPE_FILTERS: { value: TransactionTypeFilter; label: string }[] = [
   { value: "income", label: "收入" },
 ];
 
-export function DetailList({ transactions, onSelect }: DetailListProps) {
+export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoadMore }: DetailListProps) {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<TransactionTypeFilter>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -266,6 +269,17 @@ export function DetailList({ transactions, onSelect }: DetailListProps) {
               </div>
             </div>
           ))}
+
+          {/* 加载更多 */}
+          {hasMore && (
+            <button
+              onClick={onLoadMore}
+              disabled={loadingMore}
+              className="w-full py-3 rounded-xl bg-muted text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+            >
+              {loadingMore ? "加载中..." : "加载更多"}
+            </button>
+          )}
         </div>
       )}
     </div>

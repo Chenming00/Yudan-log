@@ -1,11 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Transaction } from "../types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface CalendarHeatmapProps {
-  transactions: Transaction[];
+  calendarData: Record<number, number>;
   year: number;
   month: number; // 1-12
 }
@@ -22,34 +21,15 @@ function getHeatColor(amount: number, max: number): string {
   return "bg-[#FF6B6B]/90";
 }
 
-function formatTime(dateStr: string) {
-  const d = new Date(dateStr);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-export function CalendarHeatmap({ transactions, year, month }: CalendarHeatmapProps) {
+export function CalendarHeatmap({ calendarData, year, month }: CalendarHeatmapProps) {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
 
-  const { dailyAmounts, dailyTransactions, maxAmount, daysInMonth, firstDayOfWeek } = useMemo(() => {
-    const amounts: Record<number, number> = {};
-    const txMap: Record<number, Transaction[]> = {};
-
-    transactions
-      .filter((t) => t.type === "expense")
-      .forEach((t) => {
-        const d = new Date(t.transaction_time || t.created_at);
-        const day = d.getDate();
-        amounts[day] = (amounts[day] || 0) + Number(t.amount);
-        if (!txMap[day]) txMap[day] = [];
-        txMap[day].push(t);
-      });
-
-    const max = Math.max(...Object.values(amounts), 1);
+  const { maxAmount, daysInMonth, firstDayOfWeek } = useMemo(() => {
+    const max = Math.max(...Object.values(calendarData), 1);
     const totalDays = new Date(year, month, 0).getDate();
     const firstDay = (new Date(year, month - 1, 1).getDay() + 6) % 7;
-
-    return { dailyAmounts: amounts, dailyTransactions: txMap, maxAmount: max, daysInMonth: totalDays, firstDayOfWeek: firstDay };
-  }, [transactions, year, month]);
+    return { maxAmount: max, daysInMonth: totalDays, firstDayOfWeek: firstDay };
+  }, [calendarData, year, month]);
 
   const today = new Date();
   const isThisMonth = today.getFullYear() === year && today.getMonth() + 1 === month;
@@ -59,8 +39,7 @@ export function CalendarHeatmap({ transactions, year, month }: CalendarHeatmapPr
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const selectedDayTx = selectedDay !== null ? (dailyTransactions[selectedDay] || []) : [];
-  const selectedDayTotal = selectedDay !== null ? (dailyAmounts[selectedDay] || 0) : 0;
+  const selectedDayTotal = selectedDay !== null ? (calendarData[selectedDay] || 0) : 0;
 
   return (
     <>
@@ -87,7 +66,7 @@ export function CalendarHeatmap({ transactions, year, month }: CalendarHeatmapPr
         <div className="grid grid-cols-7 gap-1">
           {cells.map((day, i) => {
             if (day === null) return <div key={`empty-${i}`} />;
-            const amount = dailyAmounts[day] || 0;
+            const amount = calendarData[day] || 0;
             const isToday = isThisMonth && today.getDate() === day;
             const hasData = amount > 0;
             return (
@@ -122,32 +101,10 @@ export function CalendarHeatmap({ transactions, year, month }: CalendarHeatmapPr
             </DialogTitle>
           </DialogHeader>
 
-          <div className="flex items-center justify-between text-sm mb-3">
-            <span className="text-muted-foreground">{selectedDayTx.length} 笔支出</span>
-            <span className="font-semibold text-[#FF6B6B]">¥{selectedDayTotal.toLocaleString()}</span>
+          <div className="text-center py-6">
+            <p className="text-3xl font-bold text-[#FF6B6B]">¥{selectedDayTotal.toLocaleString()}</p>
+            <p className="text-sm text-muted-foreground mt-2">当日总支出</p>
           </div>
-
-          {selectedDayTx.length > 0 ? (
-            <div className="space-y-2 max-h-60 overflow-y-auto">
-              {selectedDayTx
-                .sort((a, b) => new Date(a.transaction_time || a.created_at).getTime() - new Date(b.transaction_time || b.created_at).getTime())
-                .map((t) => (
-                  <div key={t.id} className="flex items-center justify-between rounded-xl bg-muted/50 px-3 py-2.5">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-foreground truncate">{t.note || t.category || "未分类"}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {t.category || "未分类"} · {formatTime(t.transaction_time || t.created_at)}
-                      </p>
-                    </div>
-                    <span className="text-sm font-medium text-[#FF6B6B] ml-3 flex-shrink-0">
-                      -¥{Number(t.amount).toLocaleString()}
-                    </span>
-                  </div>
-                ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground text-center py-4">当日无支出记录</p>
-          )}
         </DialogContent>
       </Dialog>
     </>

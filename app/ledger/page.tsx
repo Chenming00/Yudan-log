@@ -8,14 +8,10 @@ import { SummaryCards, TrendChart, CategoryBreakdown, DetailList, CalendarHeatma
 import { TransactionDialog } from "./components/transaction-dialog";
 import { AddDialog } from "./components/add-dialog";
 import { SettingsDialog } from "./components/settings-dialog";
-import { Transaction } from "./types";
+import { Transaction, MonthlyData } from "./types";
 
 function getMonthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function getTransactionDate(transaction: Transaction) {
-  return new Date(transaction.transaction_time || transaction.created_at);
 }
 
 function LoadingSkeleton() {
@@ -51,15 +47,20 @@ export default function LedgerPage() {
     return localStorage.getItem("api_key");
   });
   const canManageTransactions = Boolean(apiKey);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [monthlyData, setMonthlyData] = useState<MonthlyData | null>(null);
+  const [detailTransactions, setDetailTransactions] = useState<Transaction[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMonthly, setLoadingMonthly] = useState(false);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedMonth, setSelectedMonth] = useState(() => getMonthKey(new Date()));
+  const [viewAll, setViewAll] = useState(false);
 
   const navigateMonth = (delta: number) => {
     setSelectedMonth((prev) => {
@@ -76,61 +77,6 @@ export default function LedgerPage() {
 
   const isCurrentMonth = selectedMonth === getMonthKey(new Date());
 
-  const fetchTransactions = useCallback(async (key: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const headers = key ? { Authorization: `Bearer ${key}` } : undefined;
-      const res = await fetch("/api/list", headers ? { headers } : undefined);
-      const data = await res.json();
-      if (data.success) {
-        setTransactions(data.data);
-      } else {
-        setError(data.error || "获取账本失败");
-        if (res.status === 401) {
-          localStorage.removeItem("api_key");
-          setApiKey(null);
-        }
-      }
-    } catch {
-      setError("网络异常，请稍后重试");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void fetchTransactions(apiKey || "");
-    }, 0);
-    return () => window.clearTimeout(timer);
-  }, [apiKey, fetchTransactions]);
-
-  // 选中月份数据
-  const selectedMonthData = useMemo(() => {
-    const monthTransactions = transactions.filter(
-      (t) => getMonthKey(getTransactionDate(t)) === selectedMonth
-    );
-    const expense = monthTransactions
-      .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-    return { expense, transactions: monthTransactions };
-  }, [transactions, selectedMonth]);
-
-  // 上月数据
-  const lastMonthData = useMemo(() => {
-    const [y, m] = selectedMonth.split("-").map(Number);
-    const lastMonth = new Date(y, m - 2, 1);
-    const lastMonthKey = getMonthKey(lastMonth);
-    const monthTransactions = transactions.filter(
-      (t) => getMonthKey(getTransactionDate(t)) === lastMonthKey
-    );
-    const expense = monthTransactions
-      .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + Number(t.amount), 0);
-    return { expense };
-  }, [transactions, selectedMonth]);
-
   // 月份天数信息
   const monthInfo = useMemo(() => {
     const [y, m] = selectedMonth.split("-").map(Number);
@@ -141,14 +87,93 @@ export default function LedgerPage() {
     return { daysInMonth, daysPassed };
   }, [selectedMonth]);
 
-  // 按时间排序的交易（用于明细列表）
-  const sortedTransactions = useMemo(() => {
-    return [...transactions].sort((a, b) => {
-      const timeA = new Date(a.transaction_time || a.created_at).getTime();
-      const timeB = new Date(b.transaction_time || b.created_at).getTime();
-      return timeB - timeA;
+  // 按月过滤明细列表（客户端过滤）
+  const filteredDetailTransactions = useMemo(() => {
+    if (viewAll) return detailTransactions;
+    const [y, m] = selectedMonth.split("-").map(Number);
+    return detailTransactions.filter((t) => {
+      const d = new Date(t.transaction_time || t.created_at);
+      return d.getFullYear() === y && d.getMonth() + 1 === m;
     });
-  }, [transactions]);
+  }, [detailTransactions, selectedMonth, viewAll]);
+
+  // 获取月度汇总数据
+  const fetchMonthlyData = useCallback(async (monthKey: string) => {
+    setLoadingMonthly(true);
+    try {
+      const [y, m] = monthKey.split("-").map(Number);
+      const res = await fetch(`/api/monthly?year=${y}&month=${m}`);
+      const data = await res.json();
+      if (data.success) {
+        setMonthlyData(data.data);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingMonthly(false);
+    }
+  }, []);
+
+  // 获取明细列表（分页）
+  const fetchDetailTransactions = useCallback(async (cursor?: string) => {
+    if (cursor) {
+      setLoadingMore(true);
+    } else {
+      setLoadingDetail(true);
+    }
+    try {
+      const params = new URLSearchParams({ limit: "30" });
+      if (cursor) params.set("cursor", cursor);
+      const res = await fetch(`/api/list?${params}`);
+      const data = await res.json();
+      if (data.success) {
+        setDetailTransactions((prev) => cursor ? [...prev, ...data.data] : data.data);
+        setNextCursor(data.nextCursor);
+        setHasMore(data.hasMore);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingDetail(false);
+      setLoadingMore(false);
+    }
+  }, []);
+
+  // 初始加载
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void fetchMonthlyData(selectedMonth);
+      void fetchDetailTransactions();
+    }, 0);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 月份切换时重新获取月度数据
+  useEffect(() => {
+    void fetchMonthlyData(selectedMonth);
+  }, [selectedMonth, fetchMonthlyData]);
+
+  // 加载更多
+  const handleLoadMore = useCallback(() => {
+    if (nextCursor) {
+      void fetchDetailTransactions(nextCursor);
+    }
+  }, [nextCursor, fetchDetailTransactions]);
+
+  // 增删改后刷新
+  const handleRefresh = useCallback(() => {
+    void fetchMonthlyData(selectedMonth);
+    setDetailTransactions([]);
+    setNextCursor(null);
+    setHasMore(false);
+    void fetchDetailTransactions();
+  }, [selectedMonth, fetchMonthlyData, fetchDetailTransactions]);
+
+  // 切换全部/按月
+  const handleToggleViewAll = useCallback(() => {
+    setViewAll((prev) => !prev);
+  }, []);
 
   return (
     <main className="min-h-screen px-5 py-6 bg-background" style={{ paddingBottom: "var(--nav-height)" }}>
@@ -176,20 +201,60 @@ export default function LedgerPage() {
       {/* 主要内容区 */}
       <div className="mt-4 space-y-4">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="bg-muted rounded-xl p-1 mb-6">
-            <TabsTrigger
-              value="overview"
-              className="data-[state=active]:bg-gray-100 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
-            >
-              概览
-            </TabsTrigger>
-            <TabsTrigger
-              value="detail"
-              className="data-[state=active]:bg-gray-100 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
-            >
-              明细
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between mb-6">
+            <TabsList className="bg-muted rounded-xl p-1">
+              <TabsTrigger
+                value="overview"
+                className="data-[state=active]:bg-gray-100 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
+              >
+                概览
+              </TabsTrigger>
+              <TabsTrigger
+                value="detail"
+                className="data-[state=active]:bg-gray-100 data-[state=active]:text-foreground rounded-lg px-4 py-2 text-sm font-medium transition-all text-muted-foreground"
+              >
+                明细
+              </TabsTrigger>
+            </TabsList>
+
+            {/* 月份导航 */}
+            <div className="flex items-center gap-1">
+              {!(activeTab === "detail" && viewAll) && (
+                <>
+                  <button
+                    onClick={() => navigateMonth(-1)}
+                    className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span className="text-sm font-medium text-foreground min-w-[72px] text-center">{monthLabel}</span>
+                  <button
+                    onClick={() => navigateMonth(1)}
+                    disabled={isCurrentMonth}
+                    className={`p-1.5 rounded-lg transition-colors ${
+                      isCurrentMonth
+                        ? "text-muted-foreground/30 cursor-not-allowed"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </>
+              )}
+              {activeTab === "detail" && (
+                <button
+                  onClick={handleToggleViewAll}
+                  className={`ml-1 px-2.5 py-1 text-xs rounded-lg transition-all ${
+                    viewAll
+                      ? "bg-[#FF6B6B]/10 text-[#FF6B6B] font-medium"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  {viewAll ? "按月" : "全部"}
+                </button>
+              )}
+            </div>
+          </div>
 
           {/* 概览 Tab */}
           <TabsContent value="overview" className="space-y-4">
@@ -202,44 +267,25 @@ export default function LedgerPage() {
                 transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
                 className="space-y-4"
               >
-                {/* 月份导航 */}
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={() => navigateMonth(-1)}
-                    className="p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                  >
-                    <ChevronLeft className="h-5 w-5" />
-                  </button>
-                  <span className="text-sm font-medium text-foreground">{monthLabel}</span>
-                  <button
-                    onClick={() => navigateMonth(1)}
-                    disabled={isCurrentMonth}
-                    className={`p-2 rounded-lg transition-colors ${
-                      isCurrentMonth
-                        ? "text-muted-foreground/30 cursor-not-allowed"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-                </div>
-
-                {loading ? (
+                {loadingMonthly || !monthlyData ? (
                   <LoadingSkeleton />
                 ) : (
                   <>
                     <SummaryCards
-                      currentMonth={selectedMonthData}
-                      lastMonth={lastMonthData}
+                      totalExpense={monthlyData.totalExpense}
+                      totalIncome={monthlyData.totalIncome}
+                      transactionCount={monthlyData.transactionCount}
+                      prevMonthExpense={monthlyData.prevMonthExpense}
                       daysPassed={monthInfo.daysPassed}
+                      allTimeExpense={monthlyData.allTimeExpense}
                     />
 
-                    <TrendChart transactions={selectedMonthData.transactions} />
+                    <TrendChart dailyExpenses={monthlyData.dailyExpenses} />
 
-                    <CategoryBreakdown transactions={selectedMonthData.transactions} />
+                    <CategoryBreakdown categoryBreakdown={monthlyData.categoryBreakdown} />
 
                     <CalendarHeatmap
-                      transactions={selectedMonthData.transactions}
+                      calendarData={monthlyData.calendarData}
                       year={Number(selectedMonth.split("-")[0])}
                       month={Number(selectedMonth.split("-")[1])}
                     />
@@ -256,15 +302,18 @@ export default function LedgerPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
             >
-              {loading ? (
+              {loadingDetail && detailTransactions.length === 0 ? (
                 <LoadingSkeleton />
               ) : (
                 <DetailList
-                  transactions={sortedTransactions}
+                  transactions={filteredDetailTransactions}
                   onSelect={(t) => {
                     setSelectedTransaction(t);
                     setDialogOpen(true);
                   }}
+                  hasMore={hasMore}
+                  loadingMore={loadingMore}
+                  onLoadMore={handleLoadMore}
                 />
               )}
             </motion.div>
@@ -301,7 +350,7 @@ export default function LedgerPage() {
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         apiKey={apiKey}
-        onUpdated={() => fetchTransactions(apiKey || "")}
+        onUpdated={handleRefresh}
       />
 
       {/* 新增对话框 */}
@@ -310,7 +359,7 @@ export default function LedgerPage() {
         open={addOpen}
         onOpenChange={setAddOpen}
         apiKey={apiKey}
-        onAdded={() => fetchTransactions(apiKey || "")}
+        onAdded={handleRefresh}
       />
 
       {/* 设置对话框 */}

@@ -4,10 +4,10 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { Transaction } from "../types";
+import { CategorySummary } from "../types";
 
 interface CategoryBreakdownProps {
-  transactions: Transaction[];
+  categoryBreakdown: CategorySummary[];
   title?: string;
 }
 
@@ -45,24 +45,11 @@ const CustomTooltip = ({ active, payload }: PieTooltipProps) => {
   return null;
 };
 
-export function CategoryBreakdown({ transactions, title = "支出分类" }: CategoryBreakdownProps) {
+export function CategoryBreakdown({ categoryBreakdown, title = "支出分类" }: CategoryBreakdownProps) {
   const [expanded, setExpanded] = useState(false);
 
-  const { groups, countByCategory } = transactions
-    .filter((t) => t.type === "expense")
-    .reduce<{ groups: Record<string, number>; countByCategory: Record<string, number> }>(
-      (acc, t) => {
-        const category = t.category || "未分类";
-        acc.groups[category] = (acc.groups[category] || 0) + Number(t.amount);
-        acc.countByCategory[category] = (acc.countByCategory[category] || 0) + 1;
-        return acc;
-      },
-      { groups: {}, countByCategory: {} }
-    );
-
-  const categoryList = Object.entries(groups)
-    .map(([name, value]) => ({ name, value }))
-    .sort((a, b) => b.value - a.value);
+  const categoryList = categoryBreakdown.map((c) => ({ name: c.category, value: c.amount }));
+  const countByCategory = Object.fromEntries(categoryBreakdown.map((c) => [c.category, c.count]));
 
   const total = categoryList.reduce((sum, item) => sum + item.value, 0);
   const visibleCategories = expanded ? categoryList : categoryList.slice(0, 5);

@@ -1,6 +1,4 @@
 export type TransactionTypeFilter = 'all' | 'income' | 'expense';
-export type DateRangeFilter = 'all' | '7d' | '30d' | 'month';
-export type ViewMode = 'list' | 'monthly' | 'chart';
 
 export interface Transaction {
   id: string;
@@ -18,4 +16,28 @@ export interface TransactionFormState {
   category: string;
   type: 'expense' | 'income';
   transaction_time: string;
+}
+
+export interface DailyExpense {
+  date: string;
+  amount: number;
+}
+
+export interface CategorySummary {
+  category: string;
+  amount: number;
+  count: number;
+}
+
+export interface MonthlyData {
+  year: number;
+  month: number;
+  totalExpense: number;
+  totalIncome: number;
+  transactionCount: number;
+  dailyExpenses: DailyExpense[];
+  categoryBreakdown: CategorySummary[];
+  calendarData: Record<number, number>;
+  prevMonthExpense: number;
+  allTimeExpense: number;
 }

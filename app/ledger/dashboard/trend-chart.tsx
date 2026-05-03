@@ -4,10 +4,10 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Transaction } from "../types";
+import { DailyExpense } from "../types";
 
 interface TrendChartProps {
-  transactions: Transaction[];
+  dailyExpenses: DailyExpense[];
   title?: string;
 }
 
@@ -36,40 +36,21 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
   return null;
 };
 
-export function TrendChart({ transactions, title = "每日支出趋势" }: TrendChartProps) {
+export function TrendChart({ dailyExpenses, title = "每日支出趋势" }: TrendChartProps) {
   const [timeRange, setTimeRange] = useState<7 | 30>(7);
 
   const chartData = useMemo(() => {
-    const now = new Date();
-    const cutoffDate = new Date(now.getTime() - (timeRange - 1) * 24 * 60 * 60 * 1000);
-    
-    // 按日期分组支出
-    const dailyData = transactions
-      .filter((t) => {
-        if (t.type !== "expense") return false;
-        const date = new Date(t.transaction_time || t.created_at);
-        return date >= cutoffDate;
-      })
-      .reduce<Record<string, number>>((groups, t) => {
-        const date = new Date(t.transaction_time || t.created_at);
-        const dateKey = `${date.getMonth() + 1}/${date.getDate()}`;
-        groups[dateKey] = (groups[dateKey] || 0) + Number(t.amount);
-        return groups;
-      }, {});
-
-    // 填充完整日期范围的数据
-    const result = [];
-    for (let i = timeRange - 1; i >= 0; i--) {
-      const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-      const dateKey = `${date.getMonth() + 1}/${date.getDate()}`;
-      result.push({
-        date: dateKey,
-        value: dailyData[dateKey] || 0,
-        fullDate: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
-      });
-    }
-    return result;
-  }, [transactions, timeRange]);
+    // 取最后 timeRange 天的数据
+    const sliced = dailyExpenses.slice(-timeRange);
+    return sliced.map((d) => {
+      const date = new Date(d.date);
+      return {
+        date: `${date.getMonth() + 1}/${date.getDate()}`,
+        value: d.amount,
+        fullDate: d.date,
+      };
+    });
+  }, [dailyExpenses, timeRange]);
 
   const totalExpense = chartData.reduce((sum, d) => sum + d.value, 0);
   const avgDaily = totalExpense / timeRange;
