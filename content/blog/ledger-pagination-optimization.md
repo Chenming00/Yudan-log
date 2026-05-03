@@ -1,135 +1,581 @@
 ---
-title: 🐟 鱼蛋小账本性能优化：分页加载与月度聚合
+title: 🐟 鱼蛋小账本 API 使用教程：全部接口详解
 date: 2026-05-03
-summary: 账本从全量加载改造为游标分页 + 月度服务端聚合，明细列表支持"加载更多"，Dashboard 不再重复过滤数据。
+summary: 鱼蛋小账本全部 API 接口完整文档，涵盖交易增删改查、游标分页、月度聚合、日明细查询，附请求示例与响应结构。
 tags:
   - 技术笔记
   - 鱼蛋小账本
-  - 性能优化
+  - API 教程
 cover: /logo.png
 ---
 
-## 为什么要优化
+## 概览
 
-之前鱼蛋小账本的做法很简单粗暴：页面一打开，`fetch("/api/list")` 把数据库里**所有**交易记录一次性拉回来，前端自己过滤、分组、算汇总。
+鱼蛋小账本提供 6 个 RESTful API，用于管理个人收支记录。所有接口返回 JSON，写入类接口需要 Bearer Token 认证。
 
-数据少的时候没啥问题，但随着记录越来越多，这个方案的隐患就暴露了：
-
-- API 响应越来越慢，传输体积膨胀
-- 前端拿到全量数据后，概览 tab 和明细 tab 各自独立过滤同一份数组，做了大量重复计算
-- 明细列表一次性渲染所有记录，DOM 节点爆炸
-
-这次改造的核心思路：**该服务端做的别丢给客户端**。
+| 接口 | 方法 | 用途 | 认证 |
+|------|------|------|------|
+| `/api/list` | GET | 分页查询交易记录 | 否 |
+| `/api/monthly` | GET | 月度聚合数据 | 否 |
+| `/api/daily` | GET | 某日支出明细 | 否 |
+| `/api/add` | POST | 新增交易 | 是 |
+| `/api/edit` | PATCH | 修改交易 | 是 |
+| `/api/delete` | DELETE | 删除交易 | 是 |
 
 ---
 
-## 改了什么
+## 认证
 
-### 1. 新增 `/api/monthly` 月度汇总接口
-
-这是最大的变化。之前 Dashboard 的四个组件（汇总卡片、趋势图、分类饼图、日历热力图）各自从全量数据里过滤当月记录再计算，现在全部交给服务端一次搞定。
-
-接口接收 `year` 和 `month` 参数，返回预计算好的结构化数据：
+写入类接口（add / edit / delete）需要在请求头中携带 API Key：
 
 ```
-GET /api/monthly?year=2026&month=5
+Authorization: Bearer YOUR_API_KEY
+```
 
+读取类接口无需认证，可直接访问。
+
+---
+
+## 1. 查询交易列表（游标分页）
+
+```
+GET /api/list
+```
+
+### 请求参数（Query）
+
+| 参数 | 类型 | 必填 | 说明 | 默认值 |
+|------|------|------|------|--------|
+| `limit` | number | 否 | 每页条数，最大 100 | 30 |
+| `cursor` | string | 否 | 上一页最后一条的 `created_at`（ISO 8601），首次加载不传 | - |
+| `type` | string | 否 | 筛选类型：`expense` 或 `income` | 不筛选 |
+| `category` | string | 否 | 筛选分类名称 | 不筛选 |
+
+### 请求示例
+
+```bash
+# 首页加载（无 cursor）
+curl "https://your-domain/api/list?limit=30"
+
+# 加载下一页
+curl "https://your-domain/api/list?limit=30&cursor=2026-05-01T12:00:00Z"
+
+# 只查支出
+curl "https://your-domain/api/list?type=expense&limit=50"
+
+# 按分类筛选
+curl "https://your-domain/api/list?category=喂养用品"
+```
+
+### 响应结构
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "a1b2c3d4-...",
+      "amount": 120.5,
+      "category": "喂养用品",
+      "note": "奶粉",
+      "type": "expense",
+      "transaction_time": "2026-05-01T10:30:00Z",
+      "created_at": "2026-05-01T10:30:05Z"
+    }
+  ],
+  "nextCursor": "2026-04-28T08:30:00Z",
+  "hasMore": true
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| `data` | 当页交易记录数组 |
+| `nextCursor` | 下一页的游标值，传入下次请求的 `cursor` 参数。无更多数据时为 `null` |
+| `hasMore` | 是否还有更多数据 |
+
+### 分页流程
+
+```
+第 1 页: GET /api/list?limit=30
+         → nextCursor: "2026-04-28T08:30:00Z", hasMore: true
+
+第 2 页: GET /api/list?limit=30&cursor=2026-04-28T08:30:00Z
+         → nextCursor: "2026-04-15T14:20:00Z", hasMore: true
+
+第 3 页: GET /api/list?limit=30&cursor=2026-04-15T14:20:00Z
+         → nextCursor: null, hasMore: false  ← 没有更多了
+```
+
+### 为什么用游标分页
+
+数据库索引 `idx_transactions_created_at ON transactions (created_at DESC)` 直接支持此查询。选择游标而非 offset 分页，是因为 Telegram Bot 会异步写入新记录，offset 分页会出现数据偏移（重复或遗漏），游标锚定在 `created_at` 上，不受新插入影响。
+
+---
+
+## 2. 月度聚合数据
+
+```
+GET /api/monthly
+```
+
+一次请求返回当月所有预计算数据，Dashboard 四个组件（汇总卡片、趋势图、分类饼图、日历热力图）可直接使用，无需前端二次计算。
+
+### 请求参数（Query）
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `year` | number | 是 | 年份，如 `2026` |
+| `month` | number | 是 | 月份，1-12 |
+
+### 请求示例
+
+```bash
+curl "https://your-domain/api/monthly?year=2026&month=5"
+```
+
+### 响应结构
+
+```json
 {
   "success": true,
   "data": {
     "year": 2026,
     "month": 5,
     "totalExpense": 3280.50,
-    "totalIncome": 15000,
     "transactionCount": 42,
     "dailyExpenses": [
       { "date": "2026-05-01", "amount": 120 },
       { "date": "2026-05-02", "amount": 0 },
-      ...
+      { "date": "2026-05-03", "amount": 85 }
     ],
     "categoryBreakdown": [
       { "category": "喂养用品", "amount": 1200, "count": 8 },
-      { "category": "辅食零食", "amount": 800, "count": 12 },
-      ...
+      { "category": "辅食零食", "amount": 800, "count": 12 }
     ],
-    "calendarData": { "1": 120, "3": 85, ... },
-    "prevMonthExpense": 2950.00
+    "calendarData": { "1": 120, "3": 85, "5": 200 },
+    "prevMonthExpense": 2950.00,
+    "allTimeExpense": 28500.00,
+    "lastTransaction": {
+      "amount": 45,
+      "category": "辅食零食",
+      "note": "酸奶",
+      "transaction_time": "2026-05-03T09:00:00Z"
+    }
   }
 }
 ```
 
-- `dailyExpenses` — 每日支出金额，直接喂给趋势图
-- `categoryBreakdown` — 按金额降序的分类汇总，直接喂给饼图
-- `calendarData` — 日期到金额的 map，直接喂给日历热力图
-- `prevMonthExpense` — 上月总支出，用于环比变化的箭头显示
+### 字段说明
 
-Dashboard 组件不再需要原始交易数组，拿到数据直接渲染。
+| 字段 | 类型 | 用途 |
+|------|------|------|
+| `totalExpense` | number | 当月总支出 |
+| `transactionCount` | number | 当月交易笔数 |
+| `dailyExpenses` | array | 每日支出金额，按日期升序，无支出的日期金额为 0。直接喂给趋势图 |
+| `categoryBreakdown` | array | 分类汇总，按金额降序排列。直接喂给饼图 |
+| `calendarData` | object | 日期（几号）到金额的 map，如 `{ "1": 120, "3": 85 }`。直接喂给日历热力图 |
+| `prevMonthExpense` | number | 上月总支出，用于计算环比变化 |
+| `allTimeExpense` | number | 历史全部总支出 |
+| `lastTransaction` | object/null | 最近一笔支出记录，无记录时为 `null` |
 
-### 2. `/api/list` 支持游标分页
+### 内部实现
 
-之前是无参数的全量查询，现在支持分页：
+服务端并行执行三条 Supabase 查询（当月、上月、全部），然后在内存中聚合：
 
 ```
-GET /api/list?limit=30&cursor=2026-05-01T12:00:00Z&type=expense
+┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
+│  当月交易记录    │  │  上月交易记录    │  │  全部交易记录    │
+└────────┬────────┘  └────────┬────────┘  └────────┬────────┘
+         │                    │                    │
+         ▼                    ▼                    ▼
+   dailyExpenses        prevMonthExpense     allTimeExpense
+   categoryBreakdown
+   calendarData
+   lastTransaction
 ```
 
-| 参数 | 说明 | 默认值 |
-|------|------|--------|
-| `limit` | 每页条数，最大 100 | 30 |
-| `cursor` | 上一页最后一条的 `created_at`，首次加载不传 | - |
-| `type` | 筛选类型：`expense` / `income` | 不筛选 |
-| `category` | 筛选分类 | 不筛选 |
+---
 
-返回值多了分页信息：
+## 3. 日支出明细
+
+```
+GET /api/daily
+```
+
+返回某一天的全部支出记录，用于日历热力图点击某天后的详情弹窗。
+
+### 请求参数（Query）
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `year` | number | 是 | 年份 |
+| `month` | number | 是 | 月份，1-12 |
+| `day` | number | 是 | 日期，1-31 |
+
+### 请求示例
+
+```bash
+curl "https://your-domain/api/daily?year=2026&month=5&day=1"
+```
+
+### 响应结构
 
 ```json
 {
   "success": true,
-  "data": [...],
-  "nextCursor": "2026-04-28T08:30:00Z",
-  "hasMore": true
+  "data": [
+    {
+      "id": "a1b2c3d4-...",
+      "amount": 120,
+      "category": "喂养用品",
+      "note": "奶粉",
+      "type": "expense",
+      "transaction_time": "2026-05-01T10:30:00Z",
+      "created_at": "2026-05-01T10:30:05Z"
+    }
+  ]
 }
 ```
 
-为什么用游标分页而不是 offset？因为 Telegram Bot 会异步写入新记录，用 offset 分页会出现数据偏移（重复或遗漏），游标分页锚定在 `created_at` 上，不受新插入影响。
-
-### 3. 明细列表"加载更多"
-
-明细 tab 不再一次性渲染全部记录，首屏只加载 30 条，底部有一个"加载更多"按钮，点击后追加下一页数据。搜索和筛选仍然在已加载的数据上做客户端过滤，对个人使用场景够用了。
-
-### 4. 数据流拆分
-
-页面从一条数据流拆成两条独立的数据流：
-
-```
-概览 tab  →  GET /api/monthly?year=2026&month=5  →  Dashboard 组件
-明细 tab  →  GET /api/list?limit=30              →  DetailList 组件
-```
-
-切换月份时只重新请求月度汇总，不影响明细列表。增删改交易后两条数据流同时刷新。
+只返回 `type=expense` 的记录，按 `created_at` 降序排列。
 
 ---
 
-## 没改什么
+## 4. 新增交易
 
-- 搜索和筛选仍然是客户端的，没有搬到服务端。个人账本数据量不大，30 条内的过滤是瞬间完成的
-- 没有引入 SWR 或 React Query，保持原有的 `fetch` + 手动刷新模式
-- Telegram Bot 写入逻辑不变
-- CSV 导出仍然导出当前已加载的数据（不是全量），后续可以加 `/api/export` 端点
-- 日历热力图的日期详情弹窗从显示每笔交易简化为只显示当日总额（因为月度接口返回的是聚合数据）
+```
+POST /api/add
+```
+
+### 请求头
+
+```
+Content-Type: application/json
+Authorization: Bearer YOUR_API_KEY
+```
+
+### 请求体
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `amount` | number | 是 | 金额 |
+| `type` | string | 是 | `expense`（支出）或 `income`（收入） |
+| `category` | string | 否 | 分类名称 |
+| `note` | string | 否 | 备注 |
+| `transaction_time` | string | 否 | 交易时间（ISO 8601），不传则使用服务端当前时间 |
+
+### 请求示例
+
+```bash
+curl -X POST "https://your-domain/api/add" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "amount": 120.5,
+    "type": "expense",
+    "category": "喂养用品",
+    "note": "奶粉",
+    "transaction_time": "2026-05-01T10:30:00Z"
+  }'
+```
+
+### 响应结构
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "a1b2c3d4-...",
+    "amount": 120.5,
+    "category": "喂养用品",
+    "note": "奶粉",
+    "type": "expense",
+    "transaction_time": "2026-05-01T10:30:00Z",
+    "created_at": "2026-05-01T10:30:05Z"
+  }
+}
+```
+
+### 错误响应
+
+| 状态码 | 原因 |
+|--------|------|
+| 400 | 缺少 amount 或 type、type 值非法、amount 格式错误 |
+| 401 | API Key 无效或未提供 |
+| 500 | 服务端错误 |
 
 ---
 
-## 涉及的文件
+## 5. 修改交易
 
-| 文件 | 操作 |
-|------|------|
-| `app/api/monthly/route.ts` | 新建 |
-| `app/api/list/route.ts` | 改造 |
-| `app/ledger/types.ts` | 新增类型 |
-| `app/ledger/page.tsx` | 重构数据流 |
-| `app/ledger/dashboard/summary-cards.tsx` | 更新 props |
-| `app/ledger/dashboard/trend-chart.tsx` | 更新 props |
-| `app/ledger/dashboard/category-breakdown.tsx` | 更新 props |
-| `app/ledger/dashboard/calendar-heatmap.tsx` | 更新 props |
-| `app/ledger/dashboard/detail-list.tsx` | 加载更多 |
+```
+PATCH /api/edit
+```
+
+### 请求头
+
+```
+Content-Type: application/json
+Authorization: Bearer YOUR_API_KEY
+```
+
+### 请求体
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `id` | string | 是 | 交易记录 UUID |
+| `amount` | number | 否 | 新金额 |
+| `type` | string | 否 | 新类型 |
+| `category` | string | 否 | 新分类 |
+| `note` | string | 否 | 新备注 |
+| `transaction_time` | string | 否 | 新交易时间 |
+
+只需传入要修改的字段，未传的字段保持不变。
+
+### 请求示例
+
+```bash
+curl -X PATCH "https://your-domain/api/edit" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "id": "a1b2c3d4-...",
+    "amount": 150,
+    "note": "更新备注"
+  }'
+```
+
+### 响应结构
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "a1b2c3d4-...",
+    "amount": 150,
+    "category": "喂养用品",
+    "note": "更新备注",
+    "type": "expense",
+    "transaction_time": "2026-05-01T10:30:00Z",
+    "created_at": "2026-05-01T10:30:05Z"
+  }
+}
+```
+
+### 错误响应
+
+| 状态码 | 原因 |
+|--------|------|
+| 400 | 缺少 id、type 值非法、amount 格式错误 |
+| 401 | API Key 无效或未提供 |
+| 500 | 服务端错误 |
+
+---
+
+## 6. 删除交易
+
+```
+DELETE /api/delete
+```
+
+### 请求头
+
+```
+Content-Type: application/json
+Authorization: Bearer YOUR_API_KEY
+```
+
+### 请求体
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `id` | string | 是 | 交易记录 UUID |
+
+### 请求示例
+
+```bash
+curl -X DELETE "https://your-domain/api/delete" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{ "id": "a1b2c3d4-..." }'
+```
+
+### 响应结构
+
+```json
+{
+  "success": true
+}
+```
+
+### 错误响应
+
+| 状态码 | 原因 |
+|--------|------|
+| 400 | 缺少 id |
+| 401 | API Key 无效或未提供 |
+| 500 | 服务端错误 |
+
+---
+
+## 完整使用流程
+
+### 场景：构建一个简单的记账页面
+
+**第 1 步：加载首页数据**
+
+```javascript
+// 概览 Tab：请求月度聚合
+const monthly = await fetch('/api/monthly?year=2026&month=5').then(r => r.json());
+console.log(`本月支出: ¥${monthly.data.totalExpense}`);
+console.log(`上月支出: ¥${monthly.data.prevMonthExpense}`);
+console.log(`交易笔数: ${monthly.data.transactionCount}`);
+
+// 明细 Tab：请求第一页
+const list = await fetch('/api/list?limit=30').then(r => r.json());
+console.log(`加载了 ${list.data.length} 条记录`);
+console.log(`还有更多: ${list.hasMore}`);
+```
+
+**第 2 步：加载更多明细**
+
+```javascript
+async function loadMore() {
+  if (!list.hasMore) return;
+  const next = await fetch(`/api/list?limit=30&cursor=${list.nextCursor}`).then(r => r.json());
+  list.data.push(...next.data);
+  list.nextCursor = next.nextCursor;
+  list.hasMore = next.hasMore;
+}
+```
+
+**第 3 步：新增一笔记录**
+
+```javascript
+const res = await fetch('/api/add', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    amount: 45,
+    type: 'expense',
+    category: '辅食零食',
+    note: '酸奶',
+  }),
+}).then(r => r.json());
+console.log(`新增成功，ID: ${res.data.id}`);
+```
+
+**第 4 步：修改记录**
+
+```javascript
+await fetch('/api/edit', {
+  method: 'PATCH',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_API_KEY',
+  },
+  body: JSON.stringify({
+    id: 'a1b2c3d4-...',
+    amount: 50,
+  }),
+});
+```
+
+**第 5 步：删除记录**
+
+```javascript
+await fetch('/api/delete', {
+  method: 'DELETE',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_API_KEY',
+  },
+  body: JSON.stringify({ id: 'a1b2c3d4-...' }),
+});
+```
+
+**第 6 步：查看某日详情**
+
+```javascript
+const daily = await fetch('/api/daily?year=2026&month=5&day=1').then(r => r.json());
+daily.data.forEach(t => {
+  console.log(`${t.category}: ¥${t.amount} - ${t.note}`);
+});
+```
+
+---
+
+## 数据库结构
+
+所有接口操作同一张 `transactions` 表：
+
+```sql
+CREATE TABLE transactions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  amount DECIMAL NOT NULL,
+  category TEXT,
+  note TEXT,
+  type TEXT CHECK (type IN ('expense', 'income')) NOT NULL,
+  transaction_time TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+CREATE INDEX idx_transactions_created_at ON transactions (created_at DESC);
+```
+
+- `id` — 自动生成的 UUID 主键
+- `amount` — 金额，DECIMAL 类型
+- `category` — 分类名称，可为空
+- `note` — 备注，可为空
+- `type` — `expense`（支出）或 `income`（收入）
+- `transaction_time` — 用户指定的交易时间，可为空（为空时用 `created_at` 兜底）
+- `created_at` — 记录创建时间，自动填充，分页索引字段
+
+---
+
+## TypeScript 类型定义
+
+```typescript
+interface Transaction {
+  id: string;
+  amount: number;
+  note: string;
+  category: string;
+  type: 'expense' | 'income';
+  transaction_time?: string;
+  created_at: string;
+}
+
+interface DailyExpense {
+  date: string;    // "2026-05-01"
+  amount: number;
+}
+
+interface CategorySummary {
+  category: string;
+  amount: number;
+  count: number;
+}
+
+interface MonthlyData {
+  year: number;
+  month: number;
+  totalExpense: number;
+  transactionCount: number;
+  dailyExpenses: DailyExpense[];
+  categoryBreakdown: CategorySummary[];
+  calendarData: Record<number, number>;  // { 1: 120, 3: 85 }
+  prevMonthExpense: number;
+  allTimeExpense: number;
+  lastTransaction: {
+    amount: number;
+    category: string;
+    note: string;
+    transaction_time: string;
+  } | null;
+}
+```

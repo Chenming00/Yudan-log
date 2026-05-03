@@ -5,7 +5,7 @@
 基于 **Next.js 16 App Router** 构建，包含两个核心模块：
 
 - **鱼蛋小账本** — 记录收入支出，支持网页管理与 Telegram 自然语言记账
-- **成长 Log** — Markdown 写作，带 AI 摘要与文章问答
+- **成长 Log** — Markdown 写作，带文章问答
 
 适合当作轻量的个人生活面板：一边记账，一边写点东西。
 
@@ -21,6 +21,9 @@
 - 按分类、类型、关键词筛选
 - 查看、编辑、删除交易记录
 - **数据仪表盘**：收支趋势图、分类 breakdown、汇总卡片（基于 Recharts）
+- **日历热力图**：按日查看支出分布，点击查看详情
+- **游标分页**：明细列表支持"加载更多"，避免全量加载
+- **月度聚合**：服务端预计算月度数据，Dashboard 直接渲染
 - Telegram Bot 自然语言记账
 - Bearer Token 保护敏感写操作
 - Supabase PostgreSQL 持久化
@@ -37,7 +40,6 @@ Telegram 记账示例：
 
 - 文章放在 `content/blog/` 目录，Markdown + Frontmatter
 - 按日期倒序展示
-- **AI 摘要**：基于 MiMo 模型自动生成文章要点总结（构建时预生成 + 运行时缓存）
 - **AI 问答**：针对文章内容提问，流式返回回答
 - **目录导航（TOC）**：自动提取 h2-h4 生成侧边栏目录
 - **阅读进度条**：顶部实时显示阅读进度
@@ -82,7 +84,7 @@ NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
 BASE_URL=http://localhost:3000
 
-# 可选 - AI 功能（摘要 & 问答）
+# 可选 - AI 功能（文章问答）
 MIMO_BASE_URL=your_mimo_api_base_url
 MIMO_API_KEY=your_mimo_api_key
 ```
@@ -115,7 +117,7 @@ npm run dev
 | `NEXT_PUBLIC_SUPABASE_URL` | 是 | Supabase 项目地址 |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | 是 | Supabase 匿名公钥 |
 | `BASE_URL` | 是 | 站点对外地址，用于 Webhook 等 |
-| `MIMO_BASE_URL` | 否 | MiMo API 地址，启用 AI 摘要/问答 |
+| `MIMO_BASE_URL` | 否 | MiMo API 地址，启用文章 AI 问答 |
 | `MIMO_API_KEY` | 否 | MiMo API Key |
 
 ---
@@ -140,23 +142,23 @@ cover: /cover.png
 
 - 文件名即 slug：`my-story.md` → `/blog/my-story`
 - 保存后刷新页面即可看到新文章
-- 若配置了 AI 环境变量，运行 `npm run build` 时会自动为新文章预生成摘要缓存
 
 ---
 
 ## API 概览
 
-账本接口需要携带 `Authorization: Bearer <API_KEY>`，Telegram Webhook 除外。
+账本读取接口无需认证；写入接口（add / edit / delete）需要携带 `Authorization: Bearer <API_KEY>`。
 
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| `GET` | `/api/list` | 获取交易记录列表 |
-| `POST` | `/api/add` | 新增交易记录 |
-| `PATCH` | `/api/edit` | 编辑交易记录 |
-| `DELETE` | `/api/delete` | 删除交易记录 |
-| `POST` | `/api/telegram` | Telegram Webhook 入口 |
-| `POST` | `/api/blog/summary` | 获取文章 AI 摘要（流式） |
-| `POST` | `/api/blog/chat` | 文章 AI 问答（流式） |
+| 方法 | 路径 | 说明 | 认证 |
+| --- | --- | --- | --- |
+| `GET` | `/api/list` | 游标分页查询交易记录 | 否 |
+| `GET` | `/api/monthly` | 月度聚合数据（汇总、趋势、分类、热力图） | 否 |
+| `GET` | `/api/daily` | 某日支出明细 | 否 |
+| `POST` | `/api/add` | 新增交易记录 | 是 |
+| `PATCH` | `/api/edit` | 编辑交易记录 | 是 |
+| `DELETE` | `/api/delete` | 删除交易记录 | 是 |
+| `POST` | `/api/telegram` | Telegram Webhook 入口 | 否 |
+| `POST` | `/api/blog/chat` | 文章 AI 问答（流式） | 否 |
 
 ---
 
@@ -189,7 +191,6 @@ https://your-domain.com/api/telegram
 │   │   └── [slug]/
 │   │       ├── page.tsx             # 文章详情页
 │   │       ├── markdown-content.tsx
-│   │       ├── ai-summary.tsx       # AI 摘要组件
 │   │       ├── ai-chat.tsx          # AI 问答组件
 │   │       ├── toc-card.tsx         # 目录导航
 │   │       ├── reading-progress.tsx # 阅读进度条
@@ -199,20 +200,18 @@ https://your-domain.com/api/telegram
 │       ├── edit/route.ts
 │       ├── delete/route.ts
 │       ├── list/route.ts
+│       ├── monthly/route.ts         # 月度聚合接口
+│       ├── daily/route.ts           # 日支出明细接口
 │       ├── telegram/route.ts
 │       └── blog/
-│           ├── summary/route.ts     # AI 摘要接口
 │           └── chat/route.ts        # AI 问答接口
 ├── content/
 │   └── blog/                        # Markdown 文章
 ├── lib/
 │   ├── auth.ts                      # 鉴权
 │   ├── blog.ts                      # 博客读取与解析
-│   ├── blog-summaries.ts            # 摘要缓存
 │   ├── parser.ts                    # 自然语言记账解析
 │   └── supabase.ts                  # Supabase 客户端
-├── scripts/
-│   └── generate-summaries.ts        # 构建时预生成 AI 摘要
 ├── public/
 └── schema.sql                       # 数据库初始化脚本
 ```
