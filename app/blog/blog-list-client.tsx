@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Calendar, Clock3, Search } from "lucide-react";
 import { useState, useMemo } from "react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 interface Post {
   slug: string;
@@ -65,6 +66,9 @@ export function BlogListClient({ posts }: BlogListClientProps) {
       {/* 头部区域 */}
       <header className="pt-safe pb-8">
         <div className="relative py-4">
+          <div className="absolute right-0 top-1/2 -translate-y-1/2">
+            <ThemeToggle />
+          </div>
           <h1 className="text-[26px] sm:text-3xl font-bold tracking-tight text-foreground">
             🌱 成长 Log
           </h1>

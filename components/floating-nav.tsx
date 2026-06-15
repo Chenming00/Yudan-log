@@ -47,7 +47,7 @@ export function FloatingNav() {
     <nav
       ref={navRef}
       aria-label="全局底部导航"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border/50 bg-white shadow-sm px-3 pb-[env(safe-area-inset-bottom)] pt-2 lg:px-6"
+      className="glass-effect fixed inset-x-0 bottom-0 z-40 border-t border-border/60 shadow-sm px-3 pb-[env(safe-area-inset-bottom)] pt-2 lg:px-6"
     >
       <div className="flex w-full items-center justify-around gap-1 lg:justify-center lg:gap-3">
         {items.map((item) => {

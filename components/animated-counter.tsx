@@ -39,7 +39,7 @@ export function AnimatedCounter({
   }, [value, isInView, duration]);
 
   const formatted = decimals > 0
-    ? displayValue.toFixed(decimals)
+    ? displayValue.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
     : Math.round(displayValue).toLocaleString();
 
   return (

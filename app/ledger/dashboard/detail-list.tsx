@@ -3,6 +3,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Download } from "lucide-react";
+import { categoryEmoji, categoryLabel } from "@/lib/categories";
 import { Transaction } from "../types";
 
 interface DetailListProps {
@@ -52,6 +53,15 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
     return result;
   }, [transactions, search, categoryFilter]);
 
+  // 按交易时间降序（在任何条件 return 之前，避免 Hooks 顺序错乱）
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const dateA = new Date(a.transaction_time || a.created_at).getTime();
+      const dateB = new Date(b.transaction_time || b.created_at).getTime();
+      return dateB - dateA;
+    });
+  }, [filtered]);
+
   const handleExport = useCallback(() => {
     const header = "日期,类型,金额,分类,备注";
     const rows = filtered.map((t) => {
@@ -74,7 +84,7 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
   if (transactions.length === 0) {
     return (
       <div className="rounded-2xl bg-card border border-dashed border-border p-10 text-center">
-        <div className="w-14 h-14 rounded-full bg-[#FF6B6B]/10 mx-auto flex items-center justify-center mb-4">
+        <div className="w-14 h-14 rounded-full bg-expense/10 mx-auto flex items-center justify-center mb-4">
           <span className="text-2xl">📭</span>
         </div>
         <p className="font-medium text-foreground text-sm">暂无交易记录</p>
@@ -84,15 +94,6 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
       </div>
     );
   }
-
-  // 按交易时间排序（降序），确保分组顺序正确
-  const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
-      const dateA = new Date(a.transaction_time || a.created_at).getTime();
-      const dateB = new Date(b.transaction_time || b.created_at).getTime();
-      return dateB - dateA;
-    });
-  }, [filtered]);
 
   const grouped = sorted.reduce<Record<string, Transaction[]>>((acc, t) => {
     const date = new Date(t.transaction_time || t.created_at);
@@ -124,7 +125,7 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
           placeholder="搜索备注、分类或金额..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-[#FF6B6B]/30 focus:border-[#FF6B6B]/50 transition-colors"
+          className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-expense/30 focus:border-expense/50 transition-colors"
         />
         {search && (
           <button
@@ -219,17 +220,20 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
                     onClick={() => onSelect(t)}
-                    className="w-full flex items-center justify-between rounded-2xl bg-card border border-border p-4 hover:bg-accent transition-colors text-left"
+                    className="w-full flex items-center gap-3 rounded-2xl bg-card border border-border p-4 hover:bg-accent active:scale-[0.99] transition-all text-left"
                   >
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-lg">
+                      {categoryEmoji(t.category)}
+                    </span>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-foreground truncate">
-                        {t.note || t.category || "未分类"}
+                        {t.note || categoryLabel(t.category)}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {t.category || "未分类"} · {formatDate(t.transaction_time || t.created_at)}
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {categoryLabel(t.category)} · {formatDate(t.transaction_time || t.created_at)}
                       </p>
                     </div>
-                    <span className="text-sm font-semibold ml-2 text-[#FF6B6B]">
+                    <span className="text-sm font-semibold text-expense">
                       -¥{Number(t.amount).toLocaleString()}
                     </span>
                   </motion.button>

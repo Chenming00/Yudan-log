@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase';
+import { shanghaiDayRange, timeRangeOrFilter } from '@/lib/timezone';
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,15 +13,14 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: '请提供有效的 year、month 和 day 参数' }, { status: 400 });
     }
 
-    const dayStart = new Date(year, month - 1, day).toISOString();
-    const dayEnd = new Date(year, month - 1, day + 1).toISOString();
+    const range = shanghaiDayRange(year, month, day);
 
     const supabase = getSupabaseClient();
     const { data, error } = await supabase
       .from('transactions')
       .select('*')
       .eq('type', 'expense')
-      .or(`and(transaction_time.gte.${dayStart},transaction_time.lt.${dayEnd}),and(transaction_time.is.null,created_at.gte.${dayStart},created_at.lt.${dayEnd})`)
+      .or(timeRangeOrFilter(range))
       .order('created_at', { ascending: false });
 
     if (error) throw error;

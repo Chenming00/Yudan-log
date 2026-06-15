@@ -3,14 +3,20 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Settings, Plus, ChevronLeft, ChevronRight } from "lucide-react";
-import { SummaryCards, CategoryBreakdown, DetailList, CalendarHeatmap } from "./dashboard";
+import { SummaryCards, CategoryBreakdown, DetailList, CalendarHeatmap, TrendChart } from "./dashboard";
 import { TransactionDialog } from "./components/transaction-dialog";
 import { AddDialog } from "./components/add-dialog";
 import { SettingsDialog } from "./components/settings-dialog";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Transaction, MonthlyData } from "./types";
 
 function getMonthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+}
+
+interface MonthParams {
+  year: number;
+  month: number;
 }
 
 function LoadingSkeleton() {
@@ -66,21 +72,15 @@ export default function LedgerPage() {
     });
   };
 
-  const monthLabel = (() => {
-    const [y, m] = selectedMonth.split("-").map(Number);
-    return `${y}年${m}月`;
-  })();
-
+  const [year, month] = selectedMonth.split("-").map(Number);
+  const monthLabel = `${year}年${month}月`;
   const isCurrentMonth = selectedMonth === getMonthKey(new Date());
 
-  const filteredDetailTransactions = useMemo(() => {
-    if (viewAll) return detailTransactions;
-    const [y, m] = selectedMonth.split("-").map(Number);
-    return detailTransactions.filter((t) => {
-      const d = new Date(t.transaction_time || t.created_at);
-      return d.getFullYear() === y && d.getMonth() + 1 === m;
-    });
-  }, [detailTransactions, selectedMonth, viewAll]);
+  // 历史「按月」时传月份参数；「全部」时为 null
+  const historyParams = useMemo<MonthParams | null>(
+    () => (viewAll ? null : { year, month }),
+    [viewAll, year, month]
+  );
 
   const fetchMonthlyData = useCallback(async (monthKey: string) => {
     setLoadingMonthly(true);
@@ -98,206 +98,233 @@ export default function LedgerPage() {
     }
   }, []);
 
-  const fetchDetailTransactions = useCallback(async (cursor?: string) => {
-    if (cursor) {
-      setLoadingMore(true);
-    } else {
-      setLoadingDetail(true);
-    }
-    try {
-      const params = new URLSearchParams({ limit: "30" });
-      if (cursor) params.set("cursor", cursor);
-      const res = await fetch(`/api/list?${params}`);
-      const data = await res.json();
-      if (data.success) {
-        setDetailTransactions((prev) => cursor ? [...prev, ...data.data] : data.data);
-        setNextCursor(data.nextCursor);
-        setHasMore(data.hasMore);
+  // 历史列表取数：cursor 为空=重置首屏；params=null 表示「全部」，否则按月
+  const fetchDetail = useCallback(
+    async (opts: { cursor?: string | null; params: MonthParams | null }) => {
+      const { cursor, params } = opts;
+      if (cursor) {
+        setLoadingMore(true);
+      } else {
+        // 首屏/重置：清空旧数据以展示骨架屏
+        setLoadingDetail(true);
+        setDetailTransactions([]);
+        setNextCursor(null);
+        setHasMore(false);
       }
-    } catch {
-      // ignore
-    } finally {
-      setLoadingDetail(false);
-      setLoadingMore(false);
-    }
-  }, []);
+      try {
+        const sp = new URLSearchParams({ limit: "30" });
+        if (cursor) sp.set("cursor", cursor);
+        if (params) {
+          sp.set("year", String(params.year));
+          sp.set("month", String(params.month));
+        }
+        const res = await fetch(`/api/list?${sp}`);
+        const data = await res.json();
+        if (data.success) {
+          setDetailTransactions((prev) => (cursor ? [...prev, ...data.data] : data.data));
+          setNextCursor(data.nextCursor);
+          setHasMore(data.hasMore);
+        }
+      } catch {
+        // ignore
+      } finally {
+        setLoadingDetail(false);
+        setLoadingMore(false);
+      }
+    },
+    []
+  );
 
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void fetchMonthlyData(selectedMonth);
-      void fetchDetailTransactions();
-    }, 0);
-    return () => window.clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
+  // 首页月度数据：随所选月变化重新拉取
   useEffect(() => {
     void fetchMonthlyData(selectedMonth);
   }, [selectedMonth, fetchMonthlyData]);
 
+  // 历史列表：进入历史 / 切月 / 切「按月·全部」时，按当前范围重新取数（fetchDetail 内部会重置）
+  useEffect(() => {
+    if (activeView !== "history") return;
+    void fetchDetail({ params: viewAll ? null : { year, month } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeView, viewAll, viewAll ? "all" : selectedMonth, fetchDetail]);
+
   const handleLoadMore = useCallback(() => {
     if (nextCursor) {
-      void fetchDetailTransactions(nextCursor);
+      void fetchDetail({ cursor: nextCursor, params: historyParams });
     }
-  }, [nextCursor, fetchDetailTransactions]);
+  }, [nextCursor, fetchDetail, historyParams]);
 
   const handleRefresh = useCallback(() => {
     void fetchMonthlyData(selectedMonth);
-    setDetailTransactions([]);
-    setNextCursor(null);
-    setHasMore(false);
-    void fetchDetailTransactions();
-  }, [selectedMonth, fetchMonthlyData, fetchDetailTransactions]);
+    if (activeView === "history") {
+      void fetchDetail({ params: historyParams });
+    }
+  }, [selectedMonth, activeView, historyParams, fetchMonthlyData, fetchDetail]);
 
   return (
-    <main className="min-h-screen px-5 py-6 bg-background" style={{ paddingBottom: "var(--nav-height)" }}>
-      {/* 头部 */}
-      <div className="relative mb-4 pt-safe">
-        <div className="flex items-center justify-between py-2">
-          <div>
-            <h1 className="text-[26px] sm:text-3xl font-bold tracking-tight text-foreground">
-              🐟 鱼蛋小账本
-            </h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              记录每一笔支出
-            </p>
-          </div>
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="p-2.5 rounded-xl bg-muted/60 text-muted-foreground hover:text-foreground hover:bg-muted transition-all"
-            aria-label="设置"
-          >
-            <Settings className="h-[18px] w-[18px]" />
-          </button>
-        </div>
-      </div>
-
-      {/* 视图切换 + 月份导航 */}
-      <div className="flex items-center justify-between mb-5">
-        <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
-          <button
-            onClick={() => setActiveView("home")}
-            className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all ${
-              activeView === "home"
-                ? "bg-white shadow-sm text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            首页
-          </button>
-          <button
-            onClick={() => setActiveView("history")}
-            className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all ${
-              activeView === "history"
-                ? "bg-white shadow-sm text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            历史
-          </button>
-        </div>
-
-        <div className="flex items-center gap-1">
-          {!(activeView === "history" && viewAll) && (
-            <>
+    <main className="min-h-screen bg-background px-5 py-6" style={{ paddingBottom: "var(--nav-height)" }}>
+      <div className="mx-auto w-full max-w-2xl lg:max-w-4xl">
+        {/* 头部 */}
+        <div className="relative mb-4 pt-safe">
+          <div className="flex items-center justify-between py-2">
+            <div>
+              <h1 className="text-[26px] sm:text-3xl font-bold tracking-tight text-foreground">
+                🐟 鱼蛋小账本
+              </h1>
+              <p className="mt-1.5 text-sm text-muted-foreground">记录每一笔支出</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
               <button
-                onClick={() => navigateMonth(-1)}
-                className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                onClick={() => setSettingsOpen(true)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-muted/60 text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-95"
+                aria-label="设置"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <Settings className="h-[18px] w-[18px]" />
               </button>
-              <span className="text-sm font-medium text-foreground min-w-[72px] text-center">{monthLabel}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* 视图切换 + 月份导航 */}
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+            <button
+              onClick={() => setActiveView("home")}
+              className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all ${
+                activeView === "home"
+                  ? "bg-card shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              首页
+            </button>
+            <button
+              onClick={() => setActiveView("history")}
+              className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all ${
+                activeView === "history"
+                  ? "bg-card shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              历史
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1">
+            {!(activeView === "history" && viewAll) && (
+              <>
+                <button
+                  onClick={() => navigateMonth(-1)}
+                  className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  aria-label="上个月"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="text-sm font-medium text-foreground min-w-[72px] text-center">
+                  {monthLabel}
+                </span>
+                <button
+                  onClick={() => navigateMonth(1)}
+                  disabled={isCurrentMonth}
+                  className={`p-1.5 rounded-lg transition-colors ${
+                    isCurrentMonth
+                      ? "text-muted-foreground/30 cursor-not-allowed"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                  aria-label="下个月"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </>
+            )}
+            {activeView === "history" && (
               <button
-                onClick={() => navigateMonth(1)}
-                disabled={isCurrentMonth}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  isCurrentMonth
-                    ? "text-muted-foreground/30 cursor-not-allowed"
+                onClick={() => setViewAll((v) => !v)}
+                className={`px-2.5 py-1 text-xs rounded-lg transition-all ${
+                  viewAll
+                    ? "bg-expense/10 text-expense font-medium"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >
-                <ChevronRight className="h-4 w-4" />
+                {viewAll ? "按月" : "全部"}
               </button>
-            </>
-          )}
-          {activeView === "history" && (
-            <button
-              onClick={() => setViewAll((v) => !v)}
-              className={`px-2.5 py-1 text-xs rounded-lg transition-all ${
-                viewAll
-                  ? "bg-[#FF6B6B]/10 text-[#FF6B6B] font-medium"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
-              }`}
-            >
-              {viewAll ? "按月" : "全部"}
-            </button>
-          )}
+            )}
+          </div>
+        </div>
+
+        {/* 内容区域 */}
+        <div className="space-y-4">
+          <AnimatePresence mode="wait">
+            {activeView === "home" ? (
+              <motion.div
+                key={`home-${selectedMonth}`}
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+                className="space-y-4"
+              >
+                {loadingMonthly || !monthlyData ? (
+                  <LoadingSkeleton />
+                ) : (
+                  <>
+                    <SummaryCards
+                      monthLabel={isCurrentMonth ? "本月支出" : `${month}月支出`}
+                      totalExpense={monthlyData.totalExpense}
+                      allTimeExpense={monthlyData.allTimeExpense}
+                      prevMonthExpense={monthlyData.prevMonthExpense}
+                      transactionCount={monthlyData.transactionCount}
+                      lastTransaction={monthlyData.lastTransaction}
+                    />
+
+                    {/* lg 双列仪表盘：趋势 + 分类（无分类时趋势独占整行） */}
+                    {monthlyData.categoryBreakdown.length > 1 ? (
+                      <div className="grid gap-4 lg:grid-cols-2">
+                        <TrendChart dailyExpenses={monthlyData.dailyExpenses} />
+                        <CategoryBreakdown categoryBreakdown={monthlyData.categoryBreakdown} />
+                      </div>
+                    ) : (
+                      <TrendChart dailyExpenses={monthlyData.dailyExpenses} />
+                    )}
+
+                    <CalendarHeatmap
+                      calendarData={monthlyData.calendarData}
+                      year={year}
+                      month={month}
+                    />
+                  </>
+                )}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="history"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              >
+                {loadingDetail && detailTransactions.length === 0 ? (
+                  <LoadingSkeleton />
+                ) : (
+                  <DetailList
+                    transactions={detailTransactions}
+                    onSelect={(t) => {
+                      setSelectedTransaction(t);
+                      setDialogOpen(true);
+                    }}
+                    hasMore={hasMore}
+                    loadingMore={loadingMore}
+                    onLoadMore={handleLoadMore}
+                  />
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* 内容区域 */}
-      <div className="space-y-4">
-        <AnimatePresence mode="wait">
-          {activeView === "home" ? (
-            <motion.div
-              key={`home-${selectedMonth}`}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-              className="space-y-4"
-            >
-              {loadingMonthly || !monthlyData ? (
-                <LoadingSkeleton />
-              ) : (
-                <>
-                  <SummaryCards
-                    allTimeExpense={monthlyData.allTimeExpense}
-                    totalExpense={monthlyData.totalExpense}
-                    lastTransaction={monthlyData.lastTransaction}
-                  />
-
-                  {monthlyData.categoryBreakdown.length > 1 && (
-                    <CategoryBreakdown categoryBreakdown={monthlyData.categoryBreakdown} />
-                  )}
-
-                  <CalendarHeatmap
-                    calendarData={monthlyData.calendarData}
-                    year={Number(selectedMonth.split("-")[0])}
-                    month={Number(selectedMonth.split("-")[1])}
-                  />
-                </>
-              )}
-            </motion.div>
-          ) : (
-            <motion.div
-              key="history"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-            >
-              {loadingDetail && detailTransactions.length === 0 ? (
-                <LoadingSkeleton />
-              ) : (
-                <DetailList
-                  transactions={filteredDetailTransactions}
-                  onSelect={(t) => {
-                    setSelectedTransaction(t);
-                    setDialogOpen(true);
-                  }}
-                  hasMore={hasMore}
-                  loadingMore={loadingMore}
-                  onLoadMore={handleLoadMore}
-                />
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* 悬浮记账按钮 — 底部导航上方居中 */}
-      <div className="fixed bottom-[calc(var(--nav-height)+12px)] left-1/2 -translate-x-1/2 z-30">
+      {/* 悬浮记账按钮 — 右下角，底部导航上方 */}
+      <div className="fixed right-5 bottom-[calc(var(--nav-height)+16px)] z-30 sm:right-8">
         <button
           onClick={() => {
             if (!canManageTransactions) {
@@ -308,8 +335,8 @@ export default function LedgerPage() {
           }}
           className={`rounded-full p-4 shadow-lg transition-all hover:shadow-xl active:scale-95 ${
             canManageTransactions
-              ? "bg-[#FF6B6B] text-white"
-              : "bg-muted text-muted-foreground cursor-not-allowed"
+              ? "bg-expense text-expense-foreground"
+              : "bg-muted text-muted-foreground"
           }`}
           aria-label={canManageTransactions ? "记一笔" : "需要 API Key"}
           title={canManageTransactions ? "记一笔" : "填写 API Key 后才可记账"}

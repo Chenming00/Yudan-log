@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase';
+import { shanghaiMonthRange, timeRangeOrFilter } from '@/lib/timezone';
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : '获取记录失败';
@@ -12,6 +13,8 @@ export async function GET(req: NextRequest) {
     const limit = Math.min(Number(searchParams.get('limit')) || 30, 100);
     const type = searchParams.get('type');
     const category = searchParams.get('category');
+    const year = Number(searchParams.get('year'));
+    const month = Number(searchParams.get('month'));
 
     const supabase = getSupabaseClient();
     let query = supabase
@@ -19,6 +22,11 @@ export async function GET(req: NextRequest) {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(limit);
+
+    // 可选：按上海时区的某个月过滤（历史「按月」视图用）
+    if (year && month && month >= 1 && month <= 12) {
+      query = query.or(timeRangeOrFilter(shanghaiMonthRange(year, month)));
+    }
 
     if (cursor) {
       query = query.lt('created_at', cursor);

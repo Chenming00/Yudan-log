@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { X } from "lucide-react";
+import { CATEGORIES } from "@/lib/categories";
+import { toLocalDatetimeInput } from "@/lib/utils";
 import { Transaction } from "../types";
 
 interface TransactionDetailProps {
@@ -21,13 +23,11 @@ function createEditForm(transaction: Transaction | null) {
     return { amount: "", note: "", category: "", transaction_time: "" };
   }
   const dt = transaction.transaction_time || transaction.created_at;
-  const date = new Date(dt);
-  const localString = date.toLocaleString("sv-SE").replace(",", "");
   return {
     amount: String(transaction.amount),
     note: transaction.note || "",
     category: transaction.category || "",
-    transaction_time: localString,
+    transaction_time: toLocalDatetimeInput(new Date(dt)),
   };
 }
 
@@ -174,7 +174,7 @@ export function TransactionDialog({
                   className="text-2xl font-bold tracking-tight text-center w-full bg-transparent border-b border-border pb-1 text-foreground rounded-none"
                 />
               ) : (
-                <span className="text-2xl font-bold text-[#FF6B6B]">
+                <span className="text-2xl font-bold text-expense">
                   -¥{Number(transaction.amount).toLocaleString(undefined, {
                     minimumFractionDigits: 2,
                     maximumFractionDigits: 2,
@@ -182,7 +182,7 @@ export function TransactionDialog({
                 </span>
               )}
             </DialogTitle>
-            <span className="mt-3 text-xs px-3 py-1.5 rounded-full font-medium bg-red-50 text-[#FF6B6B] mx-auto w-fit">
+            <span className="mt-3 text-xs px-3 py-1.5 rounded-full font-medium bg-expense/10 text-expense mx-auto w-fit">
               支出
             </span>
           </DialogHeader>
@@ -200,10 +200,32 @@ export function TransactionDialog({
               </div>
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">分类</Label>
+                <div className="flex flex-wrap gap-2">
+                  {CATEGORIES.map((cat) => (
+                    <button
+                      key={cat.value}
+                      type="button"
+                      onClick={() =>
+                        setEditForm((f) => ({
+                          ...f,
+                          category: f.category === cat.label ? "" : cat.label,
+                        }))
+                      }
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 ${
+                        editForm.category === cat.label
+                          ? "bg-expense/10 text-expense border border-expense/30"
+                          : "bg-muted text-muted-foreground border border-transparent hover:bg-muted/80"
+                      }`}
+                    >
+                      {cat.emoji} {cat.label}
+                    </button>
+                  ))}
+                </div>
                 <Input
                   type="text"
                   value={editForm.category}
                   onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))}
+                  placeholder="自定义分类"
                   className="rounded-xl px-4 py-3"
                 />
               </div>

@@ -4,18 +4,9 @@ import { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { CATEGORIES } from '@/lib/categories';
+import { toLocalDatetimeInput } from '@/lib/utils';
 import { TransactionFormState } from '../types';
-
-const CATEGORIES = [
-  { label: '喂养用品', value: 'feeding', emoji: '🍼' },
-  { label: '护理清洁', value: 'care', emoji: '🧴' },
-  { label: '辅食零食', value: 'food', emoji: '🍪' },
-  { label: '医疗健康', value: 'medical', emoji: '🏥' },
-  { label: '衣物穿戴', value: 'clothing', emoji: '👶' },
-  { label: '大件用品', value: 'gear', emoji: '🛒' },
-  { label: '外出相关', value: 'outing', emoji: '🚗' },
-  { label: '其他', value: 'other', emoji: '📦' },
-];
 
 interface AddDialogProps {
   open: boolean;
@@ -45,8 +36,7 @@ export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProp
       setForm(createDefaultForm());
       setError(null);
       setShowOptional(false);
-      const now = new Date();
-      setTransactionTime(now.toLocaleString('sv-SE').replace(',', ''));
+      setTransactionTime(toLocalDatetimeInput(new Date()));
       // 自动聚焦金额输入
       setTimeout(() => amountRef.current?.focus(), 100);
     }
@@ -118,7 +108,7 @@ export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProp
               value={form.amount}
               onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
               placeholder="0.00"
-              className="w-full text-center text-3xl font-bold text-foreground bg-transparent border-b border-border pb-2 focus:outline-none focus:border-[#FF6B6B] transition-colors placeholder:text-muted-foreground/40"
+              className="w-full text-center text-3xl font-bold text-foreground bg-transparent border-b border-border pb-2 focus:outline-none focus:border-expense transition-colors placeholder:text-muted-foreground/40"
             />
           </div>
 
@@ -131,7 +121,7 @@ export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProp
                 onClick={() => setForm((prev) => ({ ...prev, category: prev.category === cat.value ? '' : cat.value }))}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 ${
                   form.category === cat.value
-                    ? 'bg-[#FF6B6B]/10 text-[#FF6B6B] border border-[#FF6B6B]/30'
+                    ? 'bg-expense/10 text-expense border border-expense/30'
                     : 'bg-muted text-muted-foreground border border-transparent hover:bg-muted/80'
                 }`}
               >
@@ -186,7 +176,7 @@ export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProp
             <Button
               onClick={handleSubmit}
               disabled={saving}
-              className="flex-1 bg-[#FF6B6B] hover:bg-[#FF6B6B]/90 text-white"
+              className="flex-1 bg-expense hover:bg-expense/90 text-expense-foreground"
             >
               {saving ? '保存中...' : '确认'}
             </Button>

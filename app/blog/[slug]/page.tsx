@@ -8,6 +8,7 @@ import { PostActions } from './post-actions';
 import { TocCard } from './toc-card';
 import { ReadingProgress } from './reading-progress';
 import { AiChat } from './ai-chat';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.BASE_URL || 'http://localhost:3000';
 
@@ -97,6 +98,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           <div className="flex-1 min-w-0">
             <h1 className="text-sm font-semibold text-foreground truncate">{post.title}</h1>
           </div>
+          <ThemeToggle />
         </div>
       </header>
 

@@ -7,34 +7,69 @@
   --radius: 0.75rem;
 }
 
-/* Notion/Linear 风格主题 - CSS 自定义属性 */
+/* Notion/Linear 风格主题 — 浅色 */
 :root {
+  color-scheme: light;
   --background: oklch(0.973 0 0); /* #F7F7F7 */
-  --foreground: oklch(0.145 0.005 49.25);
+  --foreground: oklch(0.235 0.012 60);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0.005 49.25);
+  --card-foreground: oklch(0.235 0.012 60);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0.005 49.25);
-  --primary: oklch(0.6 0.14 155); /* #6CBF84 */
-  --primary-foreground: oklch(0.97 0.01 355);
+  --popover-foreground: oklch(0.235 0.012 60);
+  --primary: oklch(0.6 0.14 155); /* #6CBF84 嫩绿 — 成长 Log */
+  --primary-foreground: oklch(0.99 0.01 155);
   --secondary: oklch(0.965 0.001 106);
-  --secondary-foreground: oklch(0.145 0.005 49.25);
+  --secondary-foreground: oklch(0.235 0.012 60);
   --muted: oklch(0.965 0.001 106);
-  --muted-foreground: oklch(0.48 0.015 70);
-  --accent: oklch(0.965 0.001 106);
-  --accent-foreground: oklch(0.145 0.005 49.25);
-  --destructive: oklch(0.637 0.237 25.331); /* #FF6B6B */
+  --muted-foreground: oklch(0.5 0.015 70);
+  --accent: oklch(0.96 0.004 60);
+  --accent-foreground: oklch(0.235 0.012 60);
+  --destructive: oklch(0.637 0.237 25.331);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0.004 286.32);
-  --input: oklch(0.922 0.004 286.32);
-  --ring: oklch(0.145 0.005 49.25);
+  --expense: oklch(0.7 0.18 21); /* #FF6B6B 珊瑚红 — 账本 */
+  --expense-foreground: oklch(0.99 0 0);
+  --expense-soft: oklch(0.7 0.18 21 / 0.1);
+  --border: oklch(0.916 0.004 60);
+  --input: oklch(0.916 0.004 60);
+  --ring: oklch(0.6 0.14 155);
   --chart-1: oklch(0.6 0.14 155);
-  --chart-2: oklch(0.637 0.237 25.331);
+  --chart-2: oklch(0.7 0.18 21);
   --chart-3: oklch(0.398 0.07 227.37);
   --chart-4: oklch(0.82 0.12 80);
   --chart-5: oklch(0.77 0.12 55);
 }
 
+/* 深色主题 */
+.dark {
+  color-scheme: dark;
+  --background: oklch(0.205 0.004 60); /* 暖调近黑 */
+  --foreground: oklch(0.955 0.003 70);
+  --card: oklch(0.246 0.005 60);
+  --card-foreground: oklch(0.955 0.003 70);
+  --popover: oklch(0.256 0.005 60);
+  --popover-foreground: oklch(0.955 0.003 70);
+  --primary: oklch(0.7 0.14 155);
+  --primary-foreground: oklch(0.16 0.02 155);
+  --secondary: oklch(0.285 0.005 60);
+  --secondary-foreground: oklch(0.955 0.003 70);
+  --muted: oklch(0.285 0.005 60);
+  --muted-foreground: oklch(0.71 0.012 70);
+  --accent: oklch(0.32 0.006 60);
+  --accent-foreground: oklch(0.955 0.003 70);
+  --destructive: oklch(0.7 0.19 22);
+  --destructive-foreground: oklch(0.99 0 0);
+  --expense: oklch(0.74 0.16 21);
+  --expense-foreground: oklch(0.16 0.02 21);
+  --expense-soft: oklch(0.74 0.16 21 / 0.16);
+  --border: oklch(0.33 0.006 60);
+  --input: oklch(0.33 0.006 60);
+  --ring: oklch(0.7 0.14 155);
+  --chart-1: oklch(0.72 0.14 155);
+  --chart-2: oklch(0.74 0.16 21);
+  --chart-3: oklch(0.6 0.12 227);
+  --chart-4: oklch(0.84 0.12 80);
+  --chart-5: oklch(0.8 0.12 55);
+}
 
 /* 注册为 Tailwind 颜色工具类 */
 @theme inline {
@@ -54,6 +89,8 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-expense: var(--expense);
+  --color-expense-foreground: var(--expense-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -79,12 +116,23 @@
 @layer base {
   body {
     background: var(--color-background);
+    color: var(--color-foreground);
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* 统一过渡动画 */
+  /* 统一过渡缓动 */
   * {
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+/* 防止 iOS 聚焦时自动缩放：移动端表单控件最小 16px。
+   写在 @layer 之外（unlayered），优先级高于 Tailwind 的 text-* 工具类。 */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea,
+  select {
+    font-size: 16px;
   }
 }
 
@@ -98,9 +146,11 @@
   @apply transition-all duration-150 active:scale-[0.97];
 }
 
-/* 毛玻璃效果 */
+/* 毛玻璃效果（深色可用） */
 .glass-effect {
-  @apply bg-white;
+  background: color-mix(in oklch, var(--color-card) 80%, transparent);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
 }
 
 /* Markdown content overflow protection */
@@ -116,7 +166,7 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* Markdown code block (highlight.js github-dark) */
+/* Markdown code block (highlight.js github-dark, 始终深色) */
 .prose pre {
   overflow-x: auto;
   max-width: 100%;

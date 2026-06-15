@@ -25,9 +25,9 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
   if (active && payload && payload.length) {
     const value = payload[0].value;
     return (
-      <div className="rounded-lg bg-white p-3 shadow-sm border border-gray-100">
+      <div className="rounded-lg bg-popover p-3 shadow-md border border-border">
         <p className="text-xs text-muted-foreground mb-1">{label}</p>
-        <p className="text-sm font-medium text-[#FF6B6B]">
+        <p className="text-sm font-medium text-expense">
           ¥{Number(value).toLocaleString()}
         </p>
       </div>
@@ -75,7 +75,7 @@ export function TrendChart({ dailyExpenses, title = "每日支出趋势" }: Tren
             size="sm"
             className={`h-7 px-3 text-xs ${
               timeRange === 7
-                ? "bg-white shadow-sm text-foreground"
+                ? "bg-card shadow-sm text-foreground"
                 : "text-muted-foreground hover:text-foreground"
             }`}
             onClick={() => setTimeRange(7)}
@@ -87,7 +87,7 @@ export function TrendChart({ dailyExpenses, title = "每日支出趋势" }: Tren
             size="sm"
             className={`h-7 px-3 text-xs ${
               timeRange === 30
-                ? "bg-white shadow-sm text-foreground"
+                ? "bg-card shadow-sm text-foreground"
                 : "text-muted-foreground hover:text-foreground"
             }`}
             onClick={() => setTimeRange(30)}
@@ -101,8 +101,8 @@ export function TrendChart({ dailyExpenses, title = "每日支出趋势" }: Tren
           <AreaChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
             <defs>
               <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#FF6B6B" stopOpacity={0.15} />
-                <stop offset="95%" stopColor="#FF6B6B" stopOpacity={0} />
+                <stop offset="5%" stopColor="var(--color-expense)" stopOpacity={0.18} />
+                <stop offset="95%" stopColor="var(--color-expense)" stopOpacity={0} />
               </linearGradient>
             </defs>
             <XAxis
@@ -122,8 +122,8 @@ export function TrendChart({ dailyExpenses, title = "每日支出趋势" }: Tren
             <Area
               type="monotone"
               dataKey="value"
-              stroke="#FF6B6B"
-              strokeWidth={1.5}
+              stroke="var(--color-expense)"
+              strokeWidth={2}
               fill="url(#colorValue)"
             />
           </AreaChart>

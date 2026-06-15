@@ -1,8 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/lib/supabase';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import {
+  shanghaiMonthRange,
+  shanghaiParts,
+  shanghaiDateKey,
+  daysInShanghaiMonth,
+  timeRangeOrFilter,
+} from '@/lib/timezone';
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : '获取月度数据失败';
+}
+
+// 总支出兜底：当 total_expense() RPC 不存在时，分页累加避免 Supabase 默认 1000 行截断。
+async function sumAllExpenseFallback(supabase: SupabaseClient): Promise<number> {
+  let sum = 0;
+  let from = 0;
+  const pageSize = 1000;
+  for (;;) {
+    const { data, error } = await supabase
+      .from('transactions')
+      .select('amount')
+      .eq('type', 'expense')
+      .range(from, from + pageSize - 1);
+    if (error) throw error;
+    if (!data || data.length === 0) break;
+    for (const r of data) sum += Number(r.amount);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  return sum;
 }
 
 export async function GET(req: NextRequest) {
@@ -17,38 +45,31 @@ export async function GET(req: NextRequest) {
 
     const supabase = getSupabaseClient();
 
-    // 当月起止时间
-    const monthStart = new Date(year, month - 1, 1).toISOString();
-    const monthEnd = new Date(year, month, 1).toISOString();
+    // 按上海时区计算当月 / 上月边界
+    const currentRange = shanghaiMonthRange(year, month);
+    const prevRange = shanghaiMonthRange(year, month - 1);
 
-    // 上月起止时间
-    const prevMonthStart = new Date(year, month - 2, 1).toISOString();
-    const prevMonthEnd = new Date(year, month - 1, 1).toISOString();
-
-    // 并行查询当月、上月、全部数据
-    const [currentRes, prevRes, allTimeRes] = await Promise.all([
+    // 并行查询：当月明细、上月汇总、全部总支出(RPC)
+    const [currentRes, prevRes, totalRpc] = await Promise.all([
       supabase
         .from('transactions')
         .select('*')
-        .or(`and(transaction_time.gte.${monthStart},transaction_time.lt.${monthEnd}),and(transaction_time.is.null,created_at.gte.${monthStart},created_at.lt.${monthEnd})`)
+        .or(timeRangeOrFilter(currentRange))
         .order('created_at', { ascending: false }),
       supabase
         .from('transactions')
         .select('amount,type')
-        .or(`and(transaction_time.gte.${prevMonthStart},transaction_time.lt.${prevMonthEnd}),and(transaction_time.is.null,created_at.gte.${prevMonthStart},created_at.lt.${prevMonthEnd})`),
-      supabase
-        .from('transactions')
-        .select('amount,type')
+        .or(timeRangeOrFilter(prevRange)),
+      supabase.rpc('total_expense'),
     ]);
 
     if (currentRes.error) throw currentRes.error;
     if (prevRes.error) throw prevRes.error;
-    if (allTimeRes.error) throw allTimeRes.error;
 
     const currentTx = currentRes.data || [];
     const prevTx = prevRes.data || [];
 
-    // 聚合计算
+    // 聚合计算（按上海时区分桶）
     let totalExpense = 0;
     const dailyMap: Record<string, number> = {};
     const categoryMap: Record<string, { amount: number; count: number }> = {};
@@ -60,17 +81,17 @@ export async function GET(req: NextRequest) {
       if (t.type === 'expense') {
         totalExpense += amount;
         if (!lastExpenseTx) lastExpenseTx = t;
+        const when = t.transaction_time || t.created_at;
         // 每日支出
-        const d = new Date(t.transaction_time || t.created_at);
-        const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        const dateKey = shanghaiDateKey(when);
         dailyMap[dateKey] = (dailyMap[dateKey] || 0) + amount;
         // 分类
         const cat = t.category || '未分类';
         if (!categoryMap[cat]) categoryMap[cat] = { amount: 0, count: 0 };
         categoryMap[cat].amount += amount;
         categoryMap[cat].count += 1;
-        // 日历
-        const day = d.getDate();
+        // 日历（上海日历的「日」）
+        const day = shanghaiParts(when).day;
         calendarMap[day] = (calendarMap[day] || 0) + amount;
       }
     }
@@ -88,13 +109,17 @@ export async function GET(req: NextRequest) {
       .filter((t) => t.type === 'expense')
       .reduce((sum, t) => sum + Number(t.amount), 0);
 
-    // 全部总支出
-    const allTimeExpense = (allTimeRes.data || [])
-      .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + Number(t.amount), 0);
+    // 全部总支出：优先 RPC，回退分页累加
+    let allTimeExpense: number;
+    if (!totalRpc.error && totalRpc.data != null) {
+      allTimeExpense = Number(totalRpc.data);
+    } else {
+      console.warn('total_expense RPC 不可用，回退分页累加：', totalRpc.error?.message);
+      allTimeExpense = await sumAllExpenseFallback(supabase);
+    }
 
     // 构建每日支出数组（填满整月）
-    const daysInMonth = new Date(year, month, 0).getDate();
+    const daysInMonth = daysInShanghaiMonth(year, month);
     const dailyExpenses = [];
     for (let d = 1; d <= daysInMonth; d++) {
       const dateKey = `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`;

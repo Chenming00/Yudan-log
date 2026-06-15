@@ -34,7 +34,7 @@ const CustomTooltip = ({ active, payload }: PieTooltipProps) => {
   if (active && payload && payload.length) {
     const entry = payload[0].payload;
     return (
-      <div className="rounded-lg bg-white p-3 shadow-lg">
+      <div className="rounded-lg bg-popover border border-border p-3 shadow-md">
         <p className="text-sm font-medium text-foreground mb-1">{entry.name}</p>
         <p className="text-xs text-muted-foreground">
           ¥{Number(entry.value).toLocaleString()} ({entry.percentage}%)

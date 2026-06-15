@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { BookOpen, Wallet, ArrowRight } from 'lucide-react';
 import { getAllPosts } from '@/lib/blog';
 import { Greeting } from './greeting';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export const metadata: Metadata = {
   title: '鱼蛋宝宝 - 记录生活的每一面',
@@ -38,9 +39,9 @@ const modules = [
     description: '记录每一笔收支',
     href: '/ledger',
     icon: Wallet,
-    color: 'text-[#FF6B6B]',
-    bgGradient: 'bg-gradient-to-br from-[#FF6B6B]/15 to-[#FF8E8E]/5',
-    borderColor: 'border-[#FF6B6B]/10',
+    color: 'text-expense',
+    bgGradient: 'bg-gradient-to-br from-expense/15 to-expense/5',
+    borderColor: 'border-expense/20',
   },
   {
     title: '成长 Log',
@@ -61,6 +62,9 @@ export default async function HomePage() {
       <div className="max-w-5xl mx-auto">
         {/* Hero Banner */}
         <div className="relative mb-10 pt-safe">
+          <div className="absolute right-0 top-1/2 -translate-y-1/2">
+            <ThemeToggle />
+          </div>
           <Greeting />
         </div>
 

@@ -15,11 +15,11 @@ const WEEKDAY_LABELS = ["一", "二", "三", "四", "五", "六", "日"];
 function getHeatStyle(amount: number, max: number): { bg: string; text: string } {
   if (amount === 0) return { bg: "bg-muted/50", text: "text-muted-foreground/50" };
   const ratio = amount / max;
-  if (ratio < 0.2) return { bg: "bg-[#FF6B6B]/10", text: "text-[#FF6B6B]" };
-  if (ratio < 0.4) return { bg: "bg-[#FF6B6B]/20", text: "text-[#FF6B6B]" };
-  if (ratio < 0.6) return { bg: "bg-[#FF6B6B]/40", text: "text-[#FF6B6B]" };
-  if (ratio < 0.8) return { bg: "bg-[#FF6B6B]/60", text: "text-white" };
-  return { bg: "bg-[#FF6B6B]/80", text: "text-white" };
+  if (ratio < 0.2) return { bg: "bg-expense/10", text: "text-expense" };
+  if (ratio < 0.4) return { bg: "bg-expense/20", text: "text-expense" };
+  if (ratio < 0.6) return { bg: "bg-expense/40", text: "text-expense" };
+  if (ratio < 0.8) return { bg: "bg-expense/60", text: "text-white" };
+  return { bg: "bg-expense/80", text: "text-white" };
 }
 
 function formatTime(dateStr: string) {
@@ -76,8 +76,8 @@ export function CalendarHeatmap({ calendarData, year, month }: CalendarHeatmapPr
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className="w-2.5 h-2.5 rounded-sm bg-muted/50" />
             <span>少</span>
-            <span className="w-2.5 h-2.5 rounded-sm bg-[#FF6B6B]/40" />
-            <span className="w-2.5 h-2.5 rounded-sm bg-[#FF6B6B]/80" />
+            <span className="w-2.5 h-2.5 rounded-sm bg-expense/40" />
+            <span className="w-2.5 h-2.5 rounded-sm bg-expense/80" />
             <span>多</span>
           </div>
         </div>
@@ -103,7 +103,7 @@ export function CalendarHeatmap({ calendarData, year, month }: CalendarHeatmapPr
                 onClick={() => handleDayClick(day)}
                 className={`aspect-square rounded-md flex flex-col items-center justify-center text-xs transition-all ${heat.bg} ${
                   isToday ? "ring-2 ring-primary ring-offset-1 ring-offset-card" : ""
-                } cursor-pointer hover:ring-2 hover:ring-[#FF6B6B]/30 hover:ring-offset-1 hover:ring-offset-card active:scale-95`}
+                } cursor-pointer hover:ring-2 hover:ring-expense/30 hover:ring-offset-1 hover:ring-offset-card active:scale-95`}
               >
                 <span className={`leading-none ${isToday ? "font-bold text-primary" : heat.text}`}>
                   {day}
@@ -129,7 +129,7 @@ export function CalendarHeatmap({ calendarData, year, month }: CalendarHeatmapPr
           </DialogHeader>
 
           <div className="text-center py-3">
-            <p className="text-2xl font-bold text-[#FF6B6B]">¥{selectedDayTotal.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-expense">¥{selectedDayTotal.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground mt-1">当日总支出</p>
           </div>
 
@@ -161,7 +161,7 @@ export function CalendarHeatmap({ calendarData, year, month }: CalendarHeatmapPr
                       {t.category || "未分类"} · {formatTime(t.transaction_time || t.created_at)}
                     </p>
                   </div>
-                  <span className="text-sm font-semibold text-[#FF6B6B] ml-2 flex-shrink-0">
+                  <span className="text-sm font-semibold text-expense ml-2 flex-shrink-0">
                     -¥{Number(t.amount).toLocaleString()}
                   </span>
                 </div>

@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeRaw from 'rehype-raw';
-import 'highlight.js/styles/github.css';
+import 'highlight.js/styles/github-dark.css';
 import { useState, useEffect, useCallback } from 'react';
 import { slugify } from '@/lib/utils';
 
@@ -31,7 +31,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="text-xs px-2.5 py-1 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
+      className="text-xs px-2.5 py-1 rounded-lg bg-white/10 text-gray-300 hover:bg-white/20 transition-colors"
     >
       {copied ? 'Copied' : 'Copy'}
     </button>
@@ -223,7 +223,7 @@ export function MarkdownContent({ content }: { content: string }) {
 
             return <li className="leading-7 text-muted-foreground" {...props}>{children}</li>;
           },
-          input: ({ checked, ...props }) => (
+          input: ({ checked }) => (
             <span className="inline-flex items-center justify-center w-4 h-4 mt-[3px] rounded border border-border shrink-0">
               {checked && (
                 <svg className="w-3 h-3 text-primary" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -258,7 +258,7 @@ export function MarkdownContent({ content }: { content: string }) {
               {children}
             </details>
           ),
-          summary: ({ children, ...props }) => (
+          summary: ({ children }) => (
             <summary className="px-4 py-3 cursor-pointer font-medium text-foreground hover:bg-muted/50 transition-colors select-none list-none [&::-webkit-details-marker]:hidden">
               <span className="inline-block mr-2 transition-transform ui-open:rotate-90">▶</span>
               {children}
@@ -287,9 +287,9 @@ export function MarkdownContent({ content }: { content: string }) {
             const language = codeChild?.className?.replace('language-', '') || 'text';
 
             return (
-              <div className="my-6 rounded-xl overflow-hidden border border-border bg-muted/50 max-w-full">
+              <div className="my-6 rounded-xl overflow-hidden border border-[#30363d] bg-[#0d1117] max-w-full">
                 {/* 顶部栏 */}
-                <div className="flex items-center justify-between px-3 py-2 text-xs text-muted-foreground bg-muted/80">
+                <div className="flex items-center justify-between px-3 py-2 text-xs text-gray-400 bg-[#161b22] border-b border-[#30363d]">
                   <span className="uppercase tracking-wide">{language}</span>
                   <CopyButton text={rawCode} />
                 </div>

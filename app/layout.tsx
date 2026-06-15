@@ -73,8 +73,14 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
-  themeColor: '#FFFFFF',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#F7F7F7' },
+    { media: '(prefers-color-scheme: dark)', color: '#211f1d' },
+  ],
 };
+
+// 在水合前同步主题，避免深色模式刷新闪白
+const themeScript = `(function(){try{var t=localStorage.getItem('theme');var d=t==='dark'||((!t||t==='system')&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -85,8 +91,10 @@ export default function RootLayout({
     <html
       lang="zh-CN"
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      suppressHydrationWarning
     >
       <body className="bg-background font-sans text-foreground">
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <Providers>
           {children}
           <FloatingNav />
