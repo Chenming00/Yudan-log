@@ -44,64 +44,60 @@ const modules = [
 
 const commits = [
   {
+    date: '2026-06-16',
     type: 'perf',
-    title: 'split ledger charts and trim client JavaScript',
-    body: '爸爸把底部导航和首页问候改成 Astro 静态组件，账本里的重图表拆成按需加载；又移除了不再使用的 Next 和动画依赖，让首屏要下载的脚本明显变少。',
+    title: 'optimize Astro structure and ledger performance',
+    body: '从 GitHub 历史看，这是 Astro 迁移后的收尾优化：把底部导航和首页问候改成静态组件，账本里的重图表按需加载，也清掉不再使用的依赖，让小站更轻、更快。',
     icon: Rocket,
   },
   {
-    type: 'refactor',
-    title: 'replace legacy Next routes with Astro structure',
-    body: '爸爸把已经被 Astro 接管的旧 Next 页面、API 和重复工具清掉；还把仍在使用的 React 组件搬到 src/components，让目录结构更像现在的项目。',
-    icon: GitBranch,
-  },
-  {
-    type: 'fix',
-    title: 'keep blog table of contents visible',
-    body: '文章目录太长时会被底部导航挡住。爸爸给目录卡片加了可视高度限制和内部滚动，让最后几项也能完整看到。',
-    icon: Search,
-  },
-  {
-    type: 'feat',
-    title: 'restore Astro blog AI chat endpoint',
-    body: '迁移到 Astro 后，文章问答曾经暂时关闭。爸爸把旧的 Next API 逻辑搬回 Astro API，让文章可以继续被 AI 追问。',
-    icon: Bot,
-  },
-  {
-    type: 'style',
-    title: 'add development diary about page',
-    body: '新增 /about 页面，把这个小站为什么做、怎么迭代、接下来想做什么放到一个地方。它是这份开发记录的第一版。',
-    icon: GitCommitHorizontal,
-  },
-  {
+    date: '2026-06-16',
     type: 'refactor',
     title: 'migrate site from Next.js to Astro',
-    body: '一次大的重构：页面入口迁到 Astro，内容页面交给 Astro，交互区域继续用 React，部署到 Vercel 也更清楚。',
+    body: '这是一次架构转向：页面入口迁到 Astro，内容页交给 Astro，交互区域继续用 React，部署到 Vercel 的路径也更清晰。它把这个站从实验状态整理成更稳定的形态。',
     icon: GitBranch,
   },
   {
-    type: 'style',
-    title: 'redesign site with mobile navigation',
-    body: '首页、博客和账本都重新打磨过。底部导航更适合手机，账本交互也变得更像每天会打开的小工具。',
-    icon: Rocket,
-  },
-  {
+    date: '2026-05-03',
     type: 'feat',
-    title: 'build ledger dashboard and monthly views',
-    body: '小账本从“能记一笔”慢慢变成“能看懂一个月”：分类统计、趋势图、日历热力图、月度聚合和历史分页都陆续加了进来。',
+    title: 'build monthly ledger views and visual summaries',
+    body: '小账本开始不只是记录流水，而是能复盘一个月：月度聚合、历史分页、日历热力图和数字动效陆续出现，账本的“看懂生活开销”这一面真正成型。',
     icon: WalletCards,
   },
   {
+    date: '2026-04-29',
     type: 'feat',
-    title: 'enhance markdown reading experience',
-    body: '成长记录不是只要能打开就行。爸爸给 Markdown 加了标题锚点、图片预览、代码高亮、阅读进度和文章目录，让以后翻旧文章时更顺手。',
+    title: 'connect AI chat and article summaries',
+    body: '这一组提交把文章总结、文章问答和账单讨论接进来。虽然中间经历过回滚和重做，但它标记了这个小站从静态记录走向“可以被追问”的阶段。',
+    icon: Bot,
+  },
+  {
+    date: '2026-04-22',
+    type: 'feat',
+    title: 'improve markdown reading experience',
+    body: '成长日志的阅读体验在这段历史里被认真打磨：目录、阅读进度、代码复制、标题结构和文章页布局都补上了，让长文章更像一个可以长期保存和回看的地方。',
     icon: Search,
   },
   {
-    type: 'docs',
-    title: 'add structured metadata and site basics',
-    body: '爸爸先给这个小站补好名字、描述、图标、robots 和 sitemap。它像 GitHub repo 的 README 第一屏，先让人知道这里是什么、为什么存在。',
-    icon: NotebookPen,
+    date: '2026-04-21',
+    type: 'feat',
+    title: 'add markdown blog and PWA basics',
+    body: '博客功能和 PWA 基础在这天落地，Markdown 内容、语法高亮、缓存和站点基础能力串起来，鱼蛋花费不再只是账本，也开始承载家庭记录。',
+    icon: BookOpenText,
+  },
+  {
+    date: '2026-04-21',
+    type: 'feat',
+    title: 'shape ledger dashboard and input workflow',
+    body: '账本在这天快速长出核心工作流：搜索筛选、交易详情、编辑删除、快捷添加、分类选择、Telegram 消息解析和图表组件，逐渐从原型变成可日常使用的小工具。',
+    icon: WalletCards,
+  },
+  {
+    date: '2026-04-20',
+    type: 'feat',
+    title: 'initialize finance system with Telegram and Supabase',
+    body: '这是 GitHub 历史里的起点：Telegram webhook、Supabase 和交易记录 API 先搭起来。后面的账本、日志、AI 功能，都是从这个最初的个人记账系统慢慢长出来的。',
+    icon: GitCommitHorizontal,
   },
 ];
 
@@ -210,7 +206,7 @@ const roadmap = [
                       </span>
                       <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <GitCommitHorizontal class="h-3.5 w-3.5" />
-                        <span>main</span>
+                        <span>{commit.date}</span>
                       </div>
                     </div>
                     <h3 class="mt-3 font-mono text-sm font-semibold leading-6 text-foreground sm:text-base">
