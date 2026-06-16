@@ -49,13 +49,6 @@ const imageUrl = new URL(image, siteUrl).toString();
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={imageUrl} />
-    <script is:inline>
-      (() => {
-        const theme = localStorage.getItem('theme') || 'system';
-        const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
-        document.documentElement.classList.toggle('dark', dark);
-      })();
-    </script>
     <slot name="head" />
   </head>
   <body class="bg-background font-sans text-foreground">

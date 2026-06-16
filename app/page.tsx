@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { BookOpen, Wallet, ArrowRight } from 'lucide-react';
 import { getAllPosts } from '@/lib/blog';
 import { Greeting } from './greeting';
-import { ThemeToggle } from '@/components/theme-toggle';
 
 export const metadata: Metadata = {
   title: '鱼蛋宝宝 - 记录生活的每一面',
@@ -62,9 +61,6 @@ export default async function HomePage() {
       <div className="max-w-5xl mx-auto">
         {/* Hero Banner */}
         <div className="relative mb-10 pt-safe">
-          <div className="absolute right-0 top-1/2 -translate-y-1/2">
-            <ThemeToggle />
-          </div>
           <Greeting />
         </div>
 

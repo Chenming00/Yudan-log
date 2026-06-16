@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { BookOpen, Home, NotebookPen, Wallet } from 'lucide-react';
-import { ThemeToggle } from '../../components/theme-toggle';
 
 const items = [
   {
@@ -80,9 +79,6 @@ export default function FloatingNav({ activePath }: { activePath: string }) {
             </a>
           );
         })}
-        <div className="flex min-w-0 flex-1 items-center justify-center sm:min-w-[88px] lg:max-w-[128px]">
-          <ThemeToggle />
-        </div>
       </div>
     </nav>
   );

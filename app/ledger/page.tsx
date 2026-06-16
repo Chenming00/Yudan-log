@@ -7,7 +7,6 @@ import { SummaryCards, CategoryBreakdown, DetailList, CalendarHeatmap, TrendChar
 import { TransactionDialog } from "./components/transaction-dialog";
 import { AddDialog } from "./components/add-dialog";
 import { SettingsDialog } from "./components/settings-dialog";
-import { ThemeToggle } from "@/components/theme-toggle";
 import type { Transaction, MonthlyData } from "./types";
 
 function getMonthKey(date: Date) {
@@ -173,7 +172,6 @@ export default function LedgerPage() {
               <p className="mt-1.5 text-sm text-muted-foreground">记录每一笔支出</p>
             </div>
             <div className="flex items-center gap-2">
-              <ThemeToggle />
               <button
                 onClick={() => setSettingsOpen(true)}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-muted/60 text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-95"

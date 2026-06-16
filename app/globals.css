@@ -39,38 +39,6 @@
   --chart-5: oklch(0.77 0.12 55);
 }
 
-/* 深色主题 */
-.dark {
-  color-scheme: dark;
-  --background: oklch(0.205 0.004 60); /* 暖调近黑 */
-  --foreground: oklch(0.955 0.003 70);
-  --card: oklch(0.246 0.005 60);
-  --card-foreground: oklch(0.955 0.003 70);
-  --popover: oklch(0.256 0.005 60);
-  --popover-foreground: oklch(0.955 0.003 70);
-  --primary: oklch(0.7 0.14 155);
-  --primary-foreground: oklch(0.16 0.02 155);
-  --secondary: oklch(0.285 0.005 60);
-  --secondary-foreground: oklch(0.955 0.003 70);
-  --muted: oklch(0.285 0.005 60);
-  --muted-foreground: oklch(0.71 0.012 70);
-  --accent: oklch(0.32 0.006 60);
-  --accent-foreground: oklch(0.955 0.003 70);
-  --destructive: oklch(0.7 0.19 22);
-  --destructive-foreground: oklch(0.99 0 0);
-  --expense: oklch(0.74 0.16 21);
-  --expense-foreground: oklch(0.16 0.02 21);
-  --expense-soft: oklch(0.74 0.16 21 / 0.16);
-  --border: oklch(0.33 0.006 60);
-  --input: oklch(0.33 0.006 60);
-  --ring: oklch(0.7 0.14 155);
-  --chart-1: oklch(0.72 0.14 155);
-  --chart-2: oklch(0.74 0.16 21);
-  --chart-3: oklch(0.6 0.12 227);
-  --chart-4: oklch(0.84 0.12 80);
-  --chart-5: oklch(0.8 0.12 55);
-}
-
 /* 注册为 Tailwind 颜色工具类 */
 @theme inline {
   --color-background: var(--background);
@@ -146,7 +114,7 @@
   @apply transition-all duration-150 active:scale-[0.97];
 }
 
-/* 毛玻璃效果（深色可用） */
+/* 毛玻璃效果 */
 .glass-effect {
   background: color-mix(in oklch, var(--color-card) 80%, transparent);
   backdrop-filter: saturate(180%) blur(12px);
@@ -166,7 +134,7 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* Markdown code block (highlight.js github-dark, 始终深色) */
+/* Markdown code block */
 .prose pre {
   overflow-x: auto;
   max-width: 100%;

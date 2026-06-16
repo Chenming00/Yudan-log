@@ -1,45 +1,63 @@
 ---
-import { CalendarDays, GitBranch, NotebookPen, Rocket, WalletCards } from 'lucide-react';
+import { Bot, CalendarDays, GitBranch, NotebookPen, Rocket, Search, Sparkles, WalletCards } from 'lucide-react';
 import BaseLayout from '../layouts/BaseLayout.astro';
 
 const milestones = [
   {
-    title: '把生活记录放在一个地方',
-    date: '起点',
-    body: '鱼蛋花费一开始只是一个很小的想法：记账不要太重，写日志也不要太正式。它更像一个每天都会打开的小角落，能把花出去的钱、记下来的事、慢慢变化的心情放在一起。',
+    title: '先把这个家安顿下来',
+    date: 'SEO / 站点骨架',
+    body: '爸爸一开始做的不是复杂功能，而是把站点的名字、描述、图标、robots 和 sitemap 这些地基铺好。这样鱼蛋的成长记录和小账本都有一个稳定入口，也方便以后慢慢加内容。',
     icon: NotebookPen,
   },
   {
-    title: '小账本先跑起来',
-    date: '账本',
-    body: '账本模块围绕“快”来做：打开页面、输入金额、选分类、保存。后面又加了月份视图、热力图、分类统计和历史列表，让日常支出能被看见，而不是只被保存。',
+    title: '让文章真正适合阅读',
+    date: 'Markdown 阅读体验',
+    body: '后来爸爸把 Markdown 渲染认真整理了一遍：标题可以复制锚点，图片可以点开放大，代码块有高亮和复制按钮。写给鱼蛋的内容不只是存起来，也要读起来舒服。',
+    icon: Search,
+  },
+  {
+    title: '给成长 Log 加一点智能',
+    date: 'AI 摘要 / 问答',
+    body: '博客曾经加入过文章摘要和问答接口，爸爸想让长文章以后也能被快速回顾。中间也做过取舍：有些 AI 功能先加上，有些后来为了稳定和隐私又暂时收起来。',
+    icon: Bot,
+  },
+  {
+    title: '小账本从“能记”变成“能看”',
+    date: '热力图 / 图表 / 分页',
+    body: '账本最早的目标只是快速记一笔。后面爸爸陆续加了日历热力图、动态数字、分类统计、趋势图、月度聚合和历史分页。这样每个月花了什么，不用翻很久也能看明白。',
     icon: WalletCards,
   },
   {
-    title: '成长 Log 变成长期记录',
-    date: '写作',
-    body: 'Markdown 文章让这个站点不只是工具，也能留下当时的想法。很多页面不是一次设计完的，而是边用边改：哪里卡住了，哪里不顺手，就在下一次开发里补上。',
+    title: '重新打磨界面',
+    date: '移动端 / 浅色界面',
+    body: '有一轮改动把首页、博客和账本都重新整理了，底部导航也改成更适合手机的样子。爸爸试过深色模式，最后还是把它拿掉，让整个站点固定在清爽的浅色界面里。',
     icon: CalendarDays,
   },
   {
     title: '迁移到 Astro',
-    date: '现在',
-    body: '这次迁移把页面入口放到 Astro，保留 React 组件处理需要交互的地方。目标是让内容页面更轻，部署更直接，也给后续继续拆小功能留出空间。',
+    date: 'Astro + React',
+    body: '最近爸爸把项目迁到 Astro：内容页面交给 Astro，账本、导航、图表这些交互继续用 React。这样网站更轻，部署到 Vercel 也更直接，后面继续写成长记录会更顺手。',
     icon: GitBranch,
+  },
+  {
+    title: '补上这页开发日记',
+    date: 'About',
+    body: '这页就是给未来的鱼蛋看的：爸爸不是一次性把网站做完，而是一点点边用边改。每一次提交，都像是在给这个小小生活站添一块砖。',
+    icon: Sparkles,
   },
 ];
 
 const nextSteps = [
-  '把账本里的高频动作继续压缩到更少点击',
-  '补上更完整的文章摘要和搜索体验',
-  '让移动端的视觉层级更安静、更耐看',
-  '整理旧 Next.js 代码，逐步收束到 Astro 结构',
+  '继续把记账流程做得更快，最好一只手也能顺手完成',
+  '把成长文章的搜索、标签和归档整理得更清楚',
+  '把旧 Next.js 代码慢慢收束，让 Astro 结构更干净',
+  '多写一些关于鱼蛋成长、家庭日常和开发过程的记录',
 ];
 ---
 
 <BaseLayout
-  title="开发日记"
-  description="鱼蛋花费的开发日记：记录这个个人生活站点为什么做、怎么迁移到 Astro，以及接下来要打磨的方向。"
+  title="爸爸的开发日记"
+  description="爸爸写给鱼蛋的开发日记：记录鱼蛋花费这个个人生活站点的主要开发变化、账本迭代、博客体验和 Astro 迁移。"
   canonical="/about"
 >
   <main class="min-h-screen px-4 py-6 sm:px-6 lg:px-8" style="padding-bottom: var(--nav-height)">
@@ -54,28 +72,28 @@ const nextSteps = [
 
         <div class="mt-6 max-w-3xl">
           <h1 class="text-3xl font-bold leading-tight text-foreground sm:text-4xl">
-            开发日记
+            爸爸的开发日记
           </h1>
           <p class="mt-4 text-base leading-8 text-muted-foreground sm:text-lg">
-            这里记录鱼蛋花费的来处和去处。它不是一个宏大的产品，更像一个被日常慢慢磨出来的私人工作台：一边记账，一边写东西，一边把生活里细小但重要的变化留下来。
+            我是鱼蛋的爸爸。这个站点不是一个很正式的产品，更像爸爸给家里做的小工具：记下每一笔花费，也留下鱼蛋慢慢长大的文字。这里按照 GitHub 提交历史，把主要的开发变化整理成一篇小小的日记。
           </p>
         </div>
       </section>
 
       <section class="mt-10 grid gap-4 sm:grid-cols-2">
         <div class="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Built for</p>
-          <h2 class="mt-2 text-lg font-semibold text-foreground">日常使用</h2>
+          <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Built by dad</p>
+          <h2 class="mt-2 text-lg font-semibold text-foreground">给家里的小站</h2>
           <p class="mt-2 text-sm leading-7 text-muted-foreground">
-            页面优先服务每天会重复发生的动作：记一笔、看本月、翻日志。功能可以慢一点长出来，但入口必须清楚。
+            爸爸做它，是想把育儿、消费、复盘和一些零碎念头放在一起。功能不需要一下子很大，但每次打开都要有用。
           </p>
         </div>
 
         <div class="rounded-2xl border border-border bg-card p-5 shadow-sm">
           <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Current stack</p>
-          <h2 class="mt-2 text-lg font-semibold text-foreground">Astro + React</h2>
+          <h2 class="mt-2 text-lg font-semibold text-foreground">Astro + React + Vercel</h2>
           <p class="mt-2 text-sm leading-7 text-muted-foreground">
-            Astro 负责页面和内容，React 负责账本、导航、图表这些交互区域。这样博客和工具可以待在同一个站点里，又各自保持轻巧。
+            现在内容页面由 Astro 承担，账本和图表继续用 React。爸爸希望它轻一点、稳定一点，也更适合以后长期写下去。
           </p>
         </div>
       </section>
@@ -84,7 +102,7 @@ const nextSteps = [
         <div class="mb-5 flex items-end justify-between gap-4">
           <div>
             <p class="text-sm font-medium text-primary">Timeline</p>
-            <h2 class="mt-1 text-2xl font-semibold text-foreground">一路改到现在</h2>
+            <h2 class="mt-1 text-2xl font-semibold text-foreground">主要开发变化</h2>
           </div>
         </div>
 
@@ -120,7 +138,7 @@ const nextSteps = [
           </span>
           <div>
             <p class="text-sm font-medium text-primary">Next</p>
-            <h2 class="text-xl font-semibold text-foreground">接下来想继续打磨</h2>
+            <h2 class="text-xl font-semibold text-foreground">爸爸接下来想继续打磨</h2>
           </div>
         </div>
 

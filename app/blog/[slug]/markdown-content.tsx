@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import rehypeRaw from 'rehype-raw';
-import 'highlight.js/styles/github-dark.css';
+import 'highlight.js/styles/github.css';
 import { useState, useEffect, useCallback } from 'react';
 import { slugify } from '@/lib/utils';
 
@@ -31,7 +31,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={handleCopy}
-      className="text-xs px-2.5 py-1 rounded-lg bg-white/10 text-gray-300 hover:bg-white/20 transition-colors"
+      className="text-xs px-2.5 py-1 rounded-lg bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
     >
       {copied ? 'Copied' : 'Copy'}
     </button>
@@ -287,9 +287,9 @@ export function MarkdownContent({ content }: { content: string }) {
             const language = codeChild?.className?.replace('language-', '') || 'text';
 
             return (
-              <div className="my-6 rounded-xl overflow-hidden border border-[#30363d] bg-[#0d1117] max-w-full">
+              <div className="my-6 rounded-xl overflow-hidden border border-border bg-card max-w-full">
                 {/* 顶部栏 */}
-                <div className="flex items-center justify-between px-3 py-2 text-xs text-gray-400 bg-[#161b22] border-b border-[#30363d]">
+                <div className="flex items-center justify-between px-3 py-2 text-xs text-muted-foreground bg-muted/70 border-b border-border">
                   <span className="uppercase tracking-wide">{language}</span>
                   <CopyButton text={rawCode} />
                 </div>
