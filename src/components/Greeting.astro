@@ -1,8 +1,4 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import Image from 'next/image';
-
+---
 interface GreetingItem {
   text: string;
   emoji: string;
@@ -61,34 +57,23 @@ function getGreeting(): GreetingItem {
   return pickRandom(greetings.night);
 }
 
-const defaultGreeting: GreetingItem = { text: '你好', emoji: '👋', sub: '欢迎回来' };
+const greeting = getGreeting();
+---
 
-export function Greeting() {
-  const [greeting, setGreeting] = useState<GreetingItem>(defaultGreeting);
-
-  useEffect(() => {
-    setGreeting(getGreeting());
-  }, []);
-
-  return (
-    <div className="relative flex items-center gap-4 px-1 py-2 sm:gap-5">
-      <div className="relative shrink-0">
-        <Image
-          src="/apple-home-logo.png"
-          alt="头像"
-          width={52}
-          height={52}
-          sizes="52px"
-          className="h-[52px] w-[52px] rounded-2xl object-cover shadow-sm sm:h-16 sm:w-16"
-          priority
-        />
-      </div>
-      <div>
-        <h1 className="text-[22px] font-bold tracking-tight text-foreground sm:text-2xl">
-          {greeting.text}，{greeting.emoji}
-        </h1>
-        <p className="text-sm text-muted-foreground mt-0.5 sm:text-base">{greeting.sub}</p>
-      </div>
-    </div>
-  );
-}
+<div class="relative flex items-center gap-4 px-1 py-2 sm:gap-5">
+  <div class="relative shrink-0">
+    <img
+      src="/apple-home-logo.png"
+      alt="头像"
+      width="52"
+      height="52"
+      class="h-[52px] w-[52px] rounded-2xl object-cover shadow-sm sm:h-16 sm:w-16"
+    />
+  </div>
+  <div>
+    <h1 class="text-[22px] font-bold tracking-tight text-foreground sm:text-2xl">
+      {greeting.text}，{greeting.emoji}
+    </h1>
+    <p class="mt-0.5 text-sm text-muted-foreground sm:text-base">{greeting.sub}</p>
+  </div>
+</div>

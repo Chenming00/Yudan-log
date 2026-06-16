@@ -1,6 +1,6 @@
 ---
 import '../styles/global.css';
-import FloatingNav from '../components/FloatingNav';
+import FloatingNav from '../components/FloatingNav.astro';
 import RegisterSW from '../components/RegisterSW.astro';
 
 interface Props {
@@ -53,7 +53,7 @@ const imageUrl = new URL(image, siteUrl).toString();
   </head>
   <body class="bg-background font-sans text-foreground">
     <slot />
-    <FloatingNav activePath={Astro.url.pathname} client:load />
+    <FloatingNav activePath={Astro.url.pathname} />
     <RegisterSW />
   </body>
 </html>

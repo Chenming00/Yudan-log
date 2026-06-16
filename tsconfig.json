@@ -22,11 +22,6 @@
   },
   "include": [
     "src/**/*",
-    "app/ledger/**/*",
-    "app/blog/[slug]/ai-chat.tsx",
-    "app/blog/[slug]/post-actions.tsx",
-    "app/blog/[slug]/reading-progress.tsx",
-    "app/blog/[slug]/toc-card.tsx",
     "components/**/*",
     "lib/**/*"
   ],

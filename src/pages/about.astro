@@ -1,154 +1,259 @@
 ---
-import { Bot, CalendarDays, GitBranch, NotebookPen, Rocket, Search, Sparkles, WalletCards } from 'lucide-react';
+import {
+  Bot,
+  BookOpenText,
+  CheckCircle2,
+  Code2,
+  GitBranch,
+  GitCommitHorizontal,
+  GitPullRequest,
+  NotebookPen,
+  Rocket,
+  Search,
+  WalletCards,
+} from 'lucide-react';
 import BaseLayout from '../layouts/BaseLayout.astro';
 
-const milestones = [
+const repoFacts = [
+  { label: 'framework', value: 'Astro + React' },
+  { label: 'deploy', value: 'Vercel' },
+  { label: 'modules', value: 'ledger / blog / ai-chat' },
+  { label: 'status', value: 'iterating' },
+];
+
+const modules = [
   {
-    title: '先把这个家安顿下来',
-    date: 'SEO / 站点骨架',
-    body: '爸爸一开始做的不是复杂功能，而是把站点的名字、描述、图标、robots 和 sitemap 这些地基铺好。这样鱼蛋的成长记录和小账本都有一个稳定入口，也方便以后慢慢加内容。',
-    icon: NotebookPen,
-  },
-  {
-    title: '让文章真正适合阅读',
-    date: 'Markdown 阅读体验',
-    body: '后来爸爸把 Markdown 渲染认真整理了一遍：标题可以复制锚点，图片可以点开放大，代码块有高亮和复制按钮。写给鱼蛋的内容不只是存起来，也要读起来舒服。',
-    icon: Search,
-  },
-  {
-    title: '给成长 Log 加一点智能',
-    date: 'AI 摘要 / 问答',
-    body: '博客曾经加入过文章摘要和问答接口，爸爸想让长文章以后也能被快速回顾。中间也做过取舍：有些 AI 功能先加上，有些后来为了稳定和隐私又暂时收起来。',
-    icon: Bot,
-  },
-  {
-    title: '小账本从“能记”变成“能看”',
-    date: '热力图 / 图表 / 分页',
-    body: '账本最早的目标只是快速记一笔。后面爸爸陆续加了日历热力图、动态数字、分类统计、趋势图、月度聚合和历史分页。这样每个月花了什么，不用翻很久也能看明白。',
+    name: 'ledger',
+    title: '鱼蛋小账本',
+    body: '给家里日常花费用的轻量账本：记一笔、看本月、翻历史、按分类复盘。',
     icon: WalletCards,
   },
   {
-    title: '重新打磨界面',
-    date: '移动端 / 浅色界面',
-    body: '有一轮改动把首页、博客和账本都重新整理了，底部导航也改成更适合手机的样子。爸爸试过深色模式，最后还是把它拿掉，让整个站点固定在清爽的浅色界面里。',
-    icon: CalendarDays,
+    name: 'blog',
+    title: '成长 Log',
+    body: '用 Markdown 留下鱼蛋成长、家庭日常和爸爸一路折腾这个站点的记录。',
+    icon: BookOpenText,
   },
   {
-    title: '迁移到 Astro',
-    date: 'Astro + React',
-    body: '最近爸爸把项目迁到 Astro：内容页面交给 Astro，账本、导航、图表这些交互继续用 React。这样网站更轻，部署到 Vercel 也更直接，后面继续写成长记录会更顺手。',
-    icon: GitBranch,
-  },
-  {
-    title: '补上这页开发日记',
-    date: 'About',
-    body: '这页就是给未来的鱼蛋看的：爸爸不是一次性把网站做完，而是一点点边用边改。每一次提交，都像是在给这个小小生活站添一块砖。',
-    icon: Sparkles,
+    name: 'ai-chat',
+    title: '文章问答',
+    body: '给长文章接上 AI 问答，之后回头看时，可以直接问这篇文章讲了什么。',
+    icon: Bot,
   },
 ];
 
-const nextSteps = [
-  '继续把记账流程做得更快，最好一只手也能顺手完成',
-  '把成长文章的搜索、标签和归档整理得更清楚',
-  '把旧 Next.js 代码慢慢收束，让 Astro 结构更干净',
-  '多写一些关于鱼蛋成长、家庭日常和开发过程的记录',
+const commits = [
+  {
+    type: 'perf',
+    title: 'split ledger charts and trim client JavaScript',
+    body: '爸爸把底部导航和首页问候改成 Astro 静态组件，账本里的重图表拆成按需加载；又移除了不再使用的 Next 和动画依赖，让首屏要下载的脚本明显变少。',
+    icon: Rocket,
+  },
+  {
+    type: 'refactor',
+    title: 'replace legacy Next routes with Astro structure',
+    body: '爸爸把已经被 Astro 接管的旧 Next 页面、API 和重复工具清掉；还把仍在使用的 React 组件搬到 src/components，让目录结构更像现在的项目。',
+    icon: GitBranch,
+  },
+  {
+    type: 'fix',
+    title: 'keep blog table of contents visible',
+    body: '文章目录太长时会被底部导航挡住。爸爸给目录卡片加了可视高度限制和内部滚动，让最后几项也能完整看到。',
+    icon: Search,
+  },
+  {
+    type: 'feat',
+    title: 'restore Astro blog AI chat endpoint',
+    body: '迁移到 Astro 后，文章问答曾经暂时关闭。爸爸把旧的 Next API 逻辑搬回 Astro API，让文章可以继续被 AI 追问。',
+    icon: Bot,
+  },
+  {
+    type: 'style',
+    title: 'add development diary about page',
+    body: '新增 /about 页面，把这个小站为什么做、怎么迭代、接下来想做什么放到一个地方。它是这份开发记录的第一版。',
+    icon: GitCommitHorizontal,
+  },
+  {
+    type: 'refactor',
+    title: 'migrate site from Next.js to Astro',
+    body: '一次大的重构：页面入口迁到 Astro，内容页面交给 Astro，交互区域继续用 React，部署到 Vercel 也更清楚。',
+    icon: GitBranch,
+  },
+  {
+    type: 'style',
+    title: 'redesign site with mobile navigation',
+    body: '首页、博客和账本都重新打磨过。底部导航更适合手机，账本交互也变得更像每天会打开的小工具。',
+    icon: Rocket,
+  },
+  {
+    type: 'feat',
+    title: 'build ledger dashboard and monthly views',
+    body: '小账本从“能记一笔”慢慢变成“能看懂一个月”：分类统计、趋势图、日历热力图、月度聚合和历史分页都陆续加了进来。',
+    icon: WalletCards,
+  },
+  {
+    type: 'feat',
+    title: 'enhance markdown reading experience',
+    body: '成长记录不是只要能打开就行。爸爸给 Markdown 加了标题锚点、图片预览、代码高亮、阅读进度和文章目录，让以后翻旧文章时更顺手。',
+    icon: Search,
+  },
+  {
+    type: 'docs',
+    title: 'add structured metadata and site basics',
+    body: '爸爸先给这个小站补好名字、描述、图标、robots 和 sitemap。它像 GitHub repo 的 README 第一屏，先让人知道这里是什么、为什么存在。',
+    icon: NotebookPen,
+  },
+];
+
+const roadmap = [
+  'todo: 把账本组件继续拆小',
+  'todo: 优化账本移动端输入流程',
+  'todo: 增加文章归档和搜索',
+  'todo: 多写鱼蛋成长和家庭日常',
 ];
 ---
 
 <BaseLayout
-  title="爸爸的开发日记"
-  description="爸爸写给鱼蛋的开发日记：记录鱼蛋花费这个个人生活站点的主要开发变化、账本迭代、博客体验和 Astro 迁移。"
+  title="爸爸给鱼蛋做的小站"
+  description="爸爸写给鱼蛋的开发日记：用 GitHub commit log 的方式记录鱼蛋花费这个小站的主要开发变化。"
   canonical="/about"
 >
   <main class="min-h-screen px-4 py-6 sm:px-6 lg:px-8" style="padding-bottom: var(--nav-height)">
-    <div class="mx-auto max-w-4xl">
+    <div class="mx-auto max-w-6xl">
       <section class="pt-safe">
-        <div class="flex items-center gap-3 text-primary">
-          <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-            <Rocket class="h-5 w-5" />
-          </span>
-          <span class="text-sm font-medium">About</span>
-        </div>
+        <div class="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-stretch">
+          <div class="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
+            <div class="inline-flex items-center gap-2 rounded-full border border-border bg-muted/60 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+              <GitPullRequest class="h-3.5 w-3.5 text-primary" />
+              about / development-log
+            </div>
 
-        <div class="mt-6 max-w-3xl">
-          <h1 class="text-3xl font-bold leading-tight text-foreground sm:text-4xl">
-            爸爸的开发日记
-          </h1>
-          <p class="mt-4 text-base leading-8 text-muted-foreground sm:text-lg">
-            我是鱼蛋的爸爸。这个站点不是一个很正式的产品，更像爸爸给家里做的小工具：记下每一笔花费，也留下鱼蛋慢慢长大的文字。这里按照 GitHub 提交历史，把主要的开发变化整理成一篇小小的日记。
-          </p>
-        </div>
-      </section>
+            <h1 class="mt-6 text-3xl font-bold leading-tight text-foreground sm:text-4xl lg:text-5xl">
+              爸爸给鱼蛋做的小站
+            </h1>
+            <p class="mt-5 max-w-2xl text-base leading-8 text-muted-foreground sm:text-lg">
+              这是爸爸边记录生活、边写代码、边慢慢迭代出来的个人项目。它记录家里的花费，也记录鱼蛋成长的文章；这里则像一份 GitHub activity，整理这个小站一路发生过的主要变化。
+            </p>
 
-      <section class="mt-10 grid gap-4 sm:grid-cols-2">
-        <div class="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Built by dad</p>
-          <h2 class="mt-2 text-lg font-semibold text-foreground">给家里的小站</h2>
-          <p class="mt-2 text-sm leading-7 text-muted-foreground">
-            爸爸做它，是想把育儿、消费、复盘和一些零碎念头放在一起。功能不需要一下子很大，但每次打开都要有用。
-          </p>
-        </div>
-
-        <div class="rounded-2xl border border-border bg-card p-5 shadow-sm">
-          <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Current stack</p>
-          <h2 class="mt-2 text-lg font-semibold text-foreground">Astro + React + Vercel</h2>
-          <p class="mt-2 text-sm leading-7 text-muted-foreground">
-            现在内容页面由 Astro 承担，账本和图表继续用 React。爸爸希望它轻一点、稳定一点，也更适合以后长期写下去。
-          </p>
-        </div>
-      </section>
-
-      <section class="mt-12">
-        <div class="mb-5 flex items-end justify-between gap-4">
-          <div>
-            <p class="text-sm font-medium text-primary">Timeline</p>
-            <h2 class="mt-1 text-2xl font-semibold text-foreground">主要开发变化</h2>
+            <div class="mt-6 flex flex-wrap gap-2">
+              <span class="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">father-built</span>
+              <span class="rounded-full bg-expense/10 px-3 py-1.5 text-xs font-medium text-expense">family-ledger</span>
+              <span class="rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">astro-migration</span>
+            </div>
           </div>
-        </div>
 
-        <div class="space-y-4">
-          {milestones.map((item) => {
-            const Icon = item.icon;
-            return (
-              <article class="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-                <div class="flex gap-4">
-                  <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted text-primary">
-                    <Icon class="h-5 w-5" />
-                  </div>
-                  <div class="min-w-0">
-                    <div class="flex flex-wrap items-center gap-2">
-                      <h3 class="text-base font-semibold text-foreground sm:text-lg">{item.title}</h3>
-                      <span class="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-                        {item.date}
-                      </span>
-                    </div>
-                    <p class="mt-2 text-sm leading-7 text-muted-foreground">{item.body}</p>
-                  </div>
+          <aside class="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+            <div class="flex items-center justify-between border-b border-border pb-4">
+              <div>
+                <p class="text-xs font-medium text-muted-foreground">Repository</p>
+                <h2 class="mt-1 text-lg font-semibold text-foreground">Yudan-log</h2>
+              </div>
+              <Code2 class="h-5 w-5 text-primary" />
+            </div>
+
+            <dl class="mt-4 space-y-3">
+              {repoFacts.map((fact) => (
+                <div class="flex items-center justify-between gap-4 rounded-xl bg-muted/50 px-3 py-2.5">
+                  <dt class="text-xs font-medium text-muted-foreground">{fact.label}</dt>
+                  <dd class="text-right text-xs font-semibold text-foreground">{fact.value}</dd>
                 </div>
-              </article>
-            );
-          })}
+              ))}
+            </dl>
+          </aside>
         </div>
       </section>
 
-      <section class="mt-12 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
-        <div class="flex items-center gap-3">
-          <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-            <NotebookPen class="h-5 w-5" />
-          </span>
-          <div>
-            <p class="text-sm font-medium text-primary">Next</p>
-            <h2 class="text-xl font-semibold text-foreground">爸爸接下来想继续打磨</h2>
-          </div>
+      <section class="mt-8 grid gap-4 md:grid-cols-3">
+        {modules.map((mod) => {
+          const Icon = mod.icon;
+          return (
+            <article class="rounded-2xl border border-border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+              <div class="flex items-center justify-between gap-3">
+                <span class="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                  /{mod.name}
+                </span>
+                <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Icon class="h-4.5 w-4.5" />
+                </span>
+              </div>
+              <h2 class="mt-4 text-base font-semibold text-foreground">{mod.title}</h2>
+              <p class="mt-2 text-sm leading-7 text-muted-foreground">{mod.body}</p>
+            </article>
+          );
+        })}
+      </section>
+
+      <section class="mt-12 grid gap-8 lg:grid-cols-[260px_1fr]">
+        <div class="lg:sticky lg:top-24 lg:self-start">
+          <p class="text-sm font-medium text-primary">Commit log</p>
+          <h2 class="mt-2 text-2xl font-semibold text-foreground">主要开发变化</h2>
+          <p class="mt-3 text-sm leading-7 text-muted-foreground">
+            按 GitHub 提交历史倒序整理，最新改动放在最上面；不逐条罗列所有 commit，只保留对这个小站影响最大的变化。
+          </p>
         </div>
 
-        <ul class="mt-5 grid gap-3 sm:grid-cols-2">
-          {nextSteps.map((step) => (
-            <li class="rounded-xl bg-muted/60 px-4 py-3 text-sm leading-6 text-foreground">
-              {step}
-            </li>
-          ))}
-        </ul>
+        <div class="relative">
+          <div class="absolute bottom-0 left-[18px] top-0 w-px bg-border" aria-hidden="true"></div>
+          <div class="space-y-5">
+            {commits.map((commit) => {
+              const Icon = commit.icon;
+              return (
+                <article class="relative pl-12">
+                  <span class="absolute left-0 top-5 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-primary shadow-sm">
+                    <Icon class="h-4.5 w-4.5" />
+                  </span>
+
+                  <div class="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <span class="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                        {commit.type}
+                      </span>
+                      <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <GitCommitHorizontal class="h-3.5 w-3.5" />
+                        <span>main</span>
+                      </div>
+                    </div>
+                    <h3 class="mt-3 font-mono text-sm font-semibold leading-6 text-foreground sm:text-base">
+                      {commit.type}: {commit.title}
+                    </h3>
+                    <p class="mt-2 text-sm leading-7 text-muted-foreground">{commit.body}</p>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section class="mt-12 grid gap-4 lg:grid-cols-[1fr_360px]">
+        <div class="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-7">
+          <div class="flex items-center gap-3">
+            <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <NotebookPen class="h-5 w-5" />
+            </span>
+            <div>
+              <p class="text-sm font-medium text-primary">Note</p>
+              <h2 class="text-xl font-semibold text-foreground">写给未来的鱼蛋</h2>
+            </div>
+          </div>
+          <p class="mt-4 text-sm leading-8 text-muted-foreground sm:text-base">
+            如果以后你看到这里，会发现这个网站不是一夜之间做完的。爸爸是一点点把它改出来的：有时候是为了记账更快，有时候是为了文章更好读，有时候只是想把某个小地方变得顺眼一点。
+          </p>
+        </div>
+
+        <div class="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-7">
+          <div class="flex items-center gap-2">
+            <CheckCircle2 class="h-5 w-5 text-primary" />
+            <h2 class="text-xl font-semibold text-foreground">Roadmap</h2>
+          </div>
+          <ul class="mt-4 space-y-2">
+            {roadmap.map((item) => (
+              <li class="rounded-xl bg-muted/60 px-3 py-2.5 font-mono text-xs leading-6 text-foreground">
+                {item}
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
     </div>
   </main>

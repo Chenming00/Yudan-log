@@ -1,13 +1,23 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Suspense, lazy, useState, useEffect, useCallback, useMemo } from "react";
 import { Settings, Plus, ChevronLeft, ChevronRight } from "lucide-react";
-import { SummaryCards, CategoryBreakdown, DetailList, CalendarHeatmap, TrendChart } from "./dashboard";
+import { SummaryCards } from "./dashboard/summary-cards";
+import { DetailList } from "./dashboard/detail-list";
 import { TransactionDialog } from "./components/transaction-dialog";
 import { AddDialog } from "./components/add-dialog";
 import { SettingsDialog } from "./components/settings-dialog";
 import type { Transaction, MonthlyData } from "./types";
+
+const TrendChart = lazy(() =>
+  import("./dashboard/trend-chart").then((module) => ({ default: module.TrendChart }))
+);
+const CategoryBreakdown = lazy(() =>
+  import("./dashboard/category-breakdown").then((module) => ({ default: module.CategoryBreakdown }))
+);
+const CalendarHeatmap = lazy(() =>
+  import("./dashboard/calendar-heatmap").then((module) => ({ default: module.CalendarHeatmap }))
+);
 
 function getMonthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -38,6 +48,15 @@ function LoadingSkeleton() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ChartSkeleton({ compact = false }: { compact?: boolean }) {
+  return (
+    <div className="rounded-2xl bg-card border border-border p-5 animate-pulse">
+      <div className="h-3 w-24 bg-muted rounded mb-4" />
+      <div className={compact ? "h-40 bg-muted rounded-xl" : "h-44 bg-muted rounded-xl"} />
     </div>
   );
 }
@@ -252,16 +271,8 @@ export default function LedgerPage() {
 
         {/* 内容区域 */}
         <div className="space-y-4">
-          <AnimatePresence mode="wait">
-            {activeView === "home" ? (
-              <motion.div
-                key={`home-${selectedMonth}`}
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-                className="space-y-4"
-              >
+          {activeView === "home" ? (
+              <div key={`home-${selectedMonth}`} className="space-y-4 animate-in fade-in-0 slide-in-from-right-2 duration-200">
                 {loadingMonthly || !monthlyData ? (
                   <LoadingSkeleton />
                 ) : (
@@ -276,31 +287,40 @@ export default function LedgerPage() {
                     />
 
                     {/* lg 双列仪表盘：趋势 + 分类（无分类时趋势独占整行） */}
-                    {monthlyData.categoryBreakdown.length > 1 ? (
-                      <div className="grid gap-4 lg:grid-cols-2">
+                    <Suspense
+                      fallback={
+                        monthlyData.categoryBreakdown.length > 1 ? (
+                          <div className="grid gap-4 lg:grid-cols-2">
+                            <ChartSkeleton />
+                            <ChartSkeleton compact />
+                          </div>
+                        ) : (
+                          <ChartSkeleton />
+                        )
+                      }
+                    >
+                      {monthlyData.categoryBreakdown.length > 1 ? (
+                        <div className="grid gap-4 lg:grid-cols-2">
+                          <TrendChart dailyExpenses={monthlyData.dailyExpenses} />
+                          <CategoryBreakdown categoryBreakdown={monthlyData.categoryBreakdown} />
+                        </div>
+                      ) : (
                         <TrendChart dailyExpenses={monthlyData.dailyExpenses} />
-                        <CategoryBreakdown categoryBreakdown={monthlyData.categoryBreakdown} />
-                      </div>
-                    ) : (
-                      <TrendChart dailyExpenses={monthlyData.dailyExpenses} />
-                    )}
+                      )}
+                    </Suspense>
 
-                    <CalendarHeatmap
-                      calendarData={monthlyData.calendarData}
-                      year={year}
-                      month={month}
-                    />
+                    <Suspense fallback={<ChartSkeleton />}>
+                      <CalendarHeatmap
+                        calendarData={monthlyData.calendarData}
+                        year={year}
+                        month={month}
+                      />
+                    </Suspense>
                   </>
                 )}
-              </motion.div>
+              </div>
             ) : (
-              <motion.div
-                key="history"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-              >
+              <div key="history" className="animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
                 {loadingDetail && detailTransactions.length === 0 ? (
                   <LoadingSkeleton />
                 ) : (
@@ -315,9 +335,8 @@ export default function LedgerPage() {
                     onLoadMore={handleLoadMore}
                   />
                 )}
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
         </div>
       </div>
 

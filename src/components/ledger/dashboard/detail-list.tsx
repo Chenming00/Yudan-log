@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { motion } from "framer-motion";
 import { Download } from "lucide-react";
 import { categoryEmoji, categoryLabel } from "@/lib/categories";
 import type { Transaction } from "../types";
@@ -213,12 +212,9 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
                 <span className="text-xs font-medium text-muted-foreground">{date}</span>
               </div>
               <div className="space-y-3">
-                {items.map((t, index) => (
-                  <motion.button
+                {items.map((t) => (
+                  <button
                     key={t.id}
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.05, duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
                     onClick={() => onSelect(t)}
                     className="w-full flex items-center gap-3 rounded-2xl bg-card border border-border p-4 hover:bg-accent active:scale-[0.99] transition-all text-left"
                   >
@@ -236,7 +232,7 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
                     <span className="text-sm font-semibold text-expense">
                       -¥{Number(t.amount).toLocaleString()}
                     </span>
-                  </motion.button>
+                  </button>
                 ))}
               </div>
             </div>

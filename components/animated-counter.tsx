@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useInView, animate } from "framer-motion";
 
 interface AnimatedCounterProps {
   value: number;
@@ -21,21 +20,47 @@ export function AnimatedCounter({
   duration = 0.8,
 }: AnimatedCounterProps) {
   const ref = useRef<HTMLSpanElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-50px" });
+  const [isInView, setIsInView] = useState(false);
   const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setIsInView(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "-50px" }
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!isInView) return;
 
-    const controls = animate(0, value, {
-      duration,
-      ease: [0.4, 0, 0.2, 1],
-      onUpdate(val) {
-        setDisplayValue(val);
-      },
-    });
+    let frameId = 0;
+    const startedAt = performance.now();
+    const durationMs = Math.max(duration, 0.1) * 1000;
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
-    return () => controls.stop();
+    const tick = (now: number) => {
+      const progress = Math.min((now - startedAt) / durationMs, 1);
+      setDisplayValue(value * easeOutCubic(progress));
+
+      if (progress < 1) {
+        frameId = requestAnimationFrame(tick);
+      }
+    };
+
+    frameId = requestAnimationFrame(tick);
+
+    return () => cancelAnimationFrame(frameId);
   }, [value, isInView, duration]);
 
   const formatted = decimals > 0

@@ -2,7 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { ChevronDown, BookOpen } from 'lucide-react';
-import type { BlogHeading } from '@/lib/blog';
+
+interface BlogHeading {
+  level: number;
+  text: string;
+  id: string;
+}
 
 export function TocCard({ headings, defaultOpen = true }: { headings: BlogHeading[]; defaultOpen?: boolean }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);

@@ -2,7 +2,6 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import type { CategorySummary } from "../types";
 
@@ -60,12 +59,7 @@ export function CategoryBreakdown({ categoryBreakdown, title = "支出分类" }:
   }
 
   return (
-    <motion.div
-      className="rounded-2xl bg-card border border-border p-4"
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3, duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-    >
+    <div className="rounded-2xl bg-card border border-border p-4">
       <p className="text-sm font-medium text-muted-foreground mb-4">{title}</p>
       <div className="flex flex-col sm:flex-row gap-6">
         {/* 饼图 */}
@@ -158,6 +152,6 @@ export function CategoryBreakdown({ categoryBreakdown, title = "支出分类" }:
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }

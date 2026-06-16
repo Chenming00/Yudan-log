@@ -3,10 +3,10 @@ import { ArrowLeft, Calendar, Clock3 } from 'lucide-react';
 import { render } from 'astro:content';
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getAdjacentBlogPosts, getBlogEntries, toBlogCardPost } from '../../lib/astro-blog';
-import { PostActions } from '../../../app/blog/[slug]/post-actions';
-import { TocCard } from '../../../app/blog/[slug]/toc-card';
-import { ReadingProgress } from '../../../app/blog/[slug]/reading-progress';
-import { AiChat } from '../../../app/blog/[slug]/ai-chat';
+import { PostActions } from '../../components/blog/post-actions';
+import { TocCard } from '../../components/blog/toc-card';
+import { ReadingProgress } from '../../components/blog/reading-progress';
+import { AiChat } from '../../components/blog/ai-chat';
 
 export const prerender = true;
 
@@ -133,11 +133,11 @@ const jsonLd = {
             <Content />
           </div>
 
-          <AiChat slug={post.slug} client:load />
+          <AiChat slug={post.slug} client:visible />
 
           <div class="mt-12 sm:mt-16 pt-8 sm:pt-10 border-t border-border/40 max-w-full sm:max-w-3xl">
             <p class="text-sm font-medium text-muted-foreground mb-4">分享文章</p>
-            <PostActions title={post.title} summary={post.summary} client:load />
+            <PostActions title={post.title} summary={post.summary} client:visible />
           </div>
 
           {(previous || next) && (

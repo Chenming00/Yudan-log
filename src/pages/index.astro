@@ -1,7 +1,7 @@
 ---
 import { BookOpen, Wallet, ArrowRight } from 'lucide-react';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import Greeting from '../components/Greeting';
+import Greeting from '../components/Greeting.astro';
 import { getBlogCardPosts } from '../lib/astro-blog';
 
 const posts = (await getBlogCardPosts()).slice(0, 3);
@@ -49,7 +49,7 @@ const modules = [
   <main class="min-h-screen px-4 py-6 sm:px-6 lg:px-8" style="padding-bottom: var(--nav-height)">
     <div class="max-w-5xl mx-auto">
       <div class="relative mb-10 pt-safe">
-        <Greeting client:load />
+        <Greeting />
       </div>
 
       <div class="grid grid-cols-2 gap-3 mb-10 sm:gap-4 lg:grid-cols-2">

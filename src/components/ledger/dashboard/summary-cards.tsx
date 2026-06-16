@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from "framer-motion";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { categoryLabel } from "@/lib/categories";
@@ -41,12 +40,7 @@ export function SummaryCards({
   const up = deltaPct >= 0;
 
   return (
-    <motion.div
-      className="rounded-2xl bg-card border border-border p-6 shadow-sm"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-    >
+    <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
       {/* 所选月支出 — 主数字 */}
       <div className="flex items-baseline justify-between">
         <p className="text-sm text-muted-foreground">{monthLabel}</p>
@@ -92,6 +86,6 @@ export function SummaryCards({
           </span>
         </div>
       )}
-    </motion.div>
+    </div>
   );
 }
