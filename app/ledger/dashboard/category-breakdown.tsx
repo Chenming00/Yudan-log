@@ -4,7 +4,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { CategorySummary } from "../types";
+import type { CategorySummary } from "../types";
 
 interface CategoryBreakdownProps {
   categoryBreakdown: CategorySummary[];

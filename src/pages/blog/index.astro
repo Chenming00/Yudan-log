@@ -1,0 +1,17 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import BlogList from '../../components/BlogList';
+import { getBlogCardPosts } from '../../lib/astro-blog';
+
+const posts = await getBlogCardPosts();
+---
+
+<BaseLayout
+  title="成长 Log"
+  description="用文字记录成长的每一步"
+  canonical="/blog"
+>
+  <main class="min-h-screen px-4 sm:px-6 py-8 bg-background" style="padding-bottom: var(--nav-height)">
+    <BlogList posts={posts} client:load />
+  </main>
+</BaseLayout>

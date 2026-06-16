@@ -4,7 +4,7 @@ import { useState, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Download } from "lucide-react";
 import { categoryEmoji, categoryLabel } from "@/lib/categories";
-import { Transaction } from "../types";
+import type { Transaction } from "../types";
 
 interface DetailListProps {
   transactions: Transaction[];

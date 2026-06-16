@@ -4,7 +4,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { DailyExpense } from "../types";
+import type { DailyExpense } from "../types";
 
 interface TrendChartProps {
   dailyExpenses: DailyExpense[];

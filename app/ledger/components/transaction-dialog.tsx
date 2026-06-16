@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { X } from "lucide-react";
 import { CATEGORIES } from "@/lib/categories";
 import { toLocalDatetimeInput } from "@/lib/utils";
-import { Transaction } from "../types";
+import type { Transaction } from "../types";
 
 interface TransactionDetailProps {
   transaction: Transaction | null;

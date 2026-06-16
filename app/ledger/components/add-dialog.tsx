@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { CATEGORIES } from '@/lib/categories';
 import { toLocalDatetimeInput } from '@/lib/utils';
-import { TransactionFormState } from '../types';
+import type { TransactionFormState } from '../types';
 
 interface AddDialogProps {
   open: boolean;

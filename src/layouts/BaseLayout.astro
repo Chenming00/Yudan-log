@@ -1,0 +1,66 @@
+---
+import '../styles/global.css';
+import FloatingNav from '../components/FloatingNav';
+import RegisterSW from '../components/RegisterSW.astro';
+
+interface Props {
+  title?: string;
+  description?: string;
+  canonical?: string;
+  image?: string;
+  type?: 'website' | 'article';
+}
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.BASE_URL || import.meta.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+const {
+  title = '鱼蛋宝宝',
+  description = '记录生活的每一面，用小账本和成长日志沉淀日常、复盘成长。',
+  canonical = '/',
+  image = '/logo.png',
+  type = 'website',
+} = Astro.props;
+const pageTitle = title === '鱼蛋宝宝' ? title : `${title} · 鱼蛋宝宝`;
+const absoluteUrl = new URL(canonical, siteUrl).toString();
+const imageUrl = new URL(image, siteUrl).toString();
+---
+
+<!doctype html>
+<html lang="zh-CN" class="antialiased">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#FFFFFF" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="description" content={description} />
+    <meta name="keywords" content="记账,成长日志,个人博客,Telegram Bot,PWA" />
+    <link rel="canonical" href={absoluteUrl} />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="icon" href="/logo.png" />
+    <link rel="apple-touch-icon" href="/apple-home-logo.png" />
+    <title>{pageTitle}</title>
+    <meta property="og:type" content={type} />
+    <meta property="og:locale" content="zh_CN" />
+    <meta property="og:site_name" content="鱼蛋宝宝" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={absoluteUrl} />
+    <meta property="og:image" content={imageUrl} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={imageUrl} />
+    <script is:inline>
+      (() => {
+        const theme = localStorage.getItem('theme') || 'system';
+        const dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.classList.toggle('dark', dark);
+      })();
+    </script>
+    <slot name="head" />
+  </head>
+  <body class="bg-background font-sans text-foreground">
+    <slot />
+    <FloatingNav activePath={Astro.url.pathname} client:load />
+    <RegisterSW />
+  </body>
+</html>

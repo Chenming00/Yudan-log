@@ -8,7 +8,7 @@ import { TransactionDialog } from "./components/transaction-dialog";
 import { AddDialog } from "./components/add-dialog";
 import { SettingsDialog } from "./components/settings-dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { Transaction, MonthlyData } from "./types";
+import type { Transaction, MonthlyData } from "./types";
 
 function getMonthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;

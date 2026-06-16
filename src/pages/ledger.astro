@@ -1,0 +1,12 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import LedgerPage from '../../app/ledger/page';
+---
+
+<BaseLayout
+  title="鱼蛋小账本"
+  description="记录每一笔支出，轻松管理日常花费"
+  canonical="/ledger"
+>
+  <LedgerPage client:only="react" />
+</BaseLayout>

@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Transaction } from "../types";
+import type { Transaction } from "../types";
 
 interface CalendarHeatmapProps {
   calendarData: Record<number, number>;

@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { AnimatedCounter } from "@/components/animated-counter";
 import { categoryLabel } from "@/lib/categories";
-import { LastTransaction } from "../types";
+import type { LastTransaction } from "../types";
 
 interface SummaryCardsProps {
   monthLabel: string;
