@@ -32,7 +32,7 @@ export function TocCard({ headings, defaultOpen = true }: { headings: BlogHeadin
   if (headings.length === 0) return null;
 
   return (
-    <div className="rounded-2xl border border-border/50 bg-card p-5">
+    <div className="flex max-h-[calc(100vh-8rem-var(--nav-height))] flex-col overflow-hidden rounded-2xl border border-border/50 bg-card p-5">
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
@@ -48,7 +48,7 @@ export function TocCard({ headings, defaultOpen = true }: { headings: BlogHeadin
       </button>
 
       {isOpen && (
-        <div id="blog-toc-content" className="mt-4 space-y-0.5 border-t border-border/30 pt-3">
+        <div id="blog-toc-content" className="mt-4 min-h-0 flex-1 space-y-0.5 overflow-y-auto border-t border-border/30 pt-3 pr-1 pb-1 scrollbar-hide">
           {headings.map((heading) => (
             <a
               key={heading.id}
