@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { BookOpen, Home, Wallet } from "lucide-react";
+import { BookOpen, Home, NotebookPen, Wallet } from "lucide-react";
 
 const items = [
   {
@@ -23,6 +23,12 @@ const items = [
     label: "Log",
     icon: BookOpen,
     match: (pathname: string) => pathname.startsWith("/blog"),
+  },
+  {
+    href: "/about",
+    label: "开发日记",
+    icon: NotebookPen,
+    match: (pathname: string) => pathname.startsWith("/about"),
   },
 ];
 

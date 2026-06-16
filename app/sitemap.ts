@@ -4,7 +4,7 @@ import { getAllPosts } from '@/lib/blog';
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.BASE_URL || 'http://localhost:3000';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const staticRoutes = ['', '/blog', '/ledger'].map((route) => ({
+  const staticRoutes = ['', '/blog', '/ledger', '/about'].map((route) => ({
     url: `${siteUrl}${route}`,
     lastModified: new Date(),
     changeFrequency: 'weekly' as const,

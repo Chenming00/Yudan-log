@@ -1,0 +1,137 @@
+---
+import { CalendarDays, GitBranch, NotebookPen, Rocket, WalletCards } from 'lucide-react';
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const milestones = [
+  {
+    title: '把生活记录放在一个地方',
+    date: '起点',
+    body: '鱼蛋花费一开始只是一个很小的想法：记账不要太重，写日志也不要太正式。它更像一个每天都会打开的小角落，能把花出去的钱、记下来的事、慢慢变化的心情放在一起。',
+    icon: NotebookPen,
+  },
+  {
+    title: '小账本先跑起来',
+    date: '账本',
+    body: '账本模块围绕“快”来做：打开页面、输入金额、选分类、保存。后面又加了月份视图、热力图、分类统计和历史列表，让日常支出能被看见，而不是只被保存。',
+    icon: WalletCards,
+  },
+  {
+    title: '成长 Log 变成长期记录',
+    date: '写作',
+    body: 'Markdown 文章让这个站点不只是工具，也能留下当时的想法。很多页面不是一次设计完的，而是边用边改：哪里卡住了，哪里不顺手，就在下一次开发里补上。',
+    icon: CalendarDays,
+  },
+  {
+    title: '迁移到 Astro',
+    date: '现在',
+    body: '这次迁移把页面入口放到 Astro，保留 React 组件处理需要交互的地方。目标是让内容页面更轻，部署更直接，也给后续继续拆小功能留出空间。',
+    icon: GitBranch,
+  },
+];
+
+const nextSteps = [
+  '把账本里的高频动作继续压缩到更少点击',
+  '补上更完整的文章摘要和搜索体验',
+  '让移动端的视觉层级更安静、更耐看',
+  '整理旧 Next.js 代码，逐步收束到 Astro 结构',
+];
+---
+
+<BaseLayout
+  title="开发日记"
+  description="鱼蛋花费的开发日记：记录这个个人生活站点为什么做、怎么迁移到 Astro，以及接下来要打磨的方向。"
+  canonical="/about"
+>
+  <main class="min-h-screen px-4 py-6 sm:px-6 lg:px-8" style="padding-bottom: var(--nav-height)">
+    <div class="mx-auto max-w-4xl">
+      <section class="pt-safe">
+        <div class="flex items-center gap-3 text-primary">
+          <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+            <Rocket class="h-5 w-5" />
+          </span>
+          <span class="text-sm font-medium">About</span>
+        </div>
+
+        <div class="mt-6 max-w-3xl">
+          <h1 class="text-3xl font-bold leading-tight text-foreground sm:text-4xl">
+            开发日记
+          </h1>
+          <p class="mt-4 text-base leading-8 text-muted-foreground sm:text-lg">
+            这里记录鱼蛋花费的来处和去处。它不是一个宏大的产品，更像一个被日常慢慢磨出来的私人工作台：一边记账，一边写东西，一边把生活里细小但重要的变化留下来。
+          </p>
+        </div>
+      </section>
+
+      <section class="mt-10 grid gap-4 sm:grid-cols-2">
+        <div class="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Built for</p>
+          <h2 class="mt-2 text-lg font-semibold text-foreground">日常使用</h2>
+          <p class="mt-2 text-sm leading-7 text-muted-foreground">
+            页面优先服务每天会重复发生的动作：记一笔、看本月、翻日志。功能可以慢一点长出来，但入口必须清楚。
+          </p>
+        </div>
+
+        <div class="rounded-2xl border border-border bg-card p-5 shadow-sm">
+          <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Current stack</p>
+          <h2 class="mt-2 text-lg font-semibold text-foreground">Astro + React</h2>
+          <p class="mt-2 text-sm leading-7 text-muted-foreground">
+            Astro 负责页面和内容，React 负责账本、导航、图表这些交互区域。这样博客和工具可以待在同一个站点里，又各自保持轻巧。
+          </p>
+        </div>
+      </section>
+
+      <section class="mt-12">
+        <div class="mb-5 flex items-end justify-between gap-4">
+          <div>
+            <p class="text-sm font-medium text-primary">Timeline</p>
+            <h2 class="mt-1 text-2xl font-semibold text-foreground">一路改到现在</h2>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          {milestones.map((item) => {
+            const Icon = item.icon;
+            return (
+              <article class="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+                <div class="flex gap-4">
+                  <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted text-primary">
+                    <Icon class="h-5 w-5" />
+                  </div>
+                  <div class="min-w-0">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <h3 class="text-base font-semibold text-foreground sm:text-lg">{item.title}</h3>
+                      <span class="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                        {item.date}
+                      </span>
+                    </div>
+                    <p class="mt-2 text-sm leading-7 text-muted-foreground">{item.body}</p>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section class="mt-12 rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+        <div class="flex items-center gap-3">
+          <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <NotebookPen class="h-5 w-5" />
+          </span>
+          <div>
+            <p class="text-sm font-medium text-primary">Next</p>
+            <h2 class="text-xl font-semibold text-foreground">接下来想继续打磨</h2>
+          </div>
+        </div>
+
+        <ul class="mt-5 grid gap-3 sm:grid-cols-2">
+          {nextSteps.map((step) => (
+            <li class="rounded-xl bg-muted/60 px-4 py-3 text-sm leading-6 text-foreground">
+              {step}
+            </li>
+          ))}
+        </ul>
+      </section>
+    </div>
+  </main>
+</BaseLayout>
