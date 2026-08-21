@@ -27,9 +27,15 @@ const repoFacts = [
 const modules = [
   {
     name: 'dashboard',
-    title: '疫苗与体重看板',
-    body: '按宝宝出生日期生成建议接种日期，记录实际接种日期和体重变化，手机与电脑都能清楚查看。',
+    title: '鱼蛋看板',
+    body: '首页只汇总下一项接种、近期安排和最新体重，让手机与电脑都能快速看清今天最重要的信息。',
     icon: HeartPulse,
+  },
+  {
+    name: 'health',
+    title: '保健档案',
+    body: '独立记录疫苗实际日期与体重变化；疫苗名称、剂次和建议日期由数据库标准清单统一管理。',
+    icon: ShieldCheck,
   },
   {
     name: 'ledger',
@@ -46,6 +52,13 @@ const modules = [
 ];
 
 const commits = [
+  {
+    date: '2026-08-21',
+    type: 'feat',
+    title: 'separate health records and standardize vaccine data',
+    body: '首页回归简洁看板，疫苗和体重移入独立保健模块。数据库保存浙江省杭州市 2026-08 标准清单、官方名称、别名、预防疾病和稳定计划 ID；API 写入前先匹配标准项目，只有唯一命中才记录，避免同一疫苗产生不同标签。',
+    icon: ShieldCheck,
+  },
   {
     date: '2026-08-21',
     type: 'feat',
@@ -190,7 +203,7 @@ const roadmap = [
         </div>
       </section>
 
-      <section class="mt-8 grid gap-4 md:grid-cols-3">
+      <section class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {modules.map((mod) => {
           const Icon = mod.icon;
           return (

@@ -5,11 +5,47 @@ import { getSupabaseAdminClient } from '../../lib/supabase';
 
 export type YudanVaccineRecord = {
   id: string;
+  planId?: string;
   vaccine: string;
   dose: string;
   ageLabel: string;
   doneDate: string;
 };
+
+export type YudanVaccinePlan = {
+  id: string;
+  sort_order: number;
+  age_months: number;
+  age_label: string;
+  vaccine: string;
+  dose: string;
+  funding: 'free' | 'paid';
+  date_rule: 'flu-season' | null;
+  date_offset_days: number;
+  region: string;
+  schedule_version: string;
+  prevents: string;
+  aliases: string[];
+  audience: string | null;
+  schedule_note: string | null;
+  source: string;
+};
+
+export type VaccinePlanCandidate = YudanVaccinePlan & {
+  suggested_date: string;
+};
+
+export class VaccineCatalogMatchError extends Error {
+  status: number;
+  candidates: VaccinePlanCandidate[];
+
+  constructor(message: string, status: number, candidates: VaccinePlanCandidate[] = []) {
+    super(message);
+    this.name = 'VaccineCatalogMatchError';
+    this.status = status;
+    this.candidates = candidates;
+  }
+}
 
 export type YudanWeightRecord = {
   id: string;
@@ -35,12 +71,125 @@ function readVaccineRecords(value: unknown): YudanVaccineRecord[] {
     const record = item as Record<string, unknown>;
     return (
       typeof record.id === 'string' &&
+      (record.planId === undefined || typeof record.planId === 'string') &&
       typeof record.vaccine === 'string' &&
       typeof record.dose === 'string' &&
       typeof record.ageLabel === 'string' &&
       typeof record.doneDate === 'string'
     );
   });
+}
+
+export async function getVaccineCatalog(supabase?: SupabaseClient) {
+  const client = supabase || getSupabaseAdminClient();
+  const { data, error } = await client
+    .from('yudan_vaccine_catalog')
+    .select('id, sort_order, age_months, age_label, vaccine, dose, funding, date_rule, date_offset_days, region, schedule_version, prevents, aliases, audience, schedule_note, source')
+    .eq('active', true)
+    .order('sort_order');
+
+  if (error) throw error;
+  return (data || []) as YudanVaccinePlan[];
+}
+
+function normalizeVaccineName(value: string) {
+  return value
+    .toLocaleLowerCase('zh-CN')
+    .replace(/疫苗/g, '')
+    .replace(/[\s（）()·+＋/\\_—-]/g, '');
+}
+
+function normalizeDose(value: string) {
+  return value
+    .toLocaleLowerCase('zh-CN')
+    .replace(/[\s（）()]/g, '')
+    .replace(/^第/, '')
+    .replace(/剂$/, '');
+}
+
+function addMonthsToDate(dateString: string, months: number) {
+  const [year, month, day] = dateString.split('-').map(Number);
+  const date = new Date(Date.UTC(year, month - 1 + months, day));
+  if (date.getUTCDate() < day) date.setUTCDate(0);
+  return date;
+}
+
+function formatDateValue(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+export function suggestedDateForPlan(birthday: string, plan: YudanVaccinePlan) {
+  const date = addMonthsToDate(birthday, plan.age_months);
+  if (plan.date_rule === 'flu-season') {
+    const month = date.getUTCMonth() + 1;
+    if (month >= 4 && month <= 8) date.setUTCMonth(8, 15);
+  }
+  if (plan.date_offset_days) date.setUTCDate(date.getUTCDate() + plan.date_offset_days);
+  return formatDateValue(date);
+}
+
+export async function resolveVaccinePlan({
+  birthday,
+  planId,
+  vaccine,
+  dose,
+}: {
+  birthday: string;
+  planId?: string;
+  vaccine?: string;
+  dose?: string;
+}) {
+  const catalog = await getVaccineCatalog();
+  const withDates = (items: YudanVaccinePlan[]): VaccinePlanCandidate[] =>
+    items.map((item) => ({ ...item, suggested_date: suggestedDateForPlan(birthday, item) }));
+
+  if (planId) {
+    const exact = catalog.find((item) => item.id === planId);
+    if (!exact) throw new VaccineCatalogMatchError(`未找到疫苗计划 ID：${planId}`, 404);
+    return exact;
+  }
+
+  if (!vaccine) {
+    throw new VaccineCatalogMatchError('请提供 plan_id，或提供 vaccine 进行自动匹配。', 400);
+  }
+
+  const vaccineQuery = normalizeVaccineName(vaccine);
+  const doseQuery = dose ? normalizeDose(dose) : '';
+  const exactMatches = catalog.filter((item) => {
+    const names = [item.vaccine, ...(item.aliases || [])].map(normalizeVaccineName);
+    const vaccineMatches = names.includes(vaccineQuery);
+    const doseMatches = !doseQuery || normalizeDose(item.dose) === doseQuery;
+    return vaccineMatches && doseMatches;
+  });
+
+  if (exactMatches.length === 1) return exactMatches[0];
+  if (exactMatches.length > 1) {
+    throw new VaccineCatalogMatchError(
+      '该疫苗包含多个剂次，请从 candidates 中选择 plan_id 后重试。',
+      409,
+      withDates(exactMatches)
+    );
+  }
+
+  const matches = catalog.filter((item) => {
+    const names = [item.vaccine, ...(item.aliases || [])].map(normalizeVaccineName);
+    const vaccineMatches = names.some(
+      (candidate) => candidate.includes(vaccineQuery) || vaccineQuery.includes(candidate)
+    );
+    const doseMatches = !doseQuery || normalizeDose(item.dose) === doseQuery;
+    return vaccineMatches && doseMatches;
+  });
+
+  if (matches.length === 1) return matches[0];
+  if (!matches.length) {
+    throw new VaccineCatalogMatchError('标准疫苗计划中没有找到匹配项目。请先读取目录并使用 plan_id。', 404);
+  }
+
+  throw new VaccineCatalogMatchError(
+    '匹配到多个疫苗项目，请从 candidates 中选择 plan_id 后重试。',
+    409,
+    withDates(matches)
+  );
 }
 
 function readWeightRecords(value: unknown): YudanWeightRecord[] {

@@ -94,6 +94,7 @@ MIMO_API_KEY=your_mimo_api_key
 
 1. `schema.sql`：创建账本表、索引和聚合函数。
 2. `yudan-schema.sql`：创建疫苗与体重看板表和所有者 RLS。
+3. `health-schema.sql`：创建标准疫苗目录，并写入当前 46 个常规接种项目（浙江省杭州市 `2026-08` 版本）。
 
 已有数据库升级权限时执行：
 
@@ -147,8 +148,9 @@ npm run start
 | `PATCH` | `/api/edit` | 编辑交易记录 | GitHub token / API Key |
 | `DELETE` | `/api/delete` | 删除交易记录 | GitHub token / API Key |
 | `GET` | `/api/yudan` | 读取疫苗与体重云端记录 | API Key |
+| `GET` | `/api/yudan/vaccines` | 读取标准疫苗目录、建议日期和实际日期 | API Key |
 | `POST` | `/api/yudan/weight` | 按日期新增或更新体重 | API Key |
-| `POST` | `/api/yudan/vaccine` | 登记某一剂疫苗的实际接种日期 | API Key |
+| `POST` | `/api/yudan/vaccine` | 按计划 ID 或疫苗信息登记实际日期 | API Key |
 | `POST` | `/api/telegram` | Telegram Webhook | 现有 Webhook 流程 |
 | `POST` | `/api/blog/chat` | 文章 AI 问答，迁移中暂停 | 无 |
 
@@ -164,29 +166,36 @@ Content-Type: application/json
 记录体重（单位：kg）：
 
 ```bash
+export MEASURED_DATE="YYYY-MM-DD"
+export MEASURED_WEIGHT="KG"
+
 curl -X POST https://cost.ykn.cm/api/yudan/weight \
   -H "Authorization: Bearer <API_KEY>" \
   -H "Content-Type: application/json" \
-  -d '{"date":"2026-08-21","weight":3.4}'
+  -d "{\"date\":\"${MEASURED_DATE}\",\"weight\":${MEASURED_WEIGHT}}"
 ```
 
 同一日期再次调用时会更新原记录，不会新增重复项。
 
-登记疫苗：
+先读取疫苗目录，取得稳定的 `plan_id`：
 
 ```bash
+curl https://cost.ykn.cm/api/yudan/vaccines \
+  -H "Authorization: Bearer <API_KEY>"
+```
+
+推荐使用 `plan_id` 登记疫苗，调用方不再需要填写年龄标签：
+
+```bash
+export VACCINATION_DATE="YYYY-MM-DD"
+
 curl -X POST https://cost.ykn.cm/api/yudan/vaccine \
   -H "Authorization: Bearer <API_KEY>" \
   -H "Content-Type: application/json" \
-  -d '{
-    "vaccine":"乙肝疫苗",
-    "dose":"第 1 剂",
-    "age_label":"出生后 24 小时内",
-    "actual_date":"2026-08-21"
-  }'
+  -d "{\"plan_id\":\"schedule-001\",\"actual_date\":\"${VACCINATION_DATE}\"}"
 ```
 
-“疫苗 + 剂次 + 月龄标签”相同时会更新实际接种日期。日期统一使用 `YYYY-MM-DD`，不接受未来日期。
+也可以只传 `vaccine`、`dose` 和 `actual_date`，服务端会先查询数据库中的标准名称与别名（如 `乙肝`、`HepB`、`A群流脑疫苗`），再自动补齐标准名称、剂次和年龄标签。目录响应还包含地区版本、预防疾病、适用人群、程序备注和来源。匹配到多个项目时返回 `409` 和候选 `plan_id`，不会猜测或创建重复标签。相同计划再次调用会更新实际日期。日期统一使用 `YYYY-MM-DD`，不接受未来日期。
 
 读取当前云端记录：
 
@@ -201,6 +210,7 @@ curl https://cost.ykn.cm/api/yudan \
 .
 |-- astro.config.mjs
 |-- access-control.sql
+|-- health-schema.sql
 |-- schema.sql
 |-- yudan-schema.sql
 |-- content/blog/
@@ -219,6 +229,7 @@ curl https://cost.ykn.cm/api/yudan \
     `-- pages/
         |-- api/
         |-- about.astro
+        |-- health.astro
         |-- index.astro
         `-- ledger.astro
 ```
