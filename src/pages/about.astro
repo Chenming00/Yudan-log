@@ -49,6 +49,13 @@ const commits = [
   {
     date: '2026-08-21',
     type: 'feat',
+    title: 'add key-authenticated vaccine and weight APIs',
+    body: '看板增加了面向自动化的 API：可以用现有 API Key 读取云端记录、按日期写入体重，也可以登记某一剂疫苗的实际接种日期。重复请求会更新原记录，并发写入则会自动重试，方便之后接入快捷指令或其他工具。',
+    icon: Code2,
+  },
+  {
+    date: '2026-08-21',
+    type: 'feat',
     title: 'launch vaccine and weight dashboard',
     body: '首页正式变成鱼蛋的疫苗与体重看板。疫苗按常规接种时间排序，以中国国家免疫规划为主，参考美国 CDC 儿童程序补充自费项目。页面只保留最常用的建议日期、实际日期和体重记录，并完成手机与 PC 自适应。',
     icon: HeartPulse,

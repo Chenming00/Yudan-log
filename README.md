@@ -146,8 +146,54 @@ npm run start
 | `POST` | `/api/add` | 新增交易记录 | GitHub token / API Key |
 | `PATCH` | `/api/edit` | 编辑交易记录 | GitHub token / API Key |
 | `DELETE` | `/api/delete` | 删除交易记录 | GitHub token / API Key |
+| `GET` | `/api/yudan` | 读取疫苗与体重云端记录 | API Key |
+| `POST` | `/api/yudan/weight` | 按日期新增或更新体重 | API Key |
+| `POST` | `/api/yudan/vaccine` | 登记某一剂疫苗的实际接种日期 | API Key |
 | `POST` | `/api/telegram` | Telegram Webhook | 现有 Webhook 流程 |
 | `POST` | `/api/blog/chat` | 文章 AI 问答，迁移中暂停 | 无 |
+
+### 看板 API 示例
+
+所有看板 API 请求都需要：
+
+```http
+Authorization: Bearer <API_KEY>
+Content-Type: application/json
+```
+
+记录体重（单位：kg）：
+
+```bash
+curl -X POST https://cost.ykn.cm/api/yudan/weight \
+  -H "Authorization: Bearer <API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"date":"2026-08-21","weight":3.4}'
+```
+
+同一日期再次调用时会更新原记录，不会新增重复项。
+
+登记疫苗：
+
+```bash
+curl -X POST https://cost.ykn.cm/api/yudan/vaccine \
+  -H "Authorization: Bearer <API_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "vaccine":"乙肝疫苗",
+    "dose":"第 1 剂",
+    "age_label":"出生后 24 小时内",
+    "actual_date":"2026-08-21"
+  }'
+```
+
+“疫苗 + 剂次 + 月龄标签”相同时会更新实际接种日期。日期统一使用 `YYYY-MM-DD`，不接受未来日期。
+
+读取当前云端记录：
+
+```bash
+curl https://cost.ykn.cm/api/yudan \
+  -H "Authorization: Bearer <API_KEY>"
+```
 
 ## 项目结构
 
@@ -167,6 +213,9 @@ npm run start
     |   |-- ledger/
     |   `-- yudan/
     |-- layouts/
+    |-- lib/
+    |   |-- http.ts
+    |   `-- yudan-api.ts
     `-- pages/
         |-- api/
         |-- about.astro
