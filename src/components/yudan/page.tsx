@@ -49,6 +49,7 @@ import { Input } from "@/components/ui/input";
 import { isGitHubProvider, isOwnerEmail, OWNER_EMAIL } from "@/lib/auth";
 import { getMaleWeightAssessments } from "@/src/lib/growth-standards";
 import type { WeightAssessment } from "@/src/lib/growth-standards";
+import { YUDAN_BIRTHDAY } from "@/src/lib/yudan-profile";
 import { getBrowserSupabaseClient } from "@/lib/supabase-browser";
 import { cn } from "@/lib/utils";
 
@@ -370,7 +371,7 @@ function scheduleForBirthday(birthday: string, catalog: CloudVaccinePlan[]) {
     : createVaccineSchedule(birthday);
 }
 
-const defaultBirthday = today;
+const defaultBirthday = YUDAN_BIRTHDAY;
 
 const defaultData: DashboardData = {
   birthday: defaultBirthday,
@@ -385,6 +386,21 @@ const defaultData: DashboardData = {
       detail: "把鱼蛋今天的重要变化写在这里。",
     },
   ],
+};
+
+const previewBirthday = YUDAN_BIRTHDAY;
+const previewVaccines = createVaccineSchedule(previewBirthday).map((item, index) =>
+  index < 2 ? { ...item, doneDate: item.plannedDate, status: "done" as VaccineStatus } : item
+);
+const previewData: DashboardData = {
+  birthday: previewBirthday,
+  growth: [
+    { id: "preview-weight-1", date: previewBirthday, weight: 3.4, height: 0, head: 0, note: "" },
+    { id: "preview-weight-2", date: "2026-08-16", weight: 3.32, height: 0, head: 0, note: "" },
+    { id: "preview-weight-3", date: "2026-08-21", weight: 3.56, height: 0, head: 0, note: "" },
+  ],
+  vaccines: previewVaccines,
+  care: [],
 };
 
 function newId(prefix: string) {
@@ -429,7 +445,7 @@ function readStoredData(userId?: string): DashboardData {
     const raw = scopedRaw || legacyRaw;
     if (raw) {
       const stored = JSON.parse(raw) as Partial<DashboardData>;
-      const birthday = stored.birthday || defaultBirthday;
+      const birthday = defaultBirthday;
       const storedVaccines = stored.vaccines || [];
       return {
         ...defaultData,
@@ -453,10 +469,10 @@ function readStoredData(userId?: string): DashboardData {
     const oldData = JSON.parse(oldRaw) as Partial<DashboardData>;
     return {
       ...defaultData,
-      birthday: oldData.birthday || defaultBirthday,
+      birthday: defaultBirthday,
       growth: oldData.growth || defaultData.growth,
       care: oldData.care || defaultData.care,
-      vaccines: createVaccineSchedule(oldData.birthday || defaultBirthday),
+      vaccines: createVaccineSchedule(defaultBirthday),
     };
   } catch {
     return defaultData;
@@ -500,7 +516,7 @@ function dashboardFromCloud(
   localData: DashboardData,
   catalog: CloudVaccinePlan[]
 ): DashboardData {
-  const birthday = row.birthday || localData.birthday || defaultBirthday;
+  const birthday = defaultBirthday;
   const vaccineRecords = readCloudVaccineRecords(row.vaccine_records);
   const weightRecords = readCloudWeightRecords(row.weight_records);
 
@@ -545,7 +561,7 @@ function dashboardToCloud(data: DashboardData) {
   }));
 
   return {
-    birthday: data.birthday,
+    birthday: defaultBirthday,
     vaccine_records: vaccineRecords,
     weight_records: weightRecords,
     updated_at: new Date().toISOString(),
@@ -598,6 +614,8 @@ export default function YudanDashboard({
   const [cloudReady, setCloudReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(supabase ? "loading" : "local");
   const [cloudError, setCloudError] = useState("");
+  const [loginPending, setLoginPending] = useState(false);
+  const [loginError, setLoginError] = useState("");
   const [activeView, setActiveView] = useState<"vaccines" | "growth">("growth");
   const [vaccineFilter, setVaccineFilter] = useState<VaccineFilter>("all");
   const [recordingVaccineId, setRecordingVaccineId] = useState<string | null>(null);
@@ -619,15 +637,17 @@ export default function YudanDashboard({
     detail: "",
   });
   const isOwner = isOwnerEmail(session?.user.email) && isGitHubProvider(session?.user.app_metadata);
+  const isPreview = Boolean(supabase && (!session || !isOwner));
+  const canEdit = !supabase || Boolean(session && isOwner);
 
   useEffect(() => {
-    setData(readStoredData());
+    setData(supabase ? previewData : readStoredData());
     if (view === "health") {
       const tab = new URLSearchParams(window.location.search).get("tab");
       setActiveView(tab === "vaccine" || tab === "vaccines" ? "vaccines" : "growth");
     }
     setReady(true);
-  }, [view]);
+  }, [supabase, view]);
 
   useEffect(() => {
     if (!supabase) {
@@ -642,7 +662,7 @@ export default function YudanDashboard({
 
     void supabase.auth.getSession().then(({ data: authData, error }) => {
       if (!active) return;
-      if (error) setCloudError(getCloudErrorMessage(error));
+      if (error) setLoginError("登录状态已过期，请重新登录。");
       setSession(authData.session);
       setAuthReady(true);
     });
@@ -654,6 +674,7 @@ export default function YudanDashboard({
       setSession(nextSession);
       setAuthReady(true);
       if (!nextSession) {
+        setData(previewData);
         setCloudReady(false);
         setSyncStatus("loading");
       }
@@ -797,19 +818,6 @@ export default function YudanDashboard({
     head: item.head,
   }));
 
-  function updateBirthday(birthday: string) {
-    setData((current) => ({
-      ...current,
-      birthday,
-      vaccines: scheduleForBirthday(birthday, vaccineCatalog).map((fresh) => {
-        const old = current.vaccines.find(
-          (item) => item.vaccine === fresh.vaccine && item.dose === fresh.dose && item.ageLabel === fresh.ageLabel
-        );
-        return old ? { ...fresh, ...old, plannedDate: fresh.plannedDate } : fresh;
-      }),
-    }));
-  }
-
   function updateVaccine(id: string, patch: Partial<VaccineEntry>) {
     setData((current) => ({
       ...current,
@@ -893,8 +901,28 @@ export default function YudanDashboard({
     }
 
     await supabase.auth.signOut();
-    setData(defaultData);
+    setData(previewData);
     setCloudReady(false);
+  }
+
+  async function handleLogin() {
+    if (!supabase) return;
+    setLoginPending(true);
+    setLoginError("");
+
+    if (session && !isOwner) {
+      await supabase.auth.signOut();
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "github",
+      options: { redirectTo: window.location.href.split("#")[0] },
+    });
+
+    if (error) {
+      setLoginPending(false);
+      setLoginError(error.message);
+    }
   }
 
   if (!ready || !authReady || (supabase && session && isOwner && !cloudReady)) {
@@ -906,14 +934,6 @@ export default function YudanDashboard({
         </div>
       </main>
     );
-  }
-
-  if (supabase && !session) {
-    return <CloudLogin supabase={supabase} />;
-  }
-
-  if (supabase && session && !isOwner) {
-    return <UnauthorizedAccount supabase={supabase} email={session.user.email} />;
   }
 
   if (ready) {
@@ -941,8 +961,8 @@ export default function YudanDashboard({
                 <p className="mt-1 text-sm text-stone-500">出生第 {babyAgeDays} 天 · {formatDate(data.birthday)} 出生</p>
               </div>
               <div className="flex items-center gap-2 pt-1">
-                <SyncIndicator status={syncStatus} />
-                {supabase && session && (
+                {isPreview ? <PreviewBadge /> : <SyncIndicator status={syncStatus} />}
+                {supabase && session && isOwner && (
                   <button type="button" className="grid h-9 w-9 place-items-center rounded-lg text-stone-400 hover:bg-white hover:text-stone-700" onClick={handleSignOut} aria-label="退出登录" title="退出登录">
                     <LogOut className="h-4 w-4" />
                   </button>
@@ -950,7 +970,8 @@ export default function YudanDashboard({
               </div>
             </header>
 
-            {cloudError && <CloudError message={cloudError} />}
+            {isPreview && <PreviewNotice email={session?.user.email} error={loginError} pending={loginPending} onLogin={() => void handleLogin()} />}
+            {canEdit && cloudError && <CloudError message={cloudError} />}
 
             <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <MetricCard icon={Baby} label="出生天数" value={`${babyAgeDays} 天`} detail={formatDate(data.birthday)} tone="emerald" />
@@ -976,7 +997,7 @@ export default function YudanDashboard({
             <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
               <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
                 <div className="flex items-start justify-between gap-4">
-                  <div><h2 className="font-semibold text-stone-950">体重与同龄参考</h2><p className="mt-1 text-xs text-stone-500">男宝宝 · 最近一次测量</p></div>
+                  <div><h2 className="font-semibold text-stone-950">体重趋势</h2><p className="mt-1 text-xs text-stone-500">男宝宝 · 最近一次测量与同龄位置</p></div>
                   <div className="text-right"><p className="text-xl font-semibold text-sky-700">{latestGrowth ? `${latestGrowth.weight} kg` : "-"}</p>{weightChange !== null && <p className={cn("mt-1 text-xs", weightChange >= 0 ? "text-emerald-700" : "text-rose-700")}>较上次 {weightChange >= 0 ? "+" : ""}{weightChange} kg</p>}</div>
                 </div>
                 {weightAssessments.length > 0 && <WeightStandardComparison assessments={weightAssessments} />}
@@ -1021,15 +1042,16 @@ export default function YudanDashboard({
               <div>
                 <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700"><HeartPulse className="h-4 w-4" />保健</div>
                 <h1 className="mt-2 text-2xl font-semibold text-stone-950 sm:text-3xl">体重与疫苗档案</h1>
-                <p className="mt-1 text-sm leading-6 text-stone-500">记录男宝宝的体重趋势与接种日期，接种安排以门诊和接种本为准。</p>
+                <p className="mt-1 text-sm leading-6 text-stone-500">{isPreview ? "预览体重趋势、同龄标准和接种记录的呈现方式。" : "记录男宝宝的体重趋势与接种日期，接种安排以门诊和接种本为准。"}</p>
               </div>
               <div className="flex items-end gap-3">
-                <label className="min-w-0 flex-1 text-xs font-medium text-stone-500 sm:w-44">出生日期<Input className="mt-1.5" type="date" value={data.birthday} onChange={(event) => updateBirthday(event.target.value)} /></label>
-                <div className="mb-1 flex items-center gap-2"><SyncIndicator status={syncStatus} />{supabase && session && <button type="button" className="grid h-9 w-9 place-items-center rounded-lg text-stone-400 hover:bg-white hover:text-stone-700" onClick={handleSignOut} aria-label="退出登录" title="退出登录"><LogOut className="h-4 w-4" /></button>}</div>
+                <BirthInfo />
+                <div className="mb-1 flex items-center gap-2">{isPreview ? <PreviewBadge /> : <SyncIndicator status={syncStatus} />}{supabase && session && isOwner && <button type="button" className="grid h-9 w-9 place-items-center rounded-lg text-stone-400 hover:bg-white hover:text-stone-700" onClick={handleSignOut} aria-label="退出登录" title="退出登录"><LogOut className="h-4 w-4" /></button>}</div>
               </div>
             </header>
 
-            {cloudError && <CloudError message={cloudError} />}
+            {isPreview && <PreviewNotice email={session?.user.email} error={loginError} pending={loginPending} onLogin={() => void handleLogin()} />}
+            {canEdit && cloudError && <CloudError message={cloudError} />}
 
             <div className="grid grid-cols-2 rounded-lg bg-stone-200/70 p-1 sm:w-72">
               <button type="button" onClick={() => setActiveView("growth")} className={cn("flex h-10 items-center justify-center gap-2 rounded-md text-sm font-medium", activeView === "growth" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><Weight className="h-4 w-4" />体重</button>
@@ -1046,7 +1068,7 @@ export default function YudanDashboard({
 
                 <section className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm">
                   <div className="flex flex-col gap-3 border-b border-stone-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-                    <div><h2 className="font-semibold text-stone-950">接种计划</h2><p className="mt-1 text-xs text-stone-500">按建议接种日期排序，点击“登记”填写实际日期</p></div>
+                    <div><h2 className="font-semibold text-stone-950">接种计划</h2><p className="mt-1 text-xs text-stone-500">{canEdit ? "按建议接种日期排序，点击“登记”填写实际日期" : "示例项目按建议接种日期排序，登录后显示真实记录"}</p></div>
                     <div className="grid grid-cols-3 rounded-lg bg-stone-100 p-1">
                       {(["all", "free", "paid"] as VaccineFilter[]).map((filter) => <button key={filter} type="button" onClick={() => setVaccineFilter(filter)} className={cn("h-8 rounded-md px-3 text-xs font-medium", vaccineFilter === filter ? "bg-white text-stone-950 shadow-sm" : "text-stone-500")}>{filter === "all" ? "全部" : filter === "free" ? "免费" : "自费"}</button>)}
                     </div>
@@ -1057,32 +1079,32 @@ export default function YudanDashboard({
                     <table className="w-full text-left text-sm">
                       <thead className="bg-stone-50 text-xs text-stone-500"><tr><th className="px-5 py-3 font-medium">疫苗</th><th className="w-44 px-4 py-3 font-medium">建议日期</th><th className="w-44 px-4 py-3 font-medium">实际日期</th><th className="w-28 px-5 py-3 text-right font-medium">操作</th></tr></thead>
                       <tbody className="divide-y divide-stone-100">
-                        {filteredVaccines.map((item) => <tr key={item.id} className={cn("hover:bg-stone-50", item.id === nextVaccine?.id && "bg-emerald-50/55")}><td className="px-5 py-3"><div className="flex flex-wrap items-center gap-2">{item.doneDate && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}<span className="font-medium text-stone-950">{item.vaccine} {item.dose}</span><TypeBadge type={item.type} /></div><p className="mt-1 text-xs text-stone-500">{item.ageLabel}{item.disease ? ` · 预防${item.disease}` : ""}</p></td><td className="px-4 py-3"><p className="font-medium text-stone-700">{formatDate(item.plannedDate)}</p><DueBadge item={item} /></td><td className="px-4 py-3 text-stone-600">{item.doneDate ? formatDate(item.doneDate) : "尚未登记"}</td><td className="px-5 py-3 text-right"><Button size="sm" variant={item.doneDate ? "outline" : "default"} onClick={() => openVaccineRecorder(item)}><CalendarCheck className="h-4 w-4" />{item.doneDate ? "修改" : "登记"}</Button></td></tr>)}
+                        {filteredVaccines.map((item) => <tr key={item.id} className={cn("hover:bg-stone-50", item.id === nextVaccine?.id && "bg-emerald-50/55")}><td className="px-5 py-3"><div className="flex flex-wrap items-center gap-2">{item.doneDate && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}<span className="font-medium text-stone-950">{item.vaccine} {item.dose}</span><TypeBadge type={item.type} /></div><p className="mt-1 text-xs text-stone-500">{item.ageLabel}{item.disease ? ` · 预防${item.disease}` : ""}</p></td><td className="px-4 py-3"><p className="font-medium text-stone-700">{formatDate(item.plannedDate)}</p><DueBadge item={item} /></td><td className="px-4 py-3 text-stone-600">{item.doneDate ? formatDate(item.doneDate) : "尚未登记"}</td><td className="px-5 py-3 text-right">{canEdit ? <Button size="sm" variant={item.doneDate ? "outline" : "default"} onClick={() => openVaccineRecorder(item)}><CalendarCheck className="h-4 w-4" />{item.doneDate ? "修改" : "登记"}</Button> : <Button size="sm" variant="outline" onClick={() => void handleLogin()}><CircleUserRound className="h-4 w-4" />登录</Button>}</td></tr>)}
                       </tbody>
                     </table>
                   </div>
                   <div className="divide-y divide-stone-100 md:hidden">
-                    {filteredVaccines.map((item) => <article key={item.id} className={cn("p-4", item.id === nextVaccine?.id && "bg-emerald-50/55")}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2">{item.doneDate && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}<h3 className="font-semibold text-stone-950">{item.vaccine} {item.dose}</h3><TypeBadge type={item.type} /></div><p className="mt-1 text-xs text-stone-500">{item.ageLabel}</p>{item.disease && <p className="mt-1 text-xs text-stone-500">预防：{item.disease}</p>}</div><Button size="sm" variant={item.doneDate ? "outline" : "default"} onClick={() => openVaccineRecorder(item)}>{item.doneDate ? "修改" : "登记"}</Button></div><div className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><p className="text-xs text-stone-500">建议日期</p><p className="mt-1 font-medium text-stone-700">{formatDate(item.plannedDate)}</p><DueBadge item={item} /></div><div><p className="text-xs text-stone-500">实际日期</p><p className="mt-1 font-medium text-stone-700">{item.doneDate ? formatDate(item.doneDate) : "尚未登记"}</p></div></div></article>)}
+                    {filteredVaccines.map((item) => <article key={item.id} className={cn("p-4", item.id === nextVaccine?.id && "bg-emerald-50/55")}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2">{item.doneDate && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}<h3 className="font-semibold text-stone-950">{item.vaccine} {item.dose}</h3><TypeBadge type={item.type} /></div><p className="mt-1 text-xs text-stone-500">{item.ageLabel}</p>{item.disease && <p className="mt-1 text-xs text-stone-500">预防：{item.disease}</p>}</div>{canEdit ? <Button size="sm" variant={item.doneDate ? "outline" : "default"} onClick={() => openVaccineRecorder(item)}>{item.doneDate ? "修改" : "登记"}</Button> : <Button size="sm" variant="outline" onClick={() => void handleLogin()}>登录</Button>}</div><div className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><p className="text-xs text-stone-500">建议日期</p><p className="mt-1 font-medium text-stone-700">{formatDate(item.plannedDate)}</p><DueBadge item={item} /></div><div><p className="text-xs text-stone-500">实际日期</p><p className="mt-1 font-medium text-stone-700">{item.doneDate ? formatDate(item.doneDate) : "尚未登记"}</p></div></div></article>)}
                   </div>
                 </section>
               </div>
             ) : (
               <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
                 <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
-                  <div className="flex items-start justify-between gap-4"><div><h2 className="font-semibold text-stone-950">体重趋势</h2><p className="mt-1 text-xs text-stone-500">按测量日期连续记录，直观看变化</p></div><Button onClick={() => setWeightDialogOpen(true)}><Plus className="h-4 w-4" />记录体重</Button></div>
+                  <div className="flex items-start justify-between gap-4"><div><h2 className="font-semibold text-stone-950">体重趋势</h2><p className="mt-1 text-xs text-stone-500">按测量日期连续记录，直观看变化</p></div>{canEdit ? <Button onClick={() => setWeightDialogOpen(true)}><Plus className="h-4 w-4" />记录体重</Button> : <Button variant="outline" onClick={() => void handleLogin()}><CircleUserRound className="h-4 w-4" />登录后记录</Button>}</div>
                   <div className="mt-5 h-72">{chartData.length ? <WeightChart data={chartData} id="healthWeight" /> : <EmptyState text="还没有体重记录" compact />}</div>
                 </section>
                 <section className="rounded-lg border border-stone-200 bg-white shadow-sm">
                   <div className="border-b border-stone-100 px-4 py-4"><p className="text-xs text-stone-500">最新体重</p><div className="mt-1 flex items-end justify-between"><p className="text-2xl font-semibold text-stone-950">{latestGrowth ? `${latestGrowth.weight} kg` : "待记录"}</p>{weightChange !== null && <p className={cn("text-xs font-medium", weightChange >= 0 ? "text-emerald-700" : "text-rose-700")}>较上次 {weightChange >= 0 ? "+" : ""}{weightChange} kg</p>}</div>{latestGrowth && <p className="mt-1 text-xs text-stone-500">{formatDate(latestGrowth.date)} · 男宝宝</p>}</div>
                   {weightAssessments.length > 0 && <div className="border-b border-stone-100 px-4 pb-4"><WeightStandardComparison assessments={weightAssessments} compact /></div>}
-                  <div className="divide-y divide-stone-100">{[...sortedGrowth].reverse().map((item) => <div key={item.id} className="flex items-center justify-between px-4 py-3 text-sm"><div><p className="font-medium text-stone-950">{item.weight} kg</p><p className="mt-0.5 text-xs text-stone-500">{formatDate(item.date)}</p></div><IconButton label="删除体重记录" onClick={() => removeEntry("growth", item.id)} /></div>)}</div>
+                  <div className="divide-y divide-stone-100">{[...sortedGrowth].reverse().map((item) => <div key={item.id} className="flex items-center justify-between px-4 py-3 text-sm"><div><p className="font-medium text-stone-950">{item.weight} kg</p><p className="mt-0.5 text-xs text-stone-500">{formatDate(item.date)}</p></div>{canEdit && <IconButton label="删除体重记录" onClick={() => removeEntry("growth", item.id)} />}</div>)}</div>
                 </section>
               </div>
             )}
           </div>
         </main>
 
-        <Dialog open={Boolean(recordingVaccine)} onOpenChange={(open) => !open && setRecordingVaccineId(null)}>
+        <Dialog open={canEdit && Boolean(recordingVaccine)} onOpenChange={(open) => !open && setRecordingVaccineId(null)}>
           <DialogContent className="w-[calc(100%-2rem)] max-w-md rounded-lg p-5 sm:p-6">
             <DialogHeader><DialogTitle>登记实际接种日期</DialogTitle><DialogDescription>{recordingVaccine ? `${recordingVaccine.vaccine} ${recordingVaccine.dose} · 建议 ${formatDate(recordingVaccine.plannedDate)}` : ""}</DialogDescription></DialogHeader>
             <Field label="实际接种日期"><Input type="date" max={today} value={vaccineDateDraft} onChange={(event) => setVaccineDateDraft(event.target.value)} /></Field>
@@ -1091,7 +1113,7 @@ export default function YudanDashboard({
           </DialogContent>
         </Dialog>
 
-        <Dialog open={weightDialogOpen} onOpenChange={setWeightDialogOpen}>
+        <Dialog open={canEdit && weightDialogOpen} onOpenChange={setWeightDialogOpen}>
           <DialogContent className="w-[calc(100%-2rem)] max-w-md rounded-lg p-5 sm:p-6">
             <DialogHeader><DialogTitle>记录体重</DialogTitle><DialogDescription>同一天再次保存会更新原记录，不会生成重复数据。</DialogDescription></DialogHeader>
             <div className="grid grid-cols-2 gap-3"><Field label="测量日期"><Input type="date" max={today} value={growthForm.date} onChange={(event) => setGrowthForm({ ...growthForm, date: event.target.value })} /></Field><Field label="体重（kg）"><Input type="number" min="0.1" max="200" step="0.01" inputMode="decimal" value={growthForm.weight} onChange={(event) => setGrowthForm({ ...growthForm, weight: event.target.value })} placeholder="例如 6.80" autoFocus /></Field></div>
@@ -1104,78 +1126,56 @@ export default function YudanDashboard({
 
 }
 
-function CloudLogin({ supabase }: { supabase: SupabaseClient }) {
-  const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
-
-  async function authenticate() {
-    setSubmitting(true);
-    setMessage("");
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "github",
-      options: { redirectTo: window.location.href.split("#")[0] },
-    });
-
-    if (error) {
-      setSubmitting(false);
-      setMessage(error.message);
-    }
-  }
-
+function BirthInfo() {
   return (
-    <main className="grid min-h-screen place-items-center bg-[#f7f8f5] px-4 py-10 text-stone-900" style={{ paddingBottom: "var(--nav-height)" }}>
-      <section className="w-full max-w-sm rounded-lg border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
-        <div className="flex items-center gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-emerald-50 text-emerald-700">
-            <Baby className="h-5 w-5" />
-          </span>
-          <div>
-            <p className="text-xs font-semibold text-emerald-700">鱼蛋看板</p>
-            <h1 className="mt-0.5 text-xl font-semibold text-stone-950">登录云端记录</h1>
-          </div>
+    <div className="flex min-w-0 flex-1 items-center gap-3 border-l-2 border-emerald-200 pl-3 sm:min-w-52">
+      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-emerald-50 text-emerald-700"><Baby className="h-4 w-4" /></span>
+      <div className="min-w-0">
+        <p className="text-[11px] font-medium text-stone-500">出生日期</p>
+        <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+          <p className="text-sm font-semibold text-stone-950">2026 年 8 月 12 日</p>
         </div>
-
-        <div className="mt-6 space-y-4">
-          {message && <p className="text-sm leading-5 text-rose-700">{message}</p>}
-
-          <Button className="w-full" type="button" disabled={submitting} onClick={() => void authenticate()}>
-            {submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CircleUserRound className="h-4 w-4" />}
-            使用 GitHub 登录
-          </Button>
-        </div>
-
-        <p className="mt-5 flex items-start gap-2 border-t border-stone-100 pt-4 text-xs leading-5 text-stone-500">
-          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
-          仅 GitHub 邮箱 {OWNER_EMAIL} 可以查看和编辑云端记录。
-        </p>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }
 
-function UnauthorizedAccount({
-  supabase,
-  email,
-}: {
-  supabase: SupabaseClient;
-  email?: string;
-}) {
+function PreviewBadge() {
   return (
-    <main className="grid min-h-screen place-items-center bg-[#f7f8f5] px-4 py-10 text-stone-900" style={{ paddingBottom: "var(--nav-height)" }}>
-      <section className="w-full max-w-sm rounded-lg border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
-        <span className="grid h-10 w-10 place-items-center rounded-lg bg-rose-50 text-rose-700">
-          <ShieldCheck className="h-5 w-5" />
-        </span>
-        <h1 className="mt-4 text-xl font-semibold text-stone-950">这个账号没有编辑权限</h1>
-        <p className="mt-2 text-sm leading-6 text-stone-500">
-          当前登录为 {email || "未知邮箱"}，请切换到 {OWNER_EMAIL} 对应的 GitHub 账号。
-        </p>
-        <Button className="mt-5 w-full" variant="outline" onClick={() => void supabase.auth.signOut()}>
-          <LogOut className="h-4 w-4" />
-          退出并切换账号
-        </Button>
-      </section>
-    </main>
+    <span className="inline-flex items-center gap-1.5 rounded-md bg-stone-100 px-2 py-1 text-xs font-medium text-stone-600">
+      <CloudOff className="h-3.5 w-3.5" />
+      示例预览
+    </span>
+  );
+}
+
+function PreviewNotice({
+  email,
+  error,
+  pending,
+  onLogin,
+}: {
+  email?: string;
+  error: string;
+  pending: boolean;
+  onLogin: () => void;
+}) {
+  const wrongAccount = Boolean(email);
+  return (
+    <section className="flex flex-col gap-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-md bg-white text-sky-700"><ShieldCheck className="h-4 w-4" /></span>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-sky-950">当前体重和接种内容为示例，鱼蛋的云端记录没有公开</p>
+          <p className="mt-0.5 text-xs leading-5 text-sky-800">{wrongAccount ? `当前账号 ${email} 没有查看权限，请切换到授权账号。` : `使用 ${OWNER_EMAIL} 对应的 GitHub 账号登录后，可查看和修改云端记录。`}</p>
+          {error && <p className="mt-1 text-xs font-medium text-rose-700">{error}</p>}
+        </div>
+      </div>
+      <Button className="shrink-0" size="sm" type="button" disabled={pending} onClick={onLogin}>
+        {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CircleUserRound className="h-4 w-4" />}
+        {wrongAccount ? "切换 GitHub 账号" : "GitHub 登录"}
+      </Button>
+    </section>
   );
 }
 
@@ -1218,25 +1218,25 @@ function WeightStandardComparison({
   compact?: boolean;
 }) {
   return (
-    <div className={cn("mt-4", compact && "mt-3")}>
-      <div className={cn("grid gap-px overflow-hidden rounded-md bg-stone-200", compact ? "grid-cols-1" : "sm:grid-cols-2")}>
-        {assessments.map((assessment) => (
-          <div key={assessment.source} className="min-w-0 bg-stone-50 p-3">
+    <div className={cn("mt-4 border-y border-stone-100", compact && "mt-3")}>
+      <div className={cn("grid", compact ? "divide-y divide-stone-100" : "gap-y-3 py-3 sm:grid-cols-2 sm:divide-x sm:divide-stone-100")}>
+        {assessments.map((assessment, index) => (
+          <div key={assessment.source} className={cn("min-w-0", compact ? "py-3 first:pt-0 last:pb-0" : "px-1 sm:px-4", !compact && index === 0 && "sm:pl-0")}>
             <div className="flex items-center justify-between gap-3">
-              <a className="truncate text-[11px] font-semibold text-stone-600 hover:text-sky-700" href={assessment.sourceUrl} target="_blank" rel="noreferrer" title="查看官方标准">
+              <a className="truncate text-xs font-semibold text-stone-700 hover:text-sky-700" href={assessment.sourceUrl} target="_blank" rel="noreferrer" title="查看官方标准">
                 {assessment.sourceLabel}
               </a>
               <span className="shrink-0 text-[11px] text-stone-400">{assessment.ageLabel}</span>
             </div>
             <div className="mt-2 flex items-baseline justify-between gap-3">
               <p className="text-xl font-semibold text-stone-950">{assessment.percentileLabel}</p>
-              <p className={cn("text-xs font-medium", assessment.position.includes("低于") || assessment.position === "下" ? "text-rose-700" : assessment.position.includes("高于") || assessment.position === "上" ? "text-amber-700" : "text-emerald-700")}>{assessment.position}</p>
+              <p className={cn("rounded-sm px-1.5 py-0.5 text-[11px] font-medium", assessment.position.includes("低于") || assessment.position === "下" ? "bg-rose-50 text-rose-700" : assessment.position.includes("高于") || assessment.position === "上" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700")}>{assessment.position}</p>
             </div>
-            <p className="mt-1 whitespace-nowrap text-[11px] text-stone-500">参考 {assessment.low.toFixed(1)}–{assessment.high.toFixed(1)} kg · 中位 {assessment.median.toFixed(1)}</p>
+            <p className="mt-1 text-[11px] leading-5 text-stone-500">参考范围 {assessment.low.toFixed(1)}–{assessment.high.toFixed(1)} kg · 中位 {assessment.median.toFixed(1)} kg</p>
           </div>
         ))}
       </div>
-      <p className="mt-2 text-[11px] leading-5 text-stone-500">年龄别体重用于观察位置与趋势；单次结果需结合身长、喂养和儿保评估。</p>
+      <p className={cn("pb-3 text-[11px] leading-5 text-stone-500", compact && "pt-3")}>男宝宝年龄别体重用于观察位置与趋势；单次结果需结合身长、喂养和儿保评估。</p>
     </div>
   );
 }
@@ -1248,9 +1248,16 @@ function WeightChart({
   data: Array<{ date: string; weight: number; height: number; head: number }>;
   id: string;
 }) {
+  const weights = data.map((item) => item.weight);
+  const minimum = Math.min(...weights);
+  const maximum = Math.max(...weights);
+  const padding = Math.max(0.15, (maximum - minimum) * 0.35);
+  const domainMinimum = Math.max(0, Math.floor((minimum - padding) * 10) / 10);
+  const domainMaximum = Math.ceil((maximum + padding) * 10) / 10;
+
   return (
     <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={data} margin={{ top: 8, right: 6, left: -26, bottom: 0 }}>
+      <AreaChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 2 }}>
         <defs>
           <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="#0284c7" stopOpacity={0.24} />
@@ -1258,10 +1265,10 @@ function WeightChart({
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" vertical={false} />
-        <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={11} minTickGap={24} />
-        <YAxis tickLine={false} axisLine={false} fontSize={11} width={38} />
-        <Tooltip formatter={(value) => [`${value} kg`, "体重"]} />
-        <Area type="monotone" dataKey="weight" stroke="#0284c7" fill={`url(#${id})`} strokeWidth={2.25} />
+        <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={11} minTickGap={28} tickMargin={10} />
+        <YAxis domain={[domainMinimum, domainMaximum]} tickCount={4} tickLine={false} axisLine={false} fontSize={11} width={42} tickMargin={8} tickFormatter={(value: number) => value.toFixed(1)} />
+        <Tooltip cursor={{ stroke: "#bae6fd", strokeWidth: 1 }} contentStyle={{ border: "1px solid #e7e5e4", borderRadius: 6, boxShadow: "0 8px 24px rgba(28,25,23,0.08)", fontSize: 12 }} labelStyle={{ color: "#57534e", marginBottom: 4 }} itemStyle={{ color: "#0369a1" }} formatter={(value) => [`${value} kg`, "体重"]} />
+        <Area type="monotone" dataKey="weight" stroke="#0284c7" fill={`url(#${id})`} strokeWidth={2.25} dot={data.length <= 12 ? { r: 2.5, fill: "#ffffff", stroke: "#0284c7", strokeWidth: 2 } : false} activeDot={{ r: 4, fill: "#0284c7", stroke: "#ffffff", strokeWidth: 2 }} />
       </AreaChart>
     </ResponsiveContainer>
   );
