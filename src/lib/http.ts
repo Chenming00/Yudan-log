@@ -23,19 +23,30 @@ function secureEqual(left: string, right: string) {
   return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
 }
 
+function getBearerToken(request: Request) {
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader) return null;
+
+  const [type, token, ...rest] = authHeader.trim().split(/\s+/);
+  return type?.toLowerCase() === 'bearer' && token && rest.length === 0 ? token : null;
+}
+
+export function validateApiKey(request: Request) {
+  const apiKey = process.env.API_KEY || import.meta.env.API_KEY || '';
+  const token = getBearerToken(request);
+
+  return Boolean(apiKey && token && secureEqual(token, apiKey));
+}
+
 export type WriteAuth =
   | { method: 'api-key' }
   | { method: 'github'; userId: string };
 
 export async function validateWriteAuth(request: Request): Promise<WriteAuth | null> {
-  const apiKey = process.env.API_KEY || import.meta.env.API_KEY || '';
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader) return null;
+  const token = getBearerToken(request);
+  if (!token) return null;
 
-  const [type, token] = authHeader.split(' ');
-  if (type !== 'Bearer' || !token) return null;
-
-  if (apiKey && secureEqual(token, apiKey)) {
+  if (validateApiKey(request)) {
     return { method: 'api-key' };
   }
 
