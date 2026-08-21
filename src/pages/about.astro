@@ -28,7 +28,7 @@ const modules = [
   {
     name: 'dashboard',
     title: '鱼蛋看板',
-    body: '首页优先展示最新体重和连续趋势，并同时对照 WHO 与中国男童生长标准；接种提醒保持紧凑，让手机与电脑都能快速看清重点。',
+    body: '首页优先展示最新体重和连续趋势，并同时对照 WHO 与中国男童生长标准；未登录展示示例，授权登录后才读取真实云端记录。',
     icon: HeartPulse,
   },
   {
@@ -52,6 +52,13 @@ const modules = [
 ];
 
 const commits = [
+  {
+    date: '2026-08-21',
+    type: 'feat',
+    title: 'add privacy-safe guest preview and refine growth chart',
+    body: '看板和保健模块取消整页登录墙：访客可以浏览明确标注的示例内容，真实体重与接种记录仍只在授权 GitHub 登录后加载和修改。体重图改为按实际数据范围缩放，修复纵轴裁切；出生日期固定为 2026 年 8 月 12 日，并为手机重新排版。',
+    icon: ShieldCheck,
+  },
   {
     date: '2026-08-21',
     type: 'feat',

@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isGitHubProvider, isOwnerEmail } from '../../lib/auth';
 import { getSupabaseAdminClient } from '../../lib/supabase';
+import { YUDAN_BIRTHDAY } from './yudan-profile';
 
 export type YudanVaccineRecord = {
   id: string;
@@ -247,7 +248,7 @@ export async function getOwnerDashboard() {
   if (error) throw error;
   if (!data) throw new Error('看板尚未初始化，请先在网页使用 GitHub 登录。');
 
-  return { supabase, row: data };
+  return { supabase, row: { ...data, birthday: YUDAN_BIRTHDAY } };
 }
 
 type DashboardChanges = Partial<
