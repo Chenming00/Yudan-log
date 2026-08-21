@@ -1,5 +1,5 @@
 ---
-import { BookOpen, Home, NotebookPen, Wallet } from 'lucide-react';
+import { BookOpen, NotebookPen, PanelsTopLeft, Wallet } from 'lucide-react';
 
 interface Props {
   activePath: string;
@@ -10,8 +10,8 @@ const { activePath } = Astro.props;
 const items = [
   {
     href: '/',
-    label: 'Home',
-    icon: Home,
+    label: '看板',
+    icon: PanelsTopLeft,
     match: (pathname: string) => pathname === '/',
   },
   {
@@ -22,13 +22,13 @@ const items = [
   },
   {
     href: '/blog',
-    label: 'Log',
+    label: '日志',
     icon: BookOpen,
     match: (pathname: string) => pathname.startsWith('/blog'),
   },
   {
     href: '/about',
-    label: '开发日记',
+    label: '关于',
     icon: NotebookPen,
     match: (pathname: string) => pathname.startsWith('/about'),
   },
@@ -36,7 +36,7 @@ const items = [
 ---
 
 <nav
-  aria-label="全局底部导航"
+  aria-label="底部导航"
   class="fixed inset-x-0 bottom-0 z-40 border-t border-border/50 bg-card/95 px-3 pb-[env(safe-area-inset-bottom)] pt-2 shadow-sm backdrop-blur lg:px-6"
 >
   <div class="flex w-full items-center justify-around gap-1 lg:justify-center lg:gap-3">
@@ -49,13 +49,13 @@ const items = [
           href={item.href}
           aria-current={isActive ? 'page' : undefined}
           class:list={[
-            'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2.5 py-2 text-[11px] font-medium transition-all duration-200 active:scale-95 sm:min-w-[88px] sm:px-3 sm:text-xs lg:max-w-[128px]',
+            'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2.5 py-2 text-[11px] font-medium transition-all duration-200 active:scale-95 sm:min-w-[88px] sm:px-3 sm:text-xs lg:max-w-[128px]',
             isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
           ]}
         >
           <span
             class:list={[
-              'flex h-8.5 w-8.5 items-center justify-center rounded-full transition-all duration-200',
+              'flex h-8.5 w-8.5 items-center justify-center rounded-lg transition-all duration-200',
               isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground',
             ]}
           >

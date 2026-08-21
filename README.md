@@ -83,6 +83,7 @@ npm install
 API_KEY=your_secret_key
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_anon_key
+SUPABASE_SECRET_KEY=your_supabase_secret_key
 BASE_URL=http://localhost:4321
 
 # 可选 - AI 功能预留
@@ -92,7 +93,13 @@ MIMO_API_KEY=your_mimo_api_key
 
 ### 3. 初始化数据库
 
-在 Supabase SQL Editor 中执行 `schema.sql`，创建 `transactions` 表。
+在 Supabase SQL Editor 中依次执行：
+
+- `schema.sql`：创建账本的 `transactions` 表。
+- `yudan-schema.sql`：创建鱼蛋看板数据表和 GitHub 所有者权限。
+- `access-control.sql`：为已有数据库开启账本 RLS，并更新看板权限。
+
+鱼蛋看板与账本使用 Supabase GitHub 登录。GitHub OAuth 回调地址设为 `https://<project-ref>.supabase.co/auth/v1/callback`；在 Supabase Authentication 的 URL Configuration 中，将线上域名设为 Site URL，并加入 Redirect URLs。只有 GitHub 邮箱 `William.chen@utah.edu` 可以写入，账本 API 也继续接受 `API_KEY`。
 
 ### 4. 启动开发
 
@@ -135,7 +142,7 @@ npm run start
 5. 确认 `Install Command` 使用默认值，通常是 `npm install`。
 6. `Output Directory` 不要手动写 `.next`。选择 Astro preset 时通常交给 Vercel 自动配置；如果你打开了 Override，静态模式一般是 `dist`，但本项目使用 Vercel adapter 的 server output，建议关闭 Override。
 7. 如果项目不是仓库根目录，检查 `Root Directory` 是否指向真正包含 `package.json` 和 `astro.config.mjs` 的目录。
-8. 在 `Environment Variables` 中保留这些变量：`API_KEY`、`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`、`BASE_URL`。如果之后恢复 AI 问答，再补上 `MIMO_BASE_URL` 和 `MIMO_API_KEY`。
+8. 在 `Environment Variables` 中保留这些变量：`API_KEY`、`NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`、`SUPABASE_SECRET_KEY`、`BASE_URL`。如果之后恢复 AI 问答，再补上 `MIMO_BASE_URL` 和 `MIMO_API_KEY`。
 9. 回到 `Deployments`，点击最新部署的 `Redeploy`，或推送一次新 commit 触发部署。
 
 如果部署仍然按 Next.js 构建，优先检查这三处：
@@ -150,9 +157,10 @@ npm run start
 
 | 变量名 | 必需 | 说明 |
 | --- | --- | --- |
-| `API_KEY` | 是 | 保护账本写操作的密钥 |
+| `API_KEY` | 是 | 账本 API 写操作的备用密钥 |
 | `NEXT_PUBLIC_SUPABASE_URL` | 是 | Supabase 项目地址 |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | 是 | Supabase 匿名公钥 |
+| `SUPABASE_SECRET_KEY` | 是 | 仅服务端使用，用于通过 RLS 执行已授权的账本写操作 |
 | `BASE_URL` | 是 | 站点对外地址，用于 Webhook 等 |
 | `MIMO_BASE_URL` | 否 | AI API 地址，当前为预留配置 |
 | `MIMO_API_KEY` | 否 | AI API Key，当前为预留配置 |
@@ -184,7 +192,7 @@ cover: /cover.png
 
 ## API 概览
 
-账本读取接口无需认证；写入接口需要携带 `Authorization: Bearer <API_KEY>`。
+账本读取接口无需认证；写入接口接受 Supabase GitHub access token 或 `Authorization: Bearer <API_KEY>`。GitHub token 仅在邮箱为 `William.chen@utah.edu` 且登录提供商为 GitHub 时通过。
 
 | 方法 | 路径 | 说明 | 认证 |
 | --- | --- | --- | --- |

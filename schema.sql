@@ -14,6 +14,20 @@ CREATE INDEX idx_transactions_created_at ON transactions (created_at DESC);
 -- Index for time-range (month/day) lookups by transaction_time
 CREATE INDEX idx_transactions_transaction_time ON transactions (transaction_time DESC);
 
+-- Public reads are allowed. Writes must go through the server API after
+-- GitHub-owner or API-key verification.
+ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE transactions FROM anon;
+REVOKE ALL ON TABLE transactions FROM authenticated;
+GRANT SELECT ON TABLE transactions TO anon;
+GRANT SELECT ON TABLE transactions TO authenticated;
+
+CREATE POLICY "Public can read transactions"
+ON transactions
+FOR SELECT
+TO anon, authenticated
+USING (true);
+
 -- 全部支出总额聚合：避免前端/接口受 Supabase 默认 1000 行返回上限影响而少算「总支出」。
 -- 用法：supabase.rpc('total_expense')
 CREATE OR REPLACE FUNCTION total_expense()

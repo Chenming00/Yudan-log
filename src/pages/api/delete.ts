@@ -1,14 +1,14 @@
 import type { APIRoute } from 'astro';
-import { getSupabaseClient } from '../../../lib/supabase';
-import { getErrorMessage, json, validateAuth } from '../../lib/http';
+import { getSupabaseAdminClient } from '../../../lib/supabase';
+import { getErrorMessage, json, validateWriteAuth } from '../../lib/http';
 
 export const DELETE: APIRoute = async ({ request }) => {
-  if (!validateAuth(request)) {
-    return json({ error: 'API Key 无效或未提供' }, { status: 401 });
+  if (!await validateWriteAuth(request)) {
+    return json({ error: '请使用授权 GitHub 账号或有效 API Key' }, { status: 401 });
   }
 
   try {
-    const supabase = getSupabaseClient();
+    const supabase = getSupabaseAdminClient();
     const { id } = await request.json();
 
     if (!id) {
