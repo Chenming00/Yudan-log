@@ -28,13 +28,13 @@ const modules = [
   {
     name: 'dashboard',
     title: '鱼蛋看板',
-    body: '首页只汇总下一项接种、近期安排和最新体重，让手机与电脑都能快速看清今天最重要的信息。',
+    body: '首页优先展示最新体重和连续趋势，并同时对照 WHO 与中国男童生长标准；接种提醒保持紧凑，让手机与电脑都能快速看清重点。',
     icon: HeartPulse,
   },
   {
     name: 'health',
     title: '保健档案',
-    body: '独立记录疫苗实际日期与体重变化；疫苗名称、剂次和建议日期由数据库标准清单统一管理。',
+    body: '默认先进入体重档案，记录体重并查看同龄参考位置；疫苗名称、剂次和建议日期由数据库标准清单统一管理。',
     icon: ShieldCheck,
   },
   {
@@ -52,6 +52,13 @@ const modules = [
 ];
 
 const commits = [
+  {
+    date: '2026-08-21',
+    type: 'feat',
+    title: 'compare weight with WHO and China growth standards',
+    body: '保健页调整为体重优先，首页和体重档案同时显示男宝宝在 WHO 0–2 岁标准与中国 WS/T 423—2022 标准中的百分位、参考区间和中位数。对照只用于观察位置与连续趋势，并保留儿保评估提示。',
+    icon: HeartPulse,
+  },
   {
     date: '2026-08-21',
     type: 'feat',

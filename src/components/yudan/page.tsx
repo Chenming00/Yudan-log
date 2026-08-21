@@ -47,6 +47,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { isGitHubProvider, isOwnerEmail, OWNER_EMAIL } from "@/lib/auth";
+import { getMaleWeightAssessments } from "@/src/lib/growth-standards";
+import type { WeightAssessment } from "@/src/lib/growth-standards";
 import { getBrowserSupabaseClient } from "@/lib/supabase-browser";
 import { cn } from "@/lib/utils";
 
@@ -596,7 +598,7 @@ export default function YudanDashboard({
   const [cloudReady, setCloudReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(supabase ? "loading" : "local");
   const [cloudError, setCloudError] = useState("");
-  const [activeView, setActiveView] = useState<"vaccines" | "growth">("vaccines");
+  const [activeView, setActiveView] = useState<"vaccines" | "growth">("growth");
   const [vaccineFilter, setVaccineFilter] = useState<VaccineFilter>("all");
   const [recordingVaccineId, setRecordingVaccineId] = useState<string | null>(null);
   const [vaccineDateDraft, setVaccineDateDraft] = useState(today);
@@ -620,8 +622,9 @@ export default function YudanDashboard({
 
   useEffect(() => {
     setData(readStoredData());
-    if (view === "health" && new URLSearchParams(window.location.search).get("tab") === "weight") {
-      setActiveView("growth");
+    if (view === "health") {
+      const tab = new URLSearchParams(window.location.search).get("tab");
+      setActiveView(tab === "vaccine" || tab === "vaccines" ? "vaccines" : "growth");
     }
     setReady(true);
   }, [view]);
@@ -920,6 +923,9 @@ export default function YudanDashboard({
     const weightChange = latestGrowth && previousGrowth
       ? Number((latestGrowth.weight - previousGrowth.weight).toFixed(2))
       : null;
+    const weightAssessments = latestGrowth
+      ? getMaleWeightAssessments(data.birthday, latestGrowth.date, latestGrowth.weight)
+      : [];
 
     if (view === "dashboard") {
       return (
@@ -948,8 +954,8 @@ export default function YudanDashboard({
 
             <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <MetricCard icon={Baby} label="出生天数" value={`${babyAgeDays} 天`} detail={formatDate(data.birthday)} tone="emerald" />
+              <MetricCard icon={Weight} label="最新体重" value={latestGrowth ? `${latestGrowth.weight} kg` : "待记录"} detail={weightAssessments.length ? weightAssessments.map((item) => `${item.source === "CN" ? "中国" : item.source} ${item.percentileLabel}`).join(" · ") : latestGrowth ? formatDate(latestGrowth.date) : "进入保健模块记录"} tone="sky" />
               <MetricCard icon={Syringe} label="免费疫苗" value={`${doneFreeVaccines}/${freeVaccines.length}`} detail={`全部计划完成 ${completionPercent}%`} tone="amber" />
-              <MetricCard icon={Weight} label="最新体重" value={latestGrowth ? `${latestGrowth.weight} kg` : "待记录"} detail={latestGrowth ? formatDate(latestGrowth.date) : "进入保健模块记录"} tone="sky" />
               <MetricCard icon={Bell} label="近期提醒" value={`${dueVaccines.length} 项`} detail={dueVaccines.length ? "需要留意接种时间" : "暂无临近项目"} tone={dueVaccines.some((item) => getDueState(item) === "overdue") ? "rose" : "emerald"} />
             </section>
 
@@ -961,17 +967,29 @@ export default function YudanDashboard({
                   <h2 className="mt-1 text-lg font-semibold text-stone-950">{nextVaccine.vaccine} {nextVaccine.dose}</h2>
                   <p className="mt-1 text-sm text-stone-600">{nextVaccine.ageLabel} · 建议 {formatDate(nextVaccine.plannedDate)}</p>
                 </div>
-                <a href="/health" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 text-sm font-medium text-white hover:bg-emerald-800">
+                <a href="/health?tab=vaccine" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 text-sm font-medium text-white hover:bg-emerald-800">
                   查看保健档案 <ArrowRight className="h-4 w-4" />
                 </a>
               </section>
             )}
 
             <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+              <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div><h2 className="font-semibold text-stone-950">体重与同龄参考</h2><p className="mt-1 text-xs text-stone-500">男宝宝 · 最近一次测量</p></div>
+                  <div className="text-right"><p className="text-xl font-semibold text-sky-700">{latestGrowth ? `${latestGrowth.weight} kg` : "-"}</p>{weightChange !== null && <p className={cn("mt-1 text-xs", weightChange >= 0 ? "text-emerald-700" : "text-rose-700")}>较上次 {weightChange >= 0 ? "+" : ""}{weightChange} kg</p>}</div>
+                </div>
+                {weightAssessments.length > 0 && <WeightStandardComparison assessments={weightAssessments} />}
+                <div className="mt-4 h-40">
+                  {chartData.length ? <WeightChart data={chartData} id="dashboardWeight" /> : <EmptyState text="还没有体重记录" compact />}
+                </div>
+                <a href="/health?tab=weight" className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50">进入体重档案 <ArrowRight className="h-4 w-4" /></a>
+              </section>
+
               <section className="rounded-lg border border-stone-200 bg-white shadow-sm">
                 <div className="flex items-center justify-between border-b border-stone-100 px-4 py-4 sm:px-5">
                   <div><h2 className="font-semibold text-stone-950">接种安排</h2><p className="mt-1 text-xs text-stone-500">接下来 3 项常规计划</p></div>
-                  <a href="/health" className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700">全部 <ChevronRight className="h-4 w-4" /></a>
+                  <a href="/health?tab=vaccine" className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700">全部 <ChevronRight className="h-4 w-4" /></a>
                 </div>
                 <div className="divide-y divide-stone-100">
                   {upcomingVaccines.map((item) => (
@@ -983,21 +1001,10 @@ export default function YudanDashboard({
                   ))}
                 </div>
               </section>
-
-              <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div><h2 className="font-semibold text-stone-950">体重变化</h2><p className="mt-1 text-xs text-stone-500">最近的生长记录</p></div>
-                  <div className="text-right"><p className="text-xl font-semibold text-sky-700">{latestGrowth ? `${latestGrowth.weight} kg` : "-"}</p>{weightChange !== null && <p className={cn("mt-1 text-xs", weightChange >= 0 ? "text-emerald-700" : "text-rose-700")}>较上次 {weightChange >= 0 ? "+" : ""}{weightChange} kg</p>}</div>
-                </div>
-                <div className="mt-4 h-44">
-                  {chartData.length ? <WeightChart data={chartData} id="dashboardWeight" /> : <EmptyState text="还没有体重记录" compact />}
-                </div>
-                <a href="/health?tab=weight" className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50">进入体重档案 <ArrowRight className="h-4 w-4" /></a>
-              </section>
             </div>
 
             <section className="grid gap-3 sm:grid-cols-3">
-              <QuickLink href="/health" icon={HeartPulse} label="保健档案" detail="疫苗与体重" />
+              <QuickLink href="/health" icon={HeartPulse} label="保健档案" detail="体重与疫苗" />
               <QuickLink href="/ledger" icon={ClipboardList} label="家庭账本" detail="收支与月度汇总" />
               <QuickLink href="/blog" icon={NotebookPen} label="成长日志" detail="保存值得记住的日子" />
             </section>
@@ -1013,8 +1020,8 @@ export default function YudanDashboard({
             <header className="grid gap-4 border-b border-stone-200 pb-5 sm:grid-cols-[1fr_auto] sm:items-end">
               <div>
                 <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700"><HeartPulse className="h-4 w-4" />保健</div>
-                <h1 className="mt-2 text-2xl font-semibold text-stone-950 sm:text-3xl">疫苗与体重档案</h1>
-                <p className="mt-1 text-sm leading-6 text-stone-500">建议日期用于整理计划，实际接种请以门诊和接种本为准。</p>
+                <h1 className="mt-2 text-2xl font-semibold text-stone-950 sm:text-3xl">体重与疫苗档案</h1>
+                <p className="mt-1 text-sm leading-6 text-stone-500">记录男宝宝的体重趋势与接种日期，接种安排以门诊和接种本为准。</p>
               </div>
               <div className="flex items-end gap-3">
                 <label className="min-w-0 flex-1 text-xs font-medium text-stone-500 sm:w-44">出生日期<Input className="mt-1.5" type="date" value={data.birthday} onChange={(event) => updateBirthday(event.target.value)} /></label>
@@ -1025,8 +1032,8 @@ export default function YudanDashboard({
             {cloudError && <CloudError message={cloudError} />}
 
             <div className="grid grid-cols-2 rounded-lg bg-stone-200/70 p-1 sm:w-72">
-              <button type="button" onClick={() => setActiveView("vaccines")} className={cn("flex h-10 items-center justify-center gap-2 rounded-md text-sm font-medium", activeView === "vaccines" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><Syringe className="h-4 w-4" />疫苗</button>
               <button type="button" onClick={() => setActiveView("growth")} className={cn("flex h-10 items-center justify-center gap-2 rounded-md text-sm font-medium", activeView === "growth" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><Weight className="h-4 w-4" />体重</button>
+              <button type="button" onClick={() => setActiveView("vaccines")} className={cn("flex h-10 items-center justify-center gap-2 rounded-md text-sm font-medium", activeView === "vaccines" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><Syringe className="h-4 w-4" />疫苗</button>
             </div>
 
             {activeView === "vaccines" ? (
@@ -1066,7 +1073,8 @@ export default function YudanDashboard({
                   <div className="mt-5 h-72">{chartData.length ? <WeightChart data={chartData} id="healthWeight" /> : <EmptyState text="还没有体重记录" compact />}</div>
                 </section>
                 <section className="rounded-lg border border-stone-200 bg-white shadow-sm">
-                  <div className="border-b border-stone-100 px-4 py-4"><p className="text-xs text-stone-500">最新体重</p><div className="mt-1 flex items-end justify-between"><p className="text-2xl font-semibold text-stone-950">{latestGrowth ? `${latestGrowth.weight} kg` : "待记录"}</p>{weightChange !== null && <p className={cn("text-xs font-medium", weightChange >= 0 ? "text-emerald-700" : "text-rose-700")}>较上次 {weightChange >= 0 ? "+" : ""}{weightChange} kg</p>}</div></div>
+                  <div className="border-b border-stone-100 px-4 py-4"><p className="text-xs text-stone-500">最新体重</p><div className="mt-1 flex items-end justify-between"><p className="text-2xl font-semibold text-stone-950">{latestGrowth ? `${latestGrowth.weight} kg` : "待记录"}</p>{weightChange !== null && <p className={cn("text-xs font-medium", weightChange >= 0 ? "text-emerald-700" : "text-rose-700")}>较上次 {weightChange >= 0 ? "+" : ""}{weightChange} kg</p>}</div>{latestGrowth && <p className="mt-1 text-xs text-stone-500">{formatDate(latestGrowth.date)} · 男宝宝</p>}</div>
+                  {weightAssessments.length > 0 && <div className="border-b border-stone-100 px-4 pb-4"><WeightStandardComparison assessments={weightAssessments} compact /></div>}
                   <div className="divide-y divide-stone-100">{[...sortedGrowth].reverse().map((item) => <div key={item.id} className="flex items-center justify-between px-4 py-3 text-sm"><div><p className="font-medium text-stone-950">{item.weight} kg</p><p className="mt-0.5 text-xs text-stone-500">{formatDate(item.date)}</p></div><IconButton label="删除体重记录" onClick={() => removeEntry("growth", item.id)} /></div>)}</div>
                 </section>
               </div>
@@ -1198,6 +1206,37 @@ function CloudError({ message }: { message: string }) {
     <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-5 text-rose-800">
       <CloudOff className="mt-0.5 h-4 w-4 shrink-0" />
       <span>{message}</span>
+    </div>
+  );
+}
+
+function WeightStandardComparison({
+  assessments,
+  compact = false,
+}: {
+  assessments: WeightAssessment[];
+  compact?: boolean;
+}) {
+  return (
+    <div className={cn("mt-4", compact && "mt-3")}>
+      <div className={cn("grid gap-px overflow-hidden rounded-md bg-stone-200", compact ? "grid-cols-1" : "sm:grid-cols-2")}>
+        {assessments.map((assessment) => (
+          <div key={assessment.source} className="min-w-0 bg-stone-50 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <a className="truncate text-[11px] font-semibold text-stone-600 hover:text-sky-700" href={assessment.sourceUrl} target="_blank" rel="noreferrer" title="查看官方标准">
+                {assessment.sourceLabel}
+              </a>
+              <span className="shrink-0 text-[11px] text-stone-400">{assessment.ageLabel}</span>
+            </div>
+            <div className="mt-2 flex items-baseline justify-between gap-3">
+              <p className="text-xl font-semibold text-stone-950">{assessment.percentileLabel}</p>
+              <p className={cn("text-xs font-medium", assessment.position.includes("低于") || assessment.position === "下" ? "text-rose-700" : assessment.position.includes("高于") || assessment.position === "上" ? "text-amber-700" : "text-emerald-700")}>{assessment.position}</p>
+            </div>
+            <p className="mt-1 whitespace-nowrap text-[11px] text-stone-500">参考 {assessment.low.toFixed(1)}–{assessment.high.toFixed(1)} kg · 中位 {assessment.median.toFixed(1)}</p>
+          </div>
+        ))}
+      </div>
+      <p className="mt-2 text-[11px] leading-5 text-stone-500">年龄别体重用于观察位置与趋势；单次结果需结合身长、喂养和儿保评估。</p>
     </div>
   );
 }
