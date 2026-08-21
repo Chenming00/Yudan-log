@@ -7,9 +7,11 @@ import {
   GitBranch,
   GitCommitHorizontal,
   GitPullRequest,
+  HeartPulse,
   NotebookPen,
   Rocket,
   Search,
+  ShieldCheck,
   WalletCards,
 } from 'lucide-react';
 import BaseLayout from '../layouts/BaseLayout.astro';
@@ -17,15 +19,22 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 const repoFacts = [
   { label: 'framework', value: 'Astro + React' },
   { label: 'deploy', value: 'Vercel' },
-  { label: 'modules', value: 'ledger / blog / ai-chat' },
-  { label: 'status', value: 'iterating' },
+  { label: 'data', value: 'Supabase' },
+  { label: 'domain', value: 'cost.ykn.cm' },
+  { label: 'status', value: 'production' },
 ];
 
 const modules = [
   {
+    name: 'dashboard',
+    title: '疫苗与体重看板',
+    body: '按宝宝出生日期生成建议接种日期，记录实际接种日期和体重变化，手机与电脑都能清楚查看。',
+    icon: HeartPulse,
+  },
+  {
     name: 'ledger',
     title: '鱼蛋小账本',
-    body: '给家里日常花费用的轻量账本：记一笔、看本月、翻历史、按分类复盘。',
+    body: '给家里日常花费用的轻量账本：记一笔、看本月、翻历史、按分类复盘，并保留 API Key 写入方式。',
     icon: WalletCards,
   },
   {
@@ -34,15 +43,30 @@ const modules = [
     body: '用 Markdown 留下鱼蛋成长、家庭日常和爸爸一路折腾这个站点的记录。',
     icon: BookOpenText,
   },
-  {
-    name: 'ai-chat',
-    title: '文章问答',
-    body: '给长文章接上 AI 问答，之后回头看时，可以直接问这篇文章讲了什么。',
-    icon: Bot,
-  },
 ];
 
 const commits = [
+  {
+    date: '2026-08-21',
+    type: 'feat',
+    title: 'launch vaccine and weight dashboard',
+    body: '首页正式变成鱼蛋的疫苗与体重看板。疫苗按常规接种时间排序，以中国国家免疫规划为主，参考美国 CDC 儿童程序补充自费项目。页面只保留最常用的建议日期、实际日期和体重记录，并完成手机与 PC 自适应。',
+    icon: HeartPulse,
+  },
+  {
+    date: '2026-08-21',
+    type: 'security',
+    title: 'secure cloud data with GitHub OAuth and RLS',
+    body: '看板和账本统一接入 Supabase GitHub OAuth，只允许指定 GitHub 邮箱写入。账本 API 同时保留原有 API Key，便于 Telegram 和其他接口继续记账。Supabase RLS 收紧为公开只读、服务端受控写入，管理函数的公开执行权也一并撤回。',
+    icon: ShieldCheck,
+  },
+  {
+    date: '2026-08-21',
+    type: 'deploy',
+    title: 'publish the dashboard at cost.ykn.cm',
+    body: '代码通过 GitHub PR 合并到 main，Vercel 负责预览与生产发布，Supabase 保存账本、疫苗和体重数据。GitHub OAuth 回跳、站点基础地址和正式域名全部统一到 cost.ykn.cm。',
+    icon: Rocket,
+  },
   {
     date: '2026-06-16',
     type: 'perf',
@@ -102,16 +126,16 @@ const commits = [
 ];
 
 const roadmap = [
-  'todo: 把账本组件继续拆小',
-  'todo: 优化账本移动端输入流程',
-  'todo: 增加文章归档和搜索',
-  'todo: 多写鱼蛋成长和家庭日常',
+  'next: 开始填入真实接种日期',
+  'next: 持续补充体重记录',
+  'next: 按门诊建议校准疫苗方案',
+  'next: 继续记录鱼蛋的成长日常',
 ];
 ---
 
 <BaseLayout
-  title="给鱼蛋做的小站"
-  description="写给鱼蛋的开发日记：用 GitHub commit log 的方式记录鱼蛋花费这个小站的主要开发变化。"
+  title="鱼蛋看板开发日记"
+  description="记录鱼蛋看板从家庭账本到疫苗、体重与云端同步工具的主要开发变化。"
   canonical="/about"
 >
   <main class="min-h-screen px-4 py-6 sm:px-6 lg:px-8" style="padding-bottom: var(--nav-height)">
@@ -125,16 +149,16 @@ const roadmap = [
             </div>
 
             <h1 class="mt-6 text-3xl font-bold leading-tight text-foreground sm:text-4xl lg:text-5xl">
-              给鱼蛋做的小站
+              鱼蛋看板开发日记
             </h1>
             <p class="mt-5 max-w-2xl text-base leading-8 text-muted-foreground sm:text-lg">
-              这是边记录生活、边写代码、边慢慢迭代出来的个人项目。它记录家里的花费，也记录鱼蛋成长的文章；这里则像一份 GitHub activity，整理这个小站一路发生过的主要变化。
+              这是边记录生活、边写代码、边慢慢迭代出来的家庭项目。它从一个小账本出发，现在也记录鱼蛋的疫苗日期、体重变化和成长文章。这里用一份精简的 commit log，记下它一路发生过的主要变化。
             </p>
 
             <div class="mt-6 flex flex-wrap gap-2">
               <span class="rounded-full bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary">father-built</span>
               <span class="rounded-full bg-expense/10 px-3 py-1.5 text-xs font-medium text-expense">family-ledger</span>
-              <span class="rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">astro-migration</span>
+              <span class="rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground">vaccine-tracker</span>
             </div>
           </div>
 
@@ -233,7 +257,7 @@ const roadmap = [
             </div>
           </div>
           <p class="mt-4 text-sm leading-8 text-muted-foreground sm:text-base">
-            如果以后你看到这里，会发现这个网站不是一夜之间做完的。爸爸是一点点把它改出来的：有时候是为了记账更快，有时候是为了文章更好读，有时候只是想把某个小地方变得顺眼一点。
+            如果以后你看到这里，会发现这个网站不是一夜之间做完的。爸爸是一点点把它改出来的：有时候是为了记账更快，有时候是为了文章更好读，这次则是想把你的疫苗和体重好好记下来。工具会继续变，但记录这件事会一直留下来。
           </p>
         </div>
 
