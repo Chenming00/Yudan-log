@@ -11,7 +11,7 @@ cover: /logo.png
 
 ## 概览
 
-鱼蛋站点提供 9 个主要 REST API，用于记录疫苗、体重和家庭收支。所有接口返回 JSON；看板接口统一使用 API Key，账本写入接口接受 API Key 或授权的 GitHub 登录令牌。
+鱼蛋站点提供 10 个主要 REST API，用于记录疫苗、体重和家庭收支。所有接口返回 JSON；看板接口统一使用 API Key，账本写入接口接受 API Key 或授权的 GitHub 登录令牌。
 
 | 接口 | 方法 | 用途 | 认证 |
 |------|------|------|------|
@@ -22,6 +22,7 @@ cover: /logo.png
 | `/api/edit` | PATCH | 修改交易 | 是 |
 | `/api/delete` | DELETE | 删除交易 | 是 |
 | `/api/yudan` | GET | 读取疫苗和体重记录 | 是 |
+| `/api/yudan/vaccines` | GET | 读取标准疫苗目录与计划 ID | 是 |
 | `/api/yudan/weight` | POST | 新增或更新体重 | 是 |
 | `/api/yudan/vaccine` | POST | 登记实际接种日期 | 是 |
 
@@ -125,10 +126,19 @@ POST /api/yudan/vaccine
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `vaccine` | string | 是 | 疫苗名称，例如 `乙肝疫苗` |
-| `dose` | string | 是 | 剂次，例如 `第 1 剂` |
-| `age_label` | string | 是 | 看板中的接种年龄标签，例如 `出生后 24 小时内` |
+| `plan_id` | string | 推荐 | 标准疫苗目录中的稳定 ID，例如 `schedule-001` |
+| `vaccine` | string | 条件必填 | 未提供 `plan_id` 时用于自动查询疫苗 |
+| `dose` | string | 否 | 配合 `vaccine` 缩小到具体剂次 |
 | `actual_date` | string | 是 | 实际接种日期，格式为 `YYYY-MM-DD` |
+
+先读取数据库中的标准目录：
+
+```bash
+curl "https://cost.ykn.cm/api/yudan/vaccines" \
+  -H "Authorization: Bearer $YUDAN_API_KEY"
+```
+
+目录会返回每一项的 `plan_id`、标准名称、剂次、年龄标签、建议日期、现有实际日期，以及 `region`、`schedule_version`、`prevents`、`audience`、`schedule_note` 和 `source`。当前目录采用浙江省杭州市 `2026-08` 清单，共 46 个稳定计划项。推荐直接使用返回的 `plan_id` 写入：
 
 ```bash
 VACCINATION_DATE='<YYYY-MM-DD>'
@@ -136,12 +146,12 @@ VACCINATION_DATE='<YYYY-MM-DD>'
 curl -X POST "https://cost.ykn.cm/api/yudan/vaccine" \
   -H "Authorization: Bearer $YUDAN_API_KEY" \
   -H "Content-Type: application/json" \
-  -d "{\"vaccine\":\"乙肝疫苗\",\"dose\":\"第 1 剂\",\"age_label\":\"出生后 24 小时内\",\"actual_date\":\"$VACCINATION_DATE\"}"
+  -d "{\"plan_id\":\"schedule-001\",\"actual_date\":\"$VACCINATION_DATE\"}"
 ```
 
 成功时，`data.record` 返回保存后的接种记录，`data.created` 表示这次是新建还是更新。
 
-系统使用“疫苗名称 + 剂次 + 接种年龄标签”识别同一条计划。三项完全相同时，再次调用会更新实际接种日期，`created` 返回 `false`。`age_label` 最好直接使用看板显示的原始标签，否则可能被识别为另一条记录。
+不方便提前读取目录时，也可以传 `vaccine` 和 `dose`。服务端会查询标准名称及别名，例如 `乙肝`、`HepB`、`A群流脑疫苗` 都会先归一到数据库中的正式名称，再自动补齐剂次和年龄标签，不再要求调用方填写 `age_label`。如果匹配到多个项目，接口返回 `409` 和 `candidates`，调用方从中选择 `plan_id` 后重试；系统不会猜测或创建重复标签。同一 `plan_id` 再次写入会更新实际日期，`created` 返回 `false`。
 
 ### 在 JavaScript 或自动化工具中调用
 
@@ -174,9 +184,7 @@ await callYudanApi('/api/yudan/weight', {
 });
 
 await callYudanApi('/api/yudan/vaccine', {
-  vaccine: '乙肝疫苗',
-  dose: '第 1 剂',
-  age_label: '出生后 24 小时内',
+  plan_id: 'schedule-001',
   actual_date: process.env.VACCINATION_DATE,
 });
 ```
@@ -187,6 +195,8 @@ await callYudanApi('/api/yudan/vaccine', {
 |--------|------|
 | 400 | JSON、日期、体重或疫苗字段不符合要求 |
 | 401 | API Key 无效或没有提供 |
+| 404 | 标准疫苗目录中没有匹配项目 |
+| 409 | 匹配到多个项目，需要从候选项选择 `plan_id` |
 | 500 | 数据库连接或服务端更新失败 |
 
 API Key 只决定是否允许 API 调用；真正的数据写入仍由服务端完成，Supabase Secret Key 不会发送给调用方。

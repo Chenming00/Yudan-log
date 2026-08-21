@@ -1,5 +1,5 @@
 ---
-import { BookOpen, NotebookPen, PanelsTopLeft, Wallet } from 'lucide-react';
+import { BookOpen, HeartPulse, NotebookPen, PanelsTopLeft, Wallet } from 'lucide-react';
 
 interface Props {
   activePath: string;
@@ -13,6 +13,12 @@ const items = [
     label: '看板',
     icon: PanelsTopLeft,
     match: (pathname: string) => pathname === '/',
+  },
+  {
+    href: '/health',
+    label: '保健',
+    icon: HeartPulse,
+    match: (pathname: string) => pathname.startsWith('/health'),
   },
   {
     href: '/ledger',
