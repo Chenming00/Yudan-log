@@ -11,15 +11,21 @@ interface Props {
   type?: 'website' | 'article';
 }
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.BASE_URL || import.meta.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  process.env.BASE_URL ||
+  import.meta.env.NEXT_PUBLIC_SITE_URL ||
+  'http://localhost:3000';
+
 const {
-  title = '鱼蛋宝宝',
-  description = '记录生活的每一面，用小账本和成长日志沉淀日常、复盘成长。',
+  title = '鱼蛋看板',
+  description = '记录鱼蛋的成长、疫苗、喂养护理和生活日常。',
   canonical = '/',
   image = '/logo.png',
   type = 'website',
 } = Astro.props;
-const pageTitle = title === '鱼蛋宝宝' ? title : `${title} · 鱼蛋宝宝`;
+
+const pageTitle = title === '鱼蛋看板' ? title : `${title} | 鱼蛋看板`;
 const absoluteUrl = new URL(canonical, siteUrl).toString();
 const imageUrl = new URL(image, siteUrl).toString();
 ---
@@ -32,7 +38,7 @@ const imageUrl = new URL(image, siteUrl).toString();
     <meta name="theme-color" content="#FFFFFF" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="description" content={description} />
-    <meta name="keywords" content="记账,成长日志,个人博客,Telegram Bot,PWA" />
+    <meta name="keywords" content="鱼蛋,成长记录,疫苗记录,喂养记录,宝宝看板" />
     <link rel="canonical" href={absoluteUrl} />
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" href="/logo.png" />
@@ -40,7 +46,7 @@ const imageUrl = new URL(image, siteUrl).toString();
     <title>{pageTitle}</title>
     <meta property="og:type" content={type} />
     <meta property="og:locale" content="zh_CN" />
-    <meta property="og:site_name" content="鱼蛋宝宝" />
+    <meta property="og:site_name" content="鱼蛋看板" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={absoluteUrl} />

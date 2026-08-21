@@ -92,7 +92,12 @@ MIMO_API_KEY=your_mimo_api_key
 
 ### 3. 初始化数据库
 
-在 Supabase SQL Editor 中执行 `schema.sql`，创建 `transactions` 表。
+在 Supabase SQL Editor 中依次执行：
+
+- `schema.sql`：创建账本的 `transactions` 表。
+- `yudan-schema.sql`：创建鱼蛋看板数据表和账号隔离权限。
+
+鱼蛋看板使用 Supabase 邮箱登录。在 Authentication 的 URL Configuration 中，将线上域名设为 Site URL，并加入 Redirect URLs。Vercel 继续使用现有的 `NEXT_PUBLIC_SUPABASE_URL` 和 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 即可。
 
 ### 4. 启动开发
 
