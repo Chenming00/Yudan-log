@@ -1,6 +1,12 @@
 -- Access controls for an existing YUDAN database.
 -- Fresh installations receive the same rules from schema.sql and yudan-schema.sql.
 
+-- This event-trigger helper is administrative only and must not be exposed
+-- through the Data API as an RPC endpoint.
+revoke all on function public.rls_auto_enable() from public;
+revoke all on function public.rls_auto_enable() from anon;
+revoke all on function public.rls_auto_enable() from authenticated;
+
 alter table public.transactions enable row level security;
 
 revoke all on table public.transactions from anon;
@@ -75,3 +81,4 @@ using (
     or ((select auth.jwt()) -> 'app_metadata' -> 'providers') ? 'github'
   )
 );
+
