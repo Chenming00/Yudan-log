@@ -13,13 +13,11 @@ import {
   CloudOff,
   ClipboardList,
   Filter,
+  CircleUserRound,
   HeartPulse,
   Info,
   LoaderCircle,
-  LockKeyhole,
-  LogIn,
   LogOut,
-  Mail,
   Plus,
   ShieldCheck,
   Syringe,
@@ -36,9 +34,11 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
+import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { isGitHubProvider, isOwnerEmail, OWNER_EMAIL } from "@/lib/auth";
+import { getBrowserSupabaseClient } from "@/lib/supabase-browser";
 import { cn } from "@/lib/utils";
 
 type GrowthEntry = {
@@ -511,17 +511,7 @@ export default function YudanDashboard({
   supabasePublishableKey = "",
 }: YudanDashboardProps) {
   const supabase = useMemo(
-    () =>
-      supabaseUrl && supabasePublishableKey
-        ? createClient(supabaseUrl, supabasePublishableKey, {
-            auth: {
-              storageKey: "yudan-dashboard-auth",
-              persistSession: true,
-              autoRefreshToken: true,
-              detectSessionInUrl: true,
-            },
-          })
-        : null,
+    () => getBrowserSupabaseClient(supabaseUrl, supabasePublishableKey),
     [supabasePublishableKey, supabaseUrl]
   );
   const [data, setData] = useState<DashboardData>(defaultData);
@@ -549,6 +539,7 @@ export default function YudanDashboard({
     title: "",
     detail: "",
   });
+  const isOwner = isOwnerEmail(session?.user.email) && isGitHubProvider(session?.user.app_metadata);
 
   useEffect(() => {
     setData(readStoredData());
@@ -592,7 +583,7 @@ export default function YudanDashboard({
   }, [supabase]);
 
   useEffect(() => {
-    if (!ready || !supabase || !session?.user.id) return;
+    if (!ready || !supabase || !session?.user.id || !isOwner) return;
 
     let active = true;
     const userId = session.user.id;
@@ -635,20 +626,20 @@ export default function YudanDashboard({
     return () => {
       active = false;
     };
-  }, [ready, session?.user.id, supabase]);
+  }, [isOwner, ready, session?.user.id, supabase]);
 
   useEffect(() => {
     if (!ready) return;
-    if (supabase && (!session?.user.id || !cloudReady)) return;
+    if (supabase && (!session?.user.id || !isOwner || !cloudReady)) return;
 
     const storageKey = session?.user.id
       ? `yudan-dashboard-v2:${session.user.id}`
       : "yudan-dashboard-v2";
     window.localStorage.setItem(storageKey, JSON.stringify(data));
-  }, [cloudReady, data, ready, session?.user.id, supabase]);
+  }, [cloudReady, data, isOwner, ready, session?.user.id, supabase]);
 
   useEffect(() => {
-    if (!ready || !cloudReady || !supabase || !session?.user.id) return;
+    if (!ready || !cloudReady || !supabase || !session?.user.id || !isOwner) return;
 
     const userId = session.user.id;
     const snapshot = data;
@@ -672,7 +663,7 @@ export default function YudanDashboard({
     }, 650);
 
     return () => window.clearTimeout(timer);
-  }, [cloudReady, data, ready, session?.user.id, supabase]);
+  }, [cloudReady, data, isOwner, ready, session?.user.id, supabase]);
 
   const sortedGrowth = useMemo(
     () => [...data.growth].sort((a, b) => a.date.localeCompare(b.date)),
@@ -782,7 +773,7 @@ export default function YudanDashboard({
   }
 
   async function handleSignOut() {
-    if (!supabase || !session?.user.id) return;
+    if (!supabase || !session?.user.id || !isOwner) return;
 
     try {
       setSyncStatus("saving");
@@ -797,7 +788,7 @@ export default function YudanDashboard({
     setCloudReady(false);
   }
 
-  if (!ready || !authReady || (supabase && session && !cloudReady)) {
+  if (!ready || !authReady || (supabase && session && isOwner && !cloudReady)) {
     return (
       <main className="grid min-h-screen place-items-center bg-[#f7f8f5] text-stone-500">
         <div className="flex items-center gap-2 text-sm">
@@ -810,6 +801,10 @@ export default function YudanDashboard({
 
   if (supabase && !session) {
     return <CloudLogin supabase={supabase} />;
+  }
+
+  if (supabase && session && !isOwner) {
+    return <UnauthorizedAccount supabase={supabase} email={session.user.email} />;
   }
 
   if (ready) {
@@ -1034,51 +1029,20 @@ export default function YudanDashboard({
 }
 
 function CloudLogin({ supabase }: { supabase: SupabaseClient }) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
-  const [isError, setIsError] = useState(false);
 
-  async function authenticate(mode: "login" | "register") {
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail || password.length < 6) {
-      setIsError(true);
-      setMessage("请输入邮箱，密码至少 6 位。");
-      return;
-    }
-
+  async function authenticate() {
     setSubmitting(true);
     setMessage("");
-    setIsError(false);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "github",
+      options: { redirectTo: window.location.href.split("#")[0] },
+    });
 
-    const result = mode === "login"
-      ? await supabase.auth.signInWithPassword({ email: normalizedEmail, password })
-      : await supabase.auth.signUp({
-          email: normalizedEmail,
-          password,
-          options: { emailRedirectTo: window.location.origin },
-        });
-
-    setSubmitting(false);
-
-    if (result.error) {
-      const rawMessage = result.error.message;
-      setIsError(true);
-      if (/invalid login credentials/i.test(rawMessage)) {
-        setMessage("邮箱或密码不正确。首次使用请先注册。");
-      } else if (/email not confirmed/i.test(rawMessage)) {
-        setMessage("请先打开邮箱完成验证。");
-      } else if (/already registered/i.test(rawMessage)) {
-        setMessage("这个邮箱已经注册，请直接登录。");
-      } else {
-        setMessage(rawMessage);
-      }
-      return;
-    }
-
-    if (mode === "register" && !result.data.session) {
-      setMessage("注册邮件已发送，请打开邮箱完成验证。");
+    if (error) {
+      setSubmitting(false);
+      setMessage(error.message);
     }
   }
 
@@ -1095,64 +1059,45 @@ function CloudLogin({ supabase }: { supabase: SupabaseClient }) {
           </div>
         </div>
 
-        <form
-          className="mt-6 space-y-4"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void authenticate("login");
-          }}
-        >
-          <Field label="邮箱">
-            <div className="relative">
-              <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-              <Input
-                className="pl-9"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                autoComplete="email"
-                placeholder="name@example.com"
-              />
-            </div>
-          </Field>
-          <Field label="密码">
-            <div className="relative">
-              <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
-              <Input
-                className="pl-9"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete="current-password"
-                minLength={6}
-                placeholder="至少 6 位"
-              />
-            </div>
-          </Field>
+        <div className="mt-6 space-y-4">
+          {message && <p className="text-sm leading-5 text-rose-700">{message}</p>}
 
-          {message && (
-            <p className={cn("text-sm leading-5", isError ? "text-rose-700" : "text-emerald-700")}>{message}</p>
-          )}
-
-          <Button className="w-full" type="submit" disabled={submitting}>
-            {submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
-            登录
+          <Button className="w-full" type="button" disabled={submitting} onClick={() => void authenticate()}>
+            {submitting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <CircleUserRound className="h-4 w-4" />}
+            使用 GitHub 登录
           </Button>
-          <Button
-            className="w-full"
-            type="button"
-            variant="outline"
-            disabled={submitting}
-            onClick={() => void authenticate("register")}
-          >
-            注册新账号
-          </Button>
-        </form>
+        </div>
 
         <p className="mt-5 flex items-start gap-2 border-t border-stone-100 pt-4 text-xs leading-5 text-stone-500">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
-          疫苗和体重数据仅当前账号可见。
+          仅 GitHub 邮箱 {OWNER_EMAIL} 可以查看和编辑云端记录。
         </p>
+      </section>
+    </main>
+  );
+}
+
+function UnauthorizedAccount({
+  supabase,
+  email,
+}: {
+  supabase: SupabaseClient;
+  email?: string;
+}) {
+  return (
+    <main className="grid min-h-screen place-items-center bg-[#f7f8f5] px-4 py-10 text-stone-900" style={{ paddingBottom: "var(--nav-height)" }}>
+      <section className="w-full max-w-sm rounded-lg border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
+        <span className="grid h-10 w-10 place-items-center rounded-lg bg-rose-50 text-rose-700">
+          <ShieldCheck className="h-5 w-5" />
+        </span>
+        <h1 className="mt-4 text-xl font-semibold text-stone-950">这个账号没有编辑权限</h1>
+        <p className="mt-2 text-sm leading-6 text-stone-500">
+          当前登录为 {email || "未知邮箱"}，请切换到 {OWNER_EMAIL} 对应的 GitHub 账号。
+        </p>
+        <Button className="mt-5 w-full" variant="outline" onClick={() => void supabase.auth.signOut()}>
+          <LogOut className="h-4 w-4" />
+          退出并切换账号
+        </Button>
       </section>
     </main>
   );

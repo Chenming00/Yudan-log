@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 let supabaseClient: SupabaseClient | null = null;
+let supabaseAdminClient: SupabaseClient | null = null;
 
 function getSupabaseEnv() {
   const supabaseUrl =
@@ -32,4 +33,31 @@ export function getSupabaseClient() {
   supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
 
   return supabaseClient;
+}
+
+export function getSupabaseAdminClient() {
+  if (supabaseAdminClient) {
+    return supabaseAdminClient;
+  }
+
+  const { supabaseUrl } = getSupabaseEnv();
+  const secretKey =
+    process.env.SUPABASE_SECRET_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    import.meta.env.SUPABASE_SECRET_KEY ||
+    import.meta.env.SUPABASE_SERVICE_ROLE_KEY ||
+    '';
+
+  if (!secretKey) {
+    throw new Error('Supabase server secret key is not configured.');
+  }
+
+  supabaseAdminClient = createClient(supabaseUrl, secretKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  return supabaseAdminClient;
 }
