@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import {
   Activity,
+  ArrowRight,
   Baby,
   Bell,
   CalendarCheck,
@@ -18,6 +19,7 @@ import {
   Info,
   LoaderCircle,
   LogOut,
+  NotebookPen,
   Plus,
   ShieldCheck,
   Syringe,
@@ -36,6 +38,13 @@ import {
 } from "recharts";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { isGitHubProvider, isOwnerEmail, OWNER_EMAIL } from "@/lib/auth";
 import { getBrowserSupabaseClient } from "@/lib/supabase-browser";
@@ -55,6 +64,7 @@ type VaccineStatus = "planned" | "booked" | "done" | "delayed" | "skipped";
 
 type VaccineEntry = {
   id: string;
+  planId?: string;
   ageLabel: string;
   ageMonths: number;
   vaccine: string;
@@ -94,10 +104,12 @@ type DashboardData = {
 type YudanDashboardProps = {
   supabaseUrl?: string;
   supabasePublishableKey?: string;
+  view?: "dashboard" | "health";
 };
 
 type CloudVaccineRecord = {
   id: string;
+  planId?: string;
   vaccine: string;
   dose: string;
   ageLabel: string;
@@ -114,6 +126,25 @@ type CloudDashboardRow = {
   birthday: string;
   vaccine_records: unknown;
   weight_records: unknown;
+};
+
+type CloudVaccinePlan = {
+  id: string;
+  sort_order: number;
+  age_months: number;
+  age_label: string;
+  vaccine: string;
+  dose: string;
+  funding: VaccineType;
+  date_rule: "flu-season" | null;
+  date_offset_days: number;
+  region: string;
+  schedule_version: string;
+  prevents: string;
+  aliases: string[];
+  audience: string | null;
+  schedule_note: string | null;
+  source: string;
 };
 
 type SyncStatus = "local" | "loading" | "saving" | "saved" | "error";
@@ -216,6 +247,8 @@ const vaccineTemplates: VaccineTemplate[] = [
 
   vaccineAt(72, "6 周岁", "百白破疫苗 DTaP", "第 5 剂", "free"),
   vaccineAt(72, "6 周岁", "流脑疫苗（A 群 C 群）", "第 4 剂", "free"),
+  vaccineAt(156, "13 周岁（女孩）", "双价 HPV 疫苗 2vHPV", "第 1 剂", "free"),
+  vaccineAt(162, "首剂后 6 个月（女孩）", "双价 HPV 疫苗 2vHPV", "第 2 剂", "free"),
 ];
 const statusLabels: Record<VaccineStatus, string> = {
   planned: "待安排",
@@ -283,6 +316,7 @@ function createVaccineSchedule(birthday: string): VaccineEntry[] {
   return vaccineTemplates.map((template, index) => ({
     ...template,
     id: `vaccine-${index + 1}`,
+    planId: `schedule-${String(index + 1).padStart(3, "0")}`,
     plannedDate: plannedDateForTemplate(birthday, template),
     bookedDate: "",
     doneDate: "",
@@ -293,20 +327,52 @@ function createVaccineSchedule(birthday: string): VaccineEntry[] {
   }));
 }
 
-const defaultBirthday = "2026-08-21";
+function createVaccineScheduleFromCatalog(
+  birthday: string,
+  catalog: CloudVaccinePlan[]
+): VaccineEntry[] {
+  return [...catalog]
+    .sort((left, right) => left.sort_order - right.sort_order)
+    .map((plan) => {
+      const template: VaccineTemplate = {
+        ageMonths: plan.age_months,
+        ageLabel: plan.age_label,
+        vaccine: plan.vaccine,
+        dose: plan.dose,
+        type: plan.funding,
+        route: "",
+        disease: plan.prevents || "",
+        note: plan.schedule_note || "",
+        status: "planned",
+        dateRule: plan.date_rule || undefined,
+        dateOffsetDays: plan.date_offset_days || undefined,
+      };
+      return {
+        ...template,
+        id: plan.id,
+        planId: plan.id,
+        plannedDate: plannedDateForTemplate(birthday, template),
+        bookedDate: "",
+        doneDate: "",
+        place: "",
+        batchNo: "",
+        manufacturer: "",
+        reminder: plan.funding === "free" ? "提前 7 天确认门诊时间" : "先咨询库存、品牌和价格",
+      };
+    });
+}
+
+function scheduleForBirthday(birthday: string, catalog: CloudVaccinePlan[]) {
+  return catalog.length
+    ? createVaccineScheduleFromCatalog(birthday, catalog)
+    : createVaccineSchedule(birthday);
+}
+
+const defaultBirthday = today;
 
 const defaultData: DashboardData = {
   birthday: defaultBirthday,
-  growth: [
-    {
-      id: "growth-1",
-      date: today,
-      weight: 3.4,
-      height: 50,
-      head: 34,
-      note: "出生记录",
-    },
-  ],
+  growth: [],
   vaccines: createVaccineSchedule(defaultBirthday),
   care: [
     {
@@ -403,6 +469,7 @@ function readCloudVaccineRecords(value: unknown): CloudVaccineRecord[] {
     const record = item as Record<string, unknown>;
     return (
       typeof record.id === "string" &&
+      (record.planId === undefined || typeof record.planId === "string") &&
       typeof record.vaccine === "string" &&
       typeof record.dose === "string" &&
       typeof record.ageLabel === "string" &&
@@ -426,7 +493,11 @@ function readCloudWeightRecords(value: unknown): CloudWeightRecord[] {
   });
 }
 
-function dashboardFromCloud(row: CloudDashboardRow, localData: DashboardData): DashboardData {
+function dashboardFromCloud(
+  row: CloudDashboardRow,
+  localData: DashboardData,
+  catalog: CloudVaccinePlan[]
+): DashboardData {
   const birthday = row.birthday || localData.birthday || defaultBirthday;
   const vaccineRecords = readCloudVaccineRecords(row.vaccine_records);
   const weightRecords = readCloudWeightRecords(row.weight_records);
@@ -434,9 +505,10 @@ function dashboardFromCloud(row: CloudDashboardRow, localData: DashboardData): D
   return {
     ...localData,
     birthday,
-    vaccines: createVaccineSchedule(birthday).map((fresh) => {
+    vaccines: scheduleForBirthday(birthday, catalog).map((fresh) => {
       const stored = vaccineRecords.find(
         (item) =>
+          item.planId === fresh.planId ||
           item.id === fresh.id ||
           (item.vaccine === fresh.vaccine && item.dose === fresh.dose && item.ageLabel === fresh.ageLabel)
       );
@@ -458,6 +530,7 @@ function dashboardToCloud(data: DashboardData) {
     .filter((item) => item.doneDate)
     .map((item) => ({
       id: item.id,
+      planId: item.planId,
       vaccine: item.vaccine,
       dose: item.dose,
       ageLabel: item.ageLabel,
@@ -509,21 +582,25 @@ function getDueState(vaccine: VaccineEntry) {
 export default function YudanDashboard({
   supabaseUrl = "",
   supabasePublishableKey = "",
+  view = "dashboard",
 }: YudanDashboardProps) {
   const supabase = useMemo(
     () => getBrowserSupabaseClient(supabaseUrl, supabasePublishableKey),
     [supabasePublishableKey, supabaseUrl]
   );
   const [data, setData] = useState<DashboardData>(defaultData);
+  const [vaccineCatalog, setVaccineCatalog] = useState<CloudVaccinePlan[]>([]);
   const [ready, setReady] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [cloudReady, setCloudReady] = useState(false);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(supabase ? "loading" : "local");
   const [cloudError, setCloudError] = useState("");
-  const [activeView, setActiveView] = useState<"vaccines" | "growth" | "care">("vaccines");
+  const [activeView, setActiveView] = useState<"vaccines" | "growth">("vaccines");
   const [vaccineFilter, setVaccineFilter] = useState<VaccineFilter>("all");
-  const [editingVaccineId, setEditingVaccineId] = useState<string | null>(null);
+  const [recordingVaccineId, setRecordingVaccineId] = useState<string | null>(null);
+  const [vaccineDateDraft, setVaccineDateDraft] = useState(today);
+  const [weightDialogOpen, setWeightDialogOpen] = useState(false);
   const saveChainRef = useRef<Promise<void>>(Promise.resolve());
   const latestSaveRef = useRef(0);
   const [growthForm, setGrowthForm] = useState({
@@ -543,8 +620,11 @@ export default function YudanDashboard({
 
   useEffect(() => {
     setData(readStoredData());
+    if (view === "health" && new URLSearchParams(window.location.search).get("tab") === "weight") {
+      setActiveView("growth");
+    }
     setReady(true);
-  }, []);
+  }, [view]);
 
   useEffect(() => {
     if (!supabase) {
@@ -594,17 +674,28 @@ export default function YudanDashboard({
 
     void (async () => {
       try {
-        const { data: cloudRow, error } = await supabase
-          .from("yudan_dashboards")
-          .select("birthday, vaccine_records, weight_records")
-          .eq("user_id", userId)
-          .maybeSingle();
+        const [dashboardResult, catalogResult] = await Promise.all([
+          supabase
+            .from("yudan_dashboards")
+            .select("birthday, vaccine_records, weight_records")
+            .eq("user_id", userId)
+            .maybeSingle(),
+          supabase
+            .from("yudan_vaccine_catalog")
+            .select("id, sort_order, age_months, age_label, vaccine, dose, funding, date_rule, date_offset_days, region, schedule_version, prevents, aliases, audience, schedule_note, source")
+            .eq("active", true)
+            .order("sort_order"),
+        ]);
 
-        if (error) throw error;
+        if (dashboardResult.error) throw dashboardResult.error;
+        if (catalogResult.error) throw catalogResult.error;
         if (!active) return;
+        const cloudRow = dashboardResult.data;
+        const catalog = (catalogResult.data || []) as CloudVaccinePlan[];
+        setVaccineCatalog(catalog);
 
         if (cloudRow) {
-          setData(dashboardFromCloud(cloudRow as CloudDashboardRow, localSnapshot));
+          setData(dashboardFromCloud(cloudRow as CloudDashboardRow, localSnapshot, catalog));
         } else {
           await saveCloudDashboard(supabase, userId, localSnapshot);
           if (!active) return;
@@ -707,7 +798,7 @@ export default function YudanDashboard({
     setData((current) => ({
       ...current,
       birthday,
-      vaccines: createVaccineSchedule(birthday).map((fresh) => {
+      vaccines: scheduleForBirthday(birthday, vaccineCatalog).map((fresh) => {
         const old = current.vaccines.find(
           (item) => item.vaccine === fresh.vaccine && item.dose === fresh.dose && item.ageLabel === fresh.ageLabel
         );
@@ -729,21 +820,36 @@ export default function YudanDashboard({
     const head = Number(growthForm.head);
     if (!growthForm.date || !weight) return;
 
-    setData((current) => ({
-      ...current,
-      growth: [
-        ...current.growth,
-        {
-          id: newId("growth"),
-          date: growthForm.date,
-          weight,
-          height: Number.isFinite(height) ? height : 0,
-          head: Number.isFinite(head) ? head : 0,
-          note: growthForm.note.trim(),
-        },
-      ],
-    }));
+    setData((current) => {
+      const existing = current.growth.find((item) => item.date === growthForm.date);
+      const record: GrowthEntry = {
+        id: existing?.id || newId("growth"),
+        date: growthForm.date,
+        weight,
+        height: Number.isFinite(height) ? height : 0,
+        head: Number.isFinite(head) ? head : 0,
+        note: growthForm.note.trim(),
+      };
+      return {
+        ...current,
+        growth: existing
+          ? current.growth.map((item) => (item.id === existing.id ? record : item))
+          : [...current.growth, record],
+      };
+    });
     setGrowthForm({ date: today, weight: "", height: "", head: "", note: "" });
+    setWeightDialogOpen(false);
+  }
+
+  function openVaccineRecorder(item: VaccineEntry) {
+    setRecordingVaccineId(item.id);
+    setVaccineDateDraft(item.doneDate || today);
+  }
+
+  function saveVaccineRecord() {
+    if (!recordingVaccineId || !vaccineDateDraft) return;
+    updateVaccine(recordingVaccineId, { doneDate: vaccineDateDraft, status: "done" });
+    setRecordingVaccineId(null);
   }
 
   function addCare() {
@@ -808,221 +914,183 @@ export default function YudanDashboard({
   }
 
   if (ready) {
-    return (
-      <main className="min-h-screen overflow-x-hidden bg-[#f7f8f5] px-3 py-4 text-stone-900 sm:px-6 sm:py-6" style={{ paddingBottom: "var(--nav-height)" }}>
-        <div className="mx-auto max-w-7xl space-y-4 sm:space-y-5">
-          <header className="border-b border-stone-200 pb-5 sm:flex sm:items-end sm:justify-between sm:gap-8">
-            <div>
-              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
-                <Baby className="h-4 w-4" />
-                鱼蛋看板
+    const recordingVaccine = sortedVaccines.find((item) => item.id === recordingVaccineId);
+    const upcomingVaccines = sortedVaccines.filter((item) => !item.doneDate).slice(0, 3);
+    const previousGrowth = sortedGrowth.at(-2);
+    const weightChange = latestGrowth && previousGrowth
+      ? Number((latestGrowth.weight - previousGrowth.weight).toFixed(2))
+      : null;
+
+    if (view === "dashboard") {
+      return (
+        <main className="min-h-screen overflow-x-hidden bg-[#f7f8f5] px-4 py-5 text-stone-900 sm:px-6 sm:py-7" style={{ paddingBottom: "var(--nav-height)" }}>
+          <div className="mx-auto max-w-6xl space-y-5 sm:space-y-6">
+            <header className="flex items-start justify-between gap-4 border-b border-stone-200 pb-5">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+                  <Baby className="h-4 w-4" />
+                  鱼蛋看板
+                </div>
+                <h1 className="mt-2 text-2xl font-semibold text-stone-950 sm:text-3xl">今天，一眼看清</h1>
+                <p className="mt-1 text-sm text-stone-500">出生第 {babyAgeDays} 天 · {formatDate(data.birthday)} 出生</p>
               </div>
-              <h1 className="mt-2 text-2xl font-semibold text-stone-950 sm:text-3xl">疫苗与体重</h1>
-              <p className="mt-1 text-sm leading-6 text-stone-500">中国国家免疫规划 2026 为主，参考美国 CDC 当前儿童程序补充自费项目。</p>
-            </div>
-            <div className="mt-4 sm:mt-0 sm:w-56">
-              <div className="mb-2 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 pt-1">
                 <SyncIndicator status={syncStatus} />
                 {supabase && session && (
-                  <button
-                    type="button"
-                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-stone-400 transition-colors hover:bg-stone-100 hover:text-stone-700"
-                    onClick={handleSignOut}
-                    aria-label="退出登录"
-                    title="退出登录"
-                  >
+                  <button type="button" className="grid h-9 w-9 place-items-center rounded-lg text-stone-400 hover:bg-white hover:text-stone-700" onClick={handleSignOut} aria-label="退出登录" title="退出登录">
                     <LogOut className="h-4 w-4" />
                   </button>
                 )}
               </div>
-              <label className="block text-sm font-medium text-stone-700">
-                出生日期
-                <Input className="mt-1.5" type="date" value={data.birthday} onChange={(event) => updateBirthday(event.target.value)} />
-              </label>
-            </div>
-          </header>
+            </header>
 
-          {cloudError && (
-            <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-5 text-rose-800">
-              <CloudOff className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{cloudError}</span>
-            </div>
-          )}
+            {cloudError && <CloudError message={cloudError} />}
 
-          <section className="grid grid-cols-3 divide-x divide-stone-200 rounded-lg border border-stone-200 bg-white py-3 shadow-sm sm:py-4">
-            <SimpleMetric label="出生天数" value={`${babyAgeDays} 天`} />
-            <SimpleMetric label="免费已完成" value={`${doneFreeVaccines}/${freeVaccines.length}`} />
-            <SimpleMetric label="最新体重" value={latestGrowth ? `${latestGrowth.weight} kg` : "待记录"} />
-          </section>
-
-          {nextVaccine && (
-            <section className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 sm:px-5">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-emerald-700 shadow-sm">
-                <CalendarCheck className="h-5 w-5" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-emerald-700">下一项建议</p>
-                <p className="mt-0.5 truncate font-semibold text-stone-950">{nextVaccine.vaccine} {nextVaccine.dose}</p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="font-semibold text-stone-950">{formatDate(nextVaccine.plannedDate)}</p>
-                <p className="mt-0.5 text-xs text-stone-500">{nextVaccine.ageLabel}</p>
-              </div>
-            </section>
-          )}
-
-          <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <section className="order-2 overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm lg:order-1">
-              <div className="flex items-start justify-between gap-4 border-b border-stone-200 px-4 py-4 sm:items-center sm:px-5">
-                <div>
-                  <h2 className="font-semibold text-stone-950">疫苗清单</h2>
-                  <p className="mt-1 text-xs text-stone-500">中国免费 {freeVaccines.length} 项 · 自费补充 {paidVaccines.length} 项</p>
-                </div>
-                <div className="w-24 shrink-0 sm:w-32">
-                  <div className="flex items-center justify-between text-[11px] text-stone-500">
-                    <span>进度</span>
-                    <span>{completionPercent}%</span>
-                  </div>
-                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-stone-100">
-                    <div className="h-full rounded-full bg-emerald-500" style={{ width: `${completionPercent}%` }} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="border-b border-sky-100 bg-sky-50/70 px-4 py-3 text-xs leading-5 text-sky-950 sm:px-5">
-                <div className="flex gap-2">
-                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-700" />
-                  <p>
-                    五联、四联属于替代方案，不是额外加打；选用后应由门诊替换对应的百白破、脊灰和 Hib 剂次。当前默认采用乙脑减毒 2 剂和甲肝减毒 1 剂方案。
-                  </p>
-                </div>
-              </div>
-
-              <div className="hidden overflow-x-auto md:block">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-stone-50 text-xs text-stone-500">
-                    <tr>
-                      <th className="px-5 py-3 font-medium">疫苗</th>
-                      <th className="w-44 px-4 py-3 font-medium">建议接种日期</th>
-                      <th className="w-48 px-5 py-3 font-medium">实际接种日期</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-stone-100">
-                    {sortedVaccines.map((item) => (
-                      <tr key={item.id} className={cn("transition-colors hover:bg-stone-50", item.id === nextVaccine?.id && "bg-emerald-50/60", item.doneDate && "bg-stone-50/70")}>
-                        <td className="px-5 py-3">
-                          <div className="flex flex-wrap items-center gap-2">
-                            {item.doneDate && <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />}
-                            <span className={cn("font-medium", item.doneDate ? "text-stone-500" : "text-stone-950")}>{item.vaccine} {item.dose}</span>
-                            <TypeBadge type={item.type} />
-                          </div>
-                          <p className="mt-1 text-xs text-stone-500">{item.ageLabel}</p>
-                        </td>
-                        <td className="px-4 py-3 text-stone-700">{formatDate(item.plannedDate)}</td>
-                        <td className="px-5 py-3">
-                          <DateInput
-                            value={item.doneDate}
-                            onChange={(value) => updateVaccine(item.id, { doneDate: value, status: value ? "done" : "planned" })}
-                          />
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="divide-y divide-stone-100 md:hidden">
-                {sortedVaccines.map((item) => (
-                  <article key={item.id} className={cn("p-4", item.id === nextVaccine?.id && "bg-emerald-50/55", item.doneDate && "bg-stone-50/70")}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          {item.doneDate && <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />}
-                          <h3 className={cn("font-semibold", item.doneDate ? "text-stone-500" : "text-stone-950")}>{item.vaccine} {item.dose}</h3>
-                          <TypeBadge type={item.type} />
-                        </div>
-                        <p className="mt-1 text-xs text-stone-500">{item.ageLabel}</p>
-                      </div>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-3">
-                      <div>
-                        <p className="mb-1.5 text-xs text-stone-500">建议接种日期</p>
-                        <p className="flex h-10 items-center text-sm font-medium text-stone-700">{formatDate(item.plannedDate)}</p>
-                      </div>
-                      <Field label="实际接种日期">
-                        <DateInput
-                          value={item.doneDate}
-                          onChange={(value) => updateVaccine(item.id, { doneDate: value, status: value ? "done" : "planned" })}
-                        />
-                      </Field>
-                    </div>
-                  </article>
-                ))}
-              </div>
+            <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <MetricCard icon={Baby} label="出生天数" value={`${babyAgeDays} 天`} detail={formatDate(data.birthday)} tone="emerald" />
+              <MetricCard icon={Syringe} label="免费疫苗" value={`${doneFreeVaccines}/${freeVaccines.length}`} detail={`全部计划完成 ${completionPercent}%`} tone="amber" />
+              <MetricCard icon={Weight} label="最新体重" value={latestGrowth ? `${latestGrowth.weight} kg` : "待记录"} detail={latestGrowth ? formatDate(latestGrowth.date) : "进入保健模块记录"} tone="sky" />
+              <MetricCard icon={Bell} label="近期提醒" value={`${dueVaccines.length} 项`} detail={dueVaccines.length ? "需要留意接种时间" : "暂无临近项目"} tone={dueVaccines.some((item) => getDueState(item) === "overdue") ? "rose" : "emerald"} />
             </section>
 
-            <aside className="order-1 space-y-4 lg:order-2 lg:sticky lg:top-4">
-              <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <Weight className="h-5 w-5 text-sky-700" />
-                  <h2 className="font-semibold text-stone-950">记录体重</h2>
+            {nextVaccine && (
+              <section className="grid gap-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:p-5">
+                <span className="grid h-11 w-11 place-items-center rounded-lg bg-white text-emerald-700 shadow-sm"><CalendarCheck className="h-5 w-5" /></span>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-emerald-700">下一项接种建议</p>
+                  <h2 className="mt-1 text-lg font-semibold text-stone-950">{nextVaccine.vaccine} {nextVaccine.dose}</h2>
+                  <p className="mt-1 text-sm text-stone-600">{nextVaccine.ageLabel} · 建议 {formatDate(nextVaccine.plannedDate)}</p>
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-3">
-                  <Field label="日期">
-                    <Input className="min-w-0 max-w-full px-2.5" type="date" value={growthForm.date} onChange={(event) => setGrowthForm({ ...growthForm, date: event.target.value })} />
-                  </Field>
-                  <Field label="体重（kg）">
-                    <Input className="min-w-0 max-w-full px-2.5" type="number" min="0" step="0.01" inputMode="decimal" value={growthForm.weight} onChange={(event) => setGrowthForm({ ...growthForm, weight: event.target.value })} placeholder="例如 6.8" />
-                  </Field>
-                </div>
-                <Button className="mt-3 w-full" disabled={!growthForm.date || !Number(growthForm.weight)} onClick={addGrowth}>
-                  <Plus className="h-4 w-4" />
-                  保存体重
-                </Button>
+                <a href="/health" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 text-sm font-medium text-white hover:bg-emerald-800">
+                  查看保健档案 <ArrowRight className="h-4 w-4" />
+                </a>
               </section>
+            )}
 
-              <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-semibold text-stone-950">体重趋势</h2>
-                  {latestGrowth && <span className="text-sm font-semibold text-sky-700">{latestGrowth.weight} kg</span>}
+            <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
+              <section className="rounded-lg border border-stone-200 bg-white shadow-sm">
+                <div className="flex items-center justify-between border-b border-stone-100 px-4 py-4 sm:px-5">
+                  <div><h2 className="font-semibold text-stone-950">接种安排</h2><p className="mt-1 text-xs text-stone-500">接下来 3 项常规计划</p></div>
+                  <a href="/health" className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700">全部 <ChevronRight className="h-4 w-4" /></a>
                 </div>
-                <div className="mt-3 h-44">
-                  {chartData.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={chartData} margin={{ top: 8, right: 4, left: -28, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="simpleWeight" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#0284c7" stopOpacity={0.24} />
-                            <stop offset="95%" stopColor="#0284c7" stopOpacity={0.02} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" vertical={false} />
-                        <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={11} />
-                        <YAxis tickLine={false} axisLine={false} fontSize={11} />
-                        <Tooltip />
-                        <Area type="monotone" dataKey="weight" name="体重 kg" stroke="#0284c7" fill="url(#simpleWeight)" strokeWidth={2} />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <EmptyState text="还没有体重记录" compact />
-                  )}
-                </div>
-                <div className="mt-3 divide-y divide-stone-100 border-t border-stone-100">
-                  {[...sortedGrowth].reverse().slice(0, 5).map((item) => (
-                    <div key={item.id} className="flex items-center justify-between py-2.5 text-sm">
-                      <span className="text-stone-500">{formatDate(item.date)}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-stone-950">{item.weight} kg</span>
-                        <IconButton label="删除体重记录" onClick={() => removeEntry("growth", item.id)} />
-                      </div>
+                <div className="divide-y divide-stone-100">
+                  {upcomingVaccines.map((item) => (
+                    <div key={item.id} className="flex items-center gap-3 px-4 py-3.5 sm:px-5">
+                      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-stone-100 text-stone-600"><Syringe className="h-4 w-4" /></span>
+                      <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-stone-950">{item.vaccine} {item.dose}</p><p className="mt-0.5 text-xs text-stone-500">{item.ageLabel}</p></div>
+                      <div className="shrink-0 text-right"><p className="text-sm font-medium text-stone-700">{formatDate(item.plannedDate)}</p><DueBadge item={item} /></div>
                     </div>
                   ))}
                 </div>
               </section>
-            </aside>
+
+              <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div><h2 className="font-semibold text-stone-950">体重变化</h2><p className="mt-1 text-xs text-stone-500">最近的生长记录</p></div>
+                  <div className="text-right"><p className="text-xl font-semibold text-sky-700">{latestGrowth ? `${latestGrowth.weight} kg` : "-"}</p>{weightChange !== null && <p className={cn("mt-1 text-xs", weightChange >= 0 ? "text-emerald-700" : "text-rose-700")}>较上次 {weightChange >= 0 ? "+" : ""}{weightChange} kg</p>}</div>
+                </div>
+                <div className="mt-4 h-44">
+                  {chartData.length ? <WeightChart data={chartData} id="dashboardWeight" /> : <EmptyState text="还没有体重记录" compact />}
+                </div>
+                <a href="/health?tab=weight" className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50">进入体重档案 <ArrowRight className="h-4 w-4" /></a>
+              </section>
+            </div>
+
+            <section className="grid gap-3 sm:grid-cols-3">
+              <QuickLink href="/health" icon={HeartPulse} label="保健档案" detail="疫苗与体重" />
+              <QuickLink href="/ledger" icon={ClipboardList} label="家庭账本" detail="收支与月度汇总" />
+              <QuickLink href="/blog" icon={NotebookPen} label="成长日志" detail="保存值得记住的日子" />
+            </section>
           </div>
-        </div>
-      </main>
+        </main>
+      );
+    }
+
+    return (
+      <>
+        <main className="min-h-screen overflow-x-hidden bg-[#f7f8f5] px-4 py-5 text-stone-900 sm:px-6 sm:py-7" style={{ paddingBottom: "var(--nav-height)" }}>
+          <div className="mx-auto max-w-6xl space-y-5">
+            <header className="grid gap-4 border-b border-stone-200 pb-5 sm:grid-cols-[1fr_auto] sm:items-end">
+              <div>
+                <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700"><HeartPulse className="h-4 w-4" />保健</div>
+                <h1 className="mt-2 text-2xl font-semibold text-stone-950 sm:text-3xl">疫苗与体重档案</h1>
+                <p className="mt-1 text-sm leading-6 text-stone-500">建议日期用于整理计划，实际接种请以门诊和接种本为准。</p>
+              </div>
+              <div className="flex items-end gap-3">
+                <label className="min-w-0 flex-1 text-xs font-medium text-stone-500 sm:w-44">出生日期<Input className="mt-1.5" type="date" value={data.birthday} onChange={(event) => updateBirthday(event.target.value)} /></label>
+                <div className="mb-1 flex items-center gap-2"><SyncIndicator status={syncStatus} />{supabase && session && <button type="button" className="grid h-9 w-9 place-items-center rounded-lg text-stone-400 hover:bg-white hover:text-stone-700" onClick={handleSignOut} aria-label="退出登录" title="退出登录"><LogOut className="h-4 w-4" /></button>}</div>
+              </div>
+            </header>
+
+            {cloudError && <CloudError message={cloudError} />}
+
+            <div className="grid grid-cols-2 rounded-lg bg-stone-200/70 p-1 sm:w-72">
+              <button type="button" onClick={() => setActiveView("vaccines")} className={cn("flex h-10 items-center justify-center gap-2 rounded-md text-sm font-medium", activeView === "vaccines" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><Syringe className="h-4 w-4" />疫苗</button>
+              <button type="button" onClick={() => setActiveView("growth")} className={cn("flex h-10 items-center justify-center gap-2 rounded-md text-sm font-medium", activeView === "growth" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><Weight className="h-4 w-4" />体重</button>
+            </div>
+
+            {activeView === "vaccines" ? (
+              <div className="space-y-4">
+                <section className="grid grid-cols-3 divide-x divide-stone-200 rounded-lg border border-stone-200 bg-white py-3 shadow-sm sm:py-4">
+                  <SimpleMetric label="已完成" value={`${doneVaccines} 项`} />
+                  <SimpleMetric label="免费计划" value={`${doneFreeVaccines}/${freeVaccines.length}`} />
+                  <SimpleMetric label="临近或逾期" value={`${dueVaccines.length} 项`} />
+                </section>
+
+                <section className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm">
+                  <div className="flex flex-col gap-3 border-b border-stone-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                    <div><h2 className="font-semibold text-stone-950">接种计划</h2><p className="mt-1 text-xs text-stone-500">按建议接种日期排序，点击“登记”填写实际日期</p></div>
+                    <div className="grid grid-cols-3 rounded-lg bg-stone-100 p-1">
+                      {(["all", "free", "paid"] as VaccineFilter[]).map((filter) => <button key={filter} type="button" onClick={() => setVaccineFilter(filter)} className={cn("h-8 rounded-md px-3 text-xs font-medium", vaccineFilter === filter ? "bg-white text-stone-950 shadow-sm" : "text-stone-500")}>{filter === "all" ? "全部" : filter === "free" ? "免费" : "自费"}</button>)}
+                    </div>
+                  </div>
+                  <div className="border-b border-sky-100 bg-sky-50/70 px-4 py-3 text-xs leading-5 text-sky-950 sm:px-5"><div className="flex gap-2"><Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-700" /><p>五联、四联属于替代方案，不是额外加打；具体品牌、程序和补种安排请由接种门诊确认。</p></div></div>
+
+                  <div className="hidden overflow-x-auto md:block">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-stone-50 text-xs text-stone-500"><tr><th className="px-5 py-3 font-medium">疫苗</th><th className="w-44 px-4 py-3 font-medium">建议日期</th><th className="w-44 px-4 py-3 font-medium">实际日期</th><th className="w-28 px-5 py-3 text-right font-medium">操作</th></tr></thead>
+                      <tbody className="divide-y divide-stone-100">
+                        {filteredVaccines.map((item) => <tr key={item.id} className={cn("hover:bg-stone-50", item.id === nextVaccine?.id && "bg-emerald-50/55")}><td className="px-5 py-3"><div className="flex flex-wrap items-center gap-2">{item.doneDate && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}<span className="font-medium text-stone-950">{item.vaccine} {item.dose}</span><TypeBadge type={item.type} /></div><p className="mt-1 text-xs text-stone-500">{item.ageLabel}{item.disease ? ` · 预防${item.disease}` : ""}</p></td><td className="px-4 py-3"><p className="font-medium text-stone-700">{formatDate(item.plannedDate)}</p><DueBadge item={item} /></td><td className="px-4 py-3 text-stone-600">{item.doneDate ? formatDate(item.doneDate) : "尚未登记"}</td><td className="px-5 py-3 text-right"><Button size="sm" variant={item.doneDate ? "outline" : "default"} onClick={() => openVaccineRecorder(item)}><CalendarCheck className="h-4 w-4" />{item.doneDate ? "修改" : "登记"}</Button></td></tr>)}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="divide-y divide-stone-100 md:hidden">
+                    {filteredVaccines.map((item) => <article key={item.id} className={cn("p-4", item.id === nextVaccine?.id && "bg-emerald-50/55")}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2">{item.doneDate && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}<h3 className="font-semibold text-stone-950">{item.vaccine} {item.dose}</h3><TypeBadge type={item.type} /></div><p className="mt-1 text-xs text-stone-500">{item.ageLabel}</p>{item.disease && <p className="mt-1 text-xs text-stone-500">预防：{item.disease}</p>}</div><Button size="sm" variant={item.doneDate ? "outline" : "default"} onClick={() => openVaccineRecorder(item)}>{item.doneDate ? "修改" : "登记"}</Button></div><div className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><p className="text-xs text-stone-500">建议日期</p><p className="mt-1 font-medium text-stone-700">{formatDate(item.plannedDate)}</p><DueBadge item={item} /></div><div><p className="text-xs text-stone-500">实际日期</p><p className="mt-1 font-medium text-stone-700">{item.doneDate ? formatDate(item.doneDate) : "尚未登记"}</p></div></div></article>)}
+                  </div>
+                </section>
+              </div>
+            ) : (
+              <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+                <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
+                  <div className="flex items-start justify-between gap-4"><div><h2 className="font-semibold text-stone-950">体重趋势</h2><p className="mt-1 text-xs text-stone-500">按测量日期连续记录，直观看变化</p></div><Button onClick={() => setWeightDialogOpen(true)}><Plus className="h-4 w-4" />记录体重</Button></div>
+                  <div className="mt-5 h-72">{chartData.length ? <WeightChart data={chartData} id="healthWeight" /> : <EmptyState text="还没有体重记录" compact />}</div>
+                </section>
+                <section className="rounded-lg border border-stone-200 bg-white shadow-sm">
+                  <div className="border-b border-stone-100 px-4 py-4"><p className="text-xs text-stone-500">最新体重</p><div className="mt-1 flex items-end justify-between"><p className="text-2xl font-semibold text-stone-950">{latestGrowth ? `${latestGrowth.weight} kg` : "待记录"}</p>{weightChange !== null && <p className={cn("text-xs font-medium", weightChange >= 0 ? "text-emerald-700" : "text-rose-700")}>较上次 {weightChange >= 0 ? "+" : ""}{weightChange} kg</p>}</div></div>
+                  <div className="divide-y divide-stone-100">{[...sortedGrowth].reverse().map((item) => <div key={item.id} className="flex items-center justify-between px-4 py-3 text-sm"><div><p className="font-medium text-stone-950">{item.weight} kg</p><p className="mt-0.5 text-xs text-stone-500">{formatDate(item.date)}</p></div><IconButton label="删除体重记录" onClick={() => removeEntry("growth", item.id)} /></div>)}</div>
+                </section>
+              </div>
+            )}
+          </div>
+        </main>
+
+        <Dialog open={Boolean(recordingVaccine)} onOpenChange={(open) => !open && setRecordingVaccineId(null)}>
+          <DialogContent className="w-[calc(100%-2rem)] max-w-md rounded-lg p-5 sm:p-6">
+            <DialogHeader><DialogTitle>登记实际接种日期</DialogTitle><DialogDescription>{recordingVaccine ? `${recordingVaccine.vaccine} ${recordingVaccine.dose} · 建议 ${formatDate(recordingVaccine.plannedDate)}` : ""}</DialogDescription></DialogHeader>
+            <Field label="实际接种日期"><Input type="date" max={today} value={vaccineDateDraft} onChange={(event) => setVaccineDateDraft(event.target.value)} /></Field>
+            <div className="grid grid-cols-2 gap-3"><Button variant="outline" onClick={() => setVaccineDateDraft(today)}>设为今天</Button><Button disabled={!vaccineDateDraft} onClick={saveVaccineRecord}><CheckCircle2 className="h-4 w-4" />保存记录</Button></div>
+            {recordingVaccine?.doneDate && <button type="button" className="text-sm font-medium text-rose-700" onClick={() => { updateVaccine(recordingVaccine.id, { doneDate: "", status: "planned" }); setRecordingVaccineId(null); }}>清除实际接种日期</button>}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={weightDialogOpen} onOpenChange={setWeightDialogOpen}>
+          <DialogContent className="w-[calc(100%-2rem)] max-w-md rounded-lg p-5 sm:p-6">
+            <DialogHeader><DialogTitle>记录体重</DialogTitle><DialogDescription>同一天再次保存会更新原记录，不会生成重复数据。</DialogDescription></DialogHeader>
+            <div className="grid grid-cols-2 gap-3"><Field label="测量日期"><Input type="date" max={today} value={growthForm.date} onChange={(event) => setGrowthForm({ ...growthForm, date: event.target.value })} /></Field><Field label="体重（kg）"><Input type="number" min="0.1" max="200" step="0.01" inputMode="decimal" value={growthForm.weight} onChange={(event) => setGrowthForm({ ...growthForm, weight: event.target.value })} placeholder="例如 6.80" autoFocus /></Field></div>
+            <Button className="w-full" disabled={!growthForm.date || !Number(growthForm.weight)} onClick={addGrowth}><CheckCircle2 className="h-4 w-4" />保存体重</Button>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 
@@ -1122,6 +1190,61 @@ function SyncIndicator({ status }: { status: SyncStatus }) {
       <Icon className={cn("h-3.5 w-3.5", isBusy && "animate-spin")} />
       {labels[status]}
     </span>
+  );
+}
+
+function CloudError({ message }: { message: string }) {
+  return (
+    <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm leading-5 text-rose-800">
+      <CloudOff className="mt-0.5 h-4 w-4 shrink-0" />
+      <span>{message}</span>
+    </div>
+  );
+}
+
+function WeightChart({
+  data,
+  id,
+}: {
+  data: Array<{ date: string; weight: number; height: number; head: number }>;
+  id: string;
+}) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={data} margin={{ top: 8, right: 6, left: -26, bottom: 0 }}>
+        <defs>
+          <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#0284c7" stopOpacity={0.24} />
+            <stop offset="95%" stopColor="#0284c7" stopOpacity={0.02} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" vertical={false} />
+        <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={11} minTickGap={24} />
+        <YAxis tickLine={false} axisLine={false} fontSize={11} width={38} />
+        <Tooltip formatter={(value) => [`${value} kg`, "体重"]} />
+        <Area type="monotone" dataKey="weight" stroke="#0284c7" fill={`url(#${id})`} strokeWidth={2.25} />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+function QuickLink({
+  href,
+  icon: Icon,
+  label,
+  detail,
+}: {
+  href: string;
+  icon: ComponentType<{ className?: string }>;
+  label: string;
+  detail: string;
+}) {
+  return (
+    <a href={href} className="group flex items-center gap-3 rounded-lg border border-stone-200 bg-white p-4 shadow-sm transition-colors hover:border-stone-300 hover:bg-stone-50">
+      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-stone-100 text-stone-700"><Icon className="h-5 w-5" /></span>
+      <div className="min-w-0 flex-1"><p className="font-medium text-stone-950">{label}</p><p className="mt-0.5 truncate text-xs text-stone-500">{detail}</p></div>
+      <ChevronRight className="h-4 w-4 text-stone-400 transition-transform group-hover:translate-x-0.5" />
+    </a>
   );
 }
 

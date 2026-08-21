@@ -17,13 +17,13 @@ const supabasePublishableKey =
 ---
 
 <BaseLayout
-  title="鱼蛋看板"
-  description="记录鱼蛋的生长数据、疫苗计划、喂养护理和重要提醒。"
-  canonical="/"
+  title="保健档案"
+  description="记录鱼蛋的疫苗实际接种日期和体重变化。"
+  canonical="/health"
 >
   <YudanDashboard
     client:only="react"
-    view="dashboard"
+    view="health"
     supabaseUrl={supabaseUrl}
     supabasePublishableKey={supabasePublishableKey}
   />
