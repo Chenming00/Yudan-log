@@ -1,7 +1,7 @@
 ---
-title: 🐟 鱼蛋小账本 API 使用教程：全部接口详解
-date: 2026-05-03
-summary: 鱼蛋小账本全部 API 接口完整文档，涵盖交易增删改查、游标分页、月度聚合、日明细查询，附请求示例与响应结构。
+title: 🐟 鱼蛋看板与小账本 API 使用教程
+date: 2026-08-21
+summary: 鱼蛋看板与小账本 API 完整文档，包含 API Key 鉴权、疫苗和体重写入，以及账本增删改查的请求示例与响应结构。
 tags:
   - 技术笔记
   - 鱼蛋小账本
@@ -11,7 +11,7 @@ cover: /logo.png
 
 ## 概览
 
-鱼蛋小账本提供 6 个 RESTful API，用于管理个人收支记录。所有接口返回 JSON，写入类接口需要 Bearer Token 认证。
+鱼蛋站点提供 9 个主要 REST API，用于记录疫苗、体重和家庭收支。所有接口返回 JSON；看板接口统一使用 API Key，账本写入接口接受 API Key 或授权的 GitHub 登录令牌。
 
 | 接口 | 方法 | 用途 | 认证 |
 |------|------|------|------|
@@ -21,18 +21,175 @@ cover: /logo.png
 | `/api/add` | POST | 新增交易 | 是 |
 | `/api/edit` | PATCH | 修改交易 | 是 |
 | `/api/delete` | DELETE | 删除交易 | 是 |
+| `/api/yudan` | GET | 读取疫苗和体重记录 | 是 |
+| `/api/yudan/weight` | POST | 新增或更新体重 | 是 |
+| `/api/yudan/vaccine` | POST | 登记实际接种日期 | 是 |
 
 ---
 
 ## 认证
 
-写入类接口（add / edit / delete）需要在请求头中携带 API Key：
+调用看板接口，或通过 API 写入账本时，需要在请求头中携带 API Key：
 
 ```
-Authorization: Bearer YOUR_API_KEY
+Authorization: Bearer <API_KEY>
 ```
 
-读取类接口无需认证，可直接访问。
+API Key 已配置在 Vercel 的 `API_KEY` 环境变量中。不要把真实 Key 写进网页、前端 JavaScript、GitHub 仓库或聊天记录；应把它保存在调用方的环境变量或密钥管理器中。
+
+在终端中可以临时设置一个只在当前会话生效的变量：
+
+```bash
+# macOS / Linux
+export YUDAN_API_KEY='你的 API Key'
+```
+
+```powershell
+# Windows PowerShell
+$env:YUDAN_API_KEY = '你的 API Key'
+```
+
+账本的查询接口 `/api/list`、`/api/monthly` 和 `/api/daily` 仍可公开读取。
+
+---
+
+## 疫苗与体重看板 API
+
+看板 API 的正式地址统一以 `https://cost.ykn.cm` 开头。日期必须使用 `YYYY-MM-DD` 格式，并且不能晚于当天。
+
+### 读取当前看板记录
+
+```http
+GET /api/yudan
+```
+
+```bash
+curl "https://cost.ykn.cm/api/yudan" \
+  -H "Authorization: Bearer $YUDAN_API_KEY"
+```
+
+成功时返回出生日期、已完成的疫苗记录、体重记录和最后更新时间。字段结构如下，不包含任何真实记录：
+
+```typescript
+interface DashboardResponse {
+  success: true;
+  data: {
+    birthday: string | null;
+    vaccine_records: Array<{
+      id: string;
+      vaccine: string;
+      dose: string;
+      ageLabel: string;
+      doneDate: string;
+    }>;
+    weight_records: Array<{
+      id: string;
+      date: string;
+      weight: number;
+    }>;
+    updated_at: string;
+  };
+}
+```
+
+### 写入体重
+
+```http
+POST /api/yudan/weight
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `date` | string | 是 | 测量日期，格式为 `YYYY-MM-DD` |
+| `weight` | number | 是 | 体重，单位为 kg，允许范围 `0.1` 到 `200` |
+
+```bash
+MEASURED_DATE='<YYYY-MM-DD>'
+WEIGHT_KG='<KG>'
+
+curl -X POST "https://cost.ykn.cm/api/yudan/weight" \
+  -H "Authorization: Bearer $YUDAN_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{\"date\":\"$MEASURED_DATE\",\"weight\":$WEIGHT_KG}"
+```
+
+成功时，`data.record` 返回保存后的记录，`data.created` 表示这次是新建还是更新。
+
+同一天再次调用会更新原记录，而不是产生重复数据。此时响应中的 `created` 为 `false`。
+
+### 写入实际接种日期
+
+```http
+POST /api/yudan/vaccine
+```
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `vaccine` | string | 是 | 疫苗名称，例如 `乙肝疫苗` |
+| `dose` | string | 是 | 剂次，例如 `第 1 剂` |
+| `age_label` | string | 是 | 看板中的接种年龄标签，例如 `出生后 24 小时内` |
+| `actual_date` | string | 是 | 实际接种日期，格式为 `YYYY-MM-DD` |
+
+```bash
+VACCINATION_DATE='<YYYY-MM-DD>'
+
+curl -X POST "https://cost.ykn.cm/api/yudan/vaccine" \
+  -H "Authorization: Bearer $YUDAN_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{\"vaccine\":\"乙肝疫苗\",\"dose\":\"第 1 剂\",\"age_label\":\"出生后 24 小时内\",\"actual_date\":\"$VACCINATION_DATE\"}"
+```
+
+成功时，`data.record` 返回保存后的接种记录，`data.created` 表示这次是新建还是更新。
+
+系统使用“疫苗名称 + 剂次 + 接种年龄标签”识别同一条计划。三项完全相同时，再次调用会更新实际接种日期，`created` 返回 `false`。`age_label` 最好直接使用看板显示的原始标签，否则可能被识别为另一条记录。
+
+### 在 JavaScript 或自动化工具中调用
+
+服务端脚本、定时任务、快捷指令或自动化平台都可以调用这组接口。下面是一个 Node.js 示例：
+
+```javascript
+const baseUrl = 'https://cost.ykn.cm';
+const apiKey = process.env.YUDAN_API_KEY;
+
+if (!apiKey) throw new Error('缺少 YUDAN_API_KEY');
+
+async function callYudanApi(path, body) {
+  const response = await fetch(`${baseUrl}${path}`, {
+    method: body ? 'POST' : 'GET',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      ...(body ? { 'Content-Type': 'application/json' } : {}),
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || `请求失败：${response.status}`);
+  return result.data;
+}
+
+await callYudanApi('/api/yudan/weight', {
+  date: process.env.MEASURED_DATE,
+  weight: Number(process.env.WEIGHT_KG),
+});
+
+await callYudanApi('/api/yudan/vaccine', {
+  vaccine: '乙肝疫苗',
+  dose: '第 1 剂',
+  age_label: '出生后 24 小时内',
+  actual_date: process.env.VACCINATION_DATE,
+});
+```
+
+### 看板 API 常见错误
+
+| 状态码 | 原因 |
+|--------|------|
+| 400 | JSON、日期、体重或疫苗字段不符合要求 |
+| 401 | API Key 无效或没有提供 |
+| 500 | 数据库连接或服务端更新失败 |
+
+API Key 只决定是否允许 API 调用；真正的数据写入仍由服务端完成，Supabase Secret Key 不会发送给调用方。
 
 ---
 
@@ -55,16 +212,16 @@ GET /api/list
 
 ```bash
 # 首页加载（无 cursor）
-curl "https://your-domain/api/list?limit=30"
+curl "https://cost.ykn.cm/api/list?limit=30"
 
 # 加载下一页
-curl "https://your-domain/api/list?limit=30&cursor=2026-05-01T12:00:00Z"
+curl "https://cost.ykn.cm/api/list?limit=30&cursor=2026-05-01T12:00:00Z"
 
 # 只查支出
-curl "https://your-domain/api/list?type=expense&limit=50"
+curl "https://cost.ykn.cm/api/list?type=expense&limit=50"
 
 # 按分类筛选
-curl "https://your-domain/api/list?category=喂养用品"
+curl "https://cost.ykn.cm/api/list?category=喂养用品"
 ```
 
 ### 响应结构
@@ -131,7 +288,7 @@ GET /api/monthly
 ### 请求示例
 
 ```bash
-curl "https://your-domain/api/monthly?year=2026&month=5"
+curl "https://cost.ykn.cm/api/monthly?year=2026&month=5"
 ```
 
 ### 响应结构
@@ -216,7 +373,7 @@ GET /api/daily
 ### 请求示例
 
 ```bash
-curl "https://your-domain/api/daily?year=2026&month=5&day=1"
+curl "https://cost.ykn.cm/api/daily?year=2026&month=5&day=1"
 ```
 
 ### 响应结构
@@ -252,7 +409,7 @@ POST /api/add
 
 ```
 Content-Type: application/json
-Authorization: Bearer YOUR_API_KEY
+Authorization: Bearer <API_KEY>
 ```
 
 ### 请求体
@@ -268,9 +425,9 @@ Authorization: Bearer YOUR_API_KEY
 ### 请求示例
 
 ```bash
-curl -X POST "https://your-domain/api/add" \
+curl -X POST "https://cost.ykn.cm/api/add" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Authorization: Bearer $YUDAN_API_KEY" \
   -d '{
     "amount": 120.5,
     "type": "expense",
@@ -317,7 +474,7 @@ PATCH /api/edit
 
 ```
 Content-Type: application/json
-Authorization: Bearer YOUR_API_KEY
+Authorization: Bearer <API_KEY>
 ```
 
 ### 请求体
@@ -336,9 +493,9 @@ Authorization: Bearer YOUR_API_KEY
 ### 请求示例
 
 ```bash
-curl -X PATCH "https://your-domain/api/edit" \
+curl -X PATCH "https://cost.ykn.cm/api/edit" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Authorization: Bearer $YUDAN_API_KEY" \
   -d '{
     "id": "a1b2c3d4-...",
     "amount": 150,
@@ -383,7 +540,7 @@ DELETE /api/delete
 
 ```
 Content-Type: application/json
-Authorization: Bearer YOUR_API_KEY
+Authorization: Bearer <API_KEY>
 ```
 
 ### 请求体
@@ -395,9 +552,9 @@ Authorization: Bearer YOUR_API_KEY
 ### 请求示例
 
 ```bash
-curl -X DELETE "https://your-domain/api/delete" \
+curl -X DELETE "https://cost.ykn.cm/api/delete" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Authorization: Bearer $YUDAN_API_KEY" \
   -d '{ "id": "a1b2c3d4-..." }'
 ```
 
@@ -421,19 +578,26 @@ curl -X DELETE "https://your-domain/api/delete" \
 
 ## 完整使用流程
 
-### 场景：构建一个简单的记账页面
+### 场景：构建一个服务端记账工具
+
+下面涉及 API Key 的 JavaScript 必须运行在服务端脚本或可信自动化环境中，不能打包进浏览器页面。
 
 **第 1 步：加载首页数据**
 
 ```javascript
+const apiBaseUrl = 'https://cost.ykn.cm';
+const apiKey = process.env.YUDAN_API_KEY;
+
+if (!apiKey) throw new Error('缺少 YUDAN_API_KEY');
+
 // 概览 Tab：请求月度聚合
-const monthly = await fetch('/api/monthly?year=2026&month=5').then(r => r.json());
+const monthly = await fetch(`${apiBaseUrl}/api/monthly?year=2026&month=5`).then(r => r.json());
 console.log(`本月支出: ¥${monthly.data.totalExpense}`);
 console.log(`上月支出: ¥${monthly.data.prevMonthExpense}`);
 console.log(`交易笔数: ${monthly.data.transactionCount}`);
 
 // 明细 Tab：请求第一页
-const list = await fetch('/api/list?limit=30').then(r => r.json());
+const list = await fetch(`${apiBaseUrl}/api/list?limit=30`).then(r => r.json());
 console.log(`加载了 ${list.data.length} 条记录`);
 console.log(`还有更多: ${list.hasMore}`);
 ```
@@ -443,7 +607,7 @@ console.log(`还有更多: ${list.hasMore}`);
 ```javascript
 async function loadMore() {
   if (!list.hasMore) return;
-  const next = await fetch(`/api/list?limit=30&cursor=${list.nextCursor}`).then(r => r.json());
+  const next = await fetch(`${apiBaseUrl}/api/list?limit=30&cursor=${list.nextCursor}`).then(r => r.json());
   list.data.push(...next.data);
   list.nextCursor = next.nextCursor;
   list.hasMore = next.hasMore;
@@ -453,11 +617,11 @@ async function loadMore() {
 **第 3 步：新增一笔记录**
 
 ```javascript
-const res = await fetch('/api/add', {
+const res = await fetch(`${apiBaseUrl}/api/add`, {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer YOUR_API_KEY',
+    'Authorization': `Bearer ${apiKey}`,
   },
   body: JSON.stringify({
     amount: 45,
@@ -472,11 +636,11 @@ console.log(`新增成功，ID: ${res.data.id}`);
 **第 4 步：修改记录**
 
 ```javascript
-await fetch('/api/edit', {
+await fetch(`${apiBaseUrl}/api/edit`, {
   method: 'PATCH',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer YOUR_API_KEY',
+    'Authorization': `Bearer ${apiKey}`,
   },
   body: JSON.stringify({
     id: 'a1b2c3d4-...',
@@ -488,11 +652,11 @@ await fetch('/api/edit', {
 **第 5 步：删除记录**
 
 ```javascript
-await fetch('/api/delete', {
+await fetch(`${apiBaseUrl}/api/delete`, {
   method: 'DELETE',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer YOUR_API_KEY',
+    'Authorization': `Bearer ${apiKey}`,
   },
   body: JSON.stringify({ id: 'a1b2c3d4-...' }),
 });
@@ -501,7 +665,7 @@ await fetch('/api/delete', {
 **第 6 步：查看某日详情**
 
 ```javascript
-const daily = await fetch('/api/daily?year=2026&month=5&day=1').then(r => r.json());
+const daily = await fetch(`${apiBaseUrl}/api/daily?year=2026&month=5&day=1`).then(r => r.json());
 daily.data.forEach(t => {
   console.log(`${t.category}: ¥${t.amount} - ${t.note}`);
 });
