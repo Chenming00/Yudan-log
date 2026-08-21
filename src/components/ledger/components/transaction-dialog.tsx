@@ -14,7 +14,7 @@ interface TransactionDetailProps {
   transaction: Transaction | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  apiKey: string | null;
+  authToken: string | null;
   onUpdated: () => void;
 }
 
@@ -46,7 +46,7 @@ export function TransactionDialog({
   transaction,
   open,
   onOpenChange,
-  apiKey,
+  authToken,
   onUpdated,
 }: TransactionDetailProps) {
   const [editing, setEditing] = useState(false);
@@ -66,16 +66,16 @@ export function TransactionDialog({
     minute: "2-digit",
   });
 
-  const canEdit = Boolean(apiKey);
+  const canEdit = Boolean(authToken);
 
   const handleSave = async () => {
-    if (!apiKey) return;
+    if (!authToken) return;
     setSaving(true);
     setActionError(null);
     try {
       const res = await fetch("/api/edit", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({
           id: transaction.id,
           amount: parseFloat(editForm.amount),
@@ -100,13 +100,13 @@ export function TransactionDialog({
   };
 
   const handleDelete = async () => {
-    if (!apiKey) return;
+    if (!authToken) return;
     setDeleting(true);
     setActionError(null);
     try {
       const res = await fetch("/api/delete", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({ id: transaction.id }),
       });
       const data = await res.json();

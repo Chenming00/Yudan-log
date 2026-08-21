@@ -2,6 +2,9 @@
 
 import { Suspense, lazy, useState, useEffect, useCallback, useMemo } from "react";
 import { Settings, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import type { Session } from "@supabase/supabase-js";
+import { isGitHubProvider, isOwnerEmail } from "@/lib/auth";
+import { getBrowserSupabaseClient } from "@/lib/supabase-browser";
 import { SummaryCards } from "./dashboard/summary-cards";
 import { DetailList } from "./dashboard/detail-list";
 import { TransactionDialog } from "./components/transaction-dialog";
@@ -26,6 +29,11 @@ function getMonthKey(date: Date) {
 interface MonthParams {
   year: number;
   month: number;
+}
+
+interface LedgerPageProps {
+  supabaseUrl?: string;
+  supabasePublishableKey?: string;
 }
 
 function LoadingSkeleton() {
@@ -61,12 +69,23 @@ function ChartSkeleton({ compact = false }: { compact?: boolean }) {
   );
 }
 
-export default function LedgerPage() {
+export default function LedgerPage({
+  supabaseUrl = "",
+  supabasePublishableKey = "",
+}: LedgerPageProps) {
+  const supabase = useMemo(
+    () => getBrowserSupabaseClient(supabaseUrl, supabasePublishableKey),
+    [supabasePublishableKey, supabaseUrl]
+  );
   const [apiKey, setApiKey] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return localStorage.getItem("api_key");
   });
-  const canManageTransactions = Boolean(apiKey);
+  const [session, setSession] = useState<Session | null>(null);
+  const githubAuthorized =
+    isOwnerEmail(session?.user.email) && isGitHubProvider(session?.user.app_metadata);
+  const writeToken = githubAuthorized ? session?.access_token || null : apiKey;
+  const canManageTransactions = Boolean(writeToken);
   const [monthlyData, setMonthlyData] = useState<MonthlyData | null>(null);
   const [detailTransactions, setDetailTransactions] = useState<Transaction[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -81,6 +100,38 @@ export default function LedgerPage() {
   const [activeView, setActiveView] = useState<"home" | "history">("home");
   const [selectedMonth, setSelectedMonth] = useState(() => getMonthKey(new Date()));
   const [viewAll, setViewAll] = useState(false);
+
+  useEffect(() => {
+    if (!supabase) return;
+
+    let active = true;
+    void supabase.auth.getSession().then(({ data }) => {
+      if (active) setSession(data.session);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (active) setSession(nextSession);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  const signInWithGitHub = useCallback(async () => {
+    if (!supabase) return;
+    await supabase.auth.signInWithOAuth({
+      provider: "github",
+      options: { redirectTo: window.location.href.split("#")[0] },
+    });
+  }, [supabase]);
+
+  const signOutGitHub = useCallback(async () => {
+    await supabase?.auth.signOut();
+  }, [supabase]);
 
   const navigateMonth = (delta: number) => {
     setSelectedMonth((prev) => {
@@ -195,6 +246,7 @@ export default function LedgerPage() {
                 onClick={() => setSettingsOpen(true)}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-muted/60 text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-95"
                 aria-label="设置"
+                title={githubAuthorized ? "GitHub 已授权" : canManageTransactions ? "API Key 已授权" : "设置写入权限"}
               >
                 <Settings className="h-[18px] w-[18px]" />
               </button>
@@ -355,8 +407,8 @@ export default function LedgerPage() {
               ? "bg-expense text-expense-foreground"
               : "bg-muted text-muted-foreground"
           }`}
-          aria-label={canManageTransactions ? "记一笔" : "需要 API Key"}
-          title={canManageTransactions ? "记一笔" : "填写 API Key 后才可记账"}
+          aria-label={canManageTransactions ? "记一笔" : "需要登录或 API Key"}
+          title={canManageTransactions ? "记一笔" : "使用 GitHub 登录或填写 API Key 后记账"}
         >
           <Plus className="h-6 w-6" />
         </button>
@@ -368,7 +420,7 @@ export default function LedgerPage() {
         transaction={selectedTransaction}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        apiKey={apiKey}
+        authToken={writeToken}
         onUpdated={handleRefresh}
       />
 
@@ -377,16 +429,21 @@ export default function LedgerPage() {
         key={addOpen ? "add-open" : "add-closed"}
         open={addOpen}
         onOpenChange={setAddOpen}
-        apiKey={apiKey}
+        authToken={writeToken}
         onAdded={handleRefresh}
       />
 
       {/* 设置对话框 */}
       <SettingsDialog
-        key={`${settingsOpen ? "settings-open" : "settings-closed"}-${apiKey ?? ""}`}
+        key={`${settingsOpen ? "settings-open" : "settings-closed"}-${apiKey ?? ""}-${session?.user.email ?? ""}`}
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
         currentKey={apiKey}
+        githubEmail={session?.user.email}
+        githubAuthorized={githubAuthorized}
+        githubAvailable={Boolean(supabase)}
+        onGitHubSignIn={signInWithGitHub}
+        onGitHubSignOut={signOutGitHub}
         onSave={(key) => {
           if (key) {
             localStorage.setItem("api_key", key);

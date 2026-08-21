@@ -11,7 +11,7 @@ import type { TransactionFormState } from '../types';
 interface AddDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  apiKey: string | null;
+  authToken: string | null;
   onAdded: () => void;
 }
 
@@ -23,7 +23,7 @@ function createDefaultForm(): TransactionFormState {
   };
 }
 
-export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProps) {
+export function AddDialog({ open, onOpenChange, authToken, onAdded }: AddDialogProps) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(createDefaultForm);
@@ -43,8 +43,8 @@ export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProp
   }, [open]);
 
   const handleSubmit = async () => {
-    if (!apiKey) {
-      setError('请先在设置中填写 API Key');
+    if (!authToken) {
+      setError('请先使用 GitHub 登录或填写 API Key');
       return;
     }
 
@@ -61,7 +61,7 @@ export function AddDialog({ open, onOpenChange, apiKey, onAdded }: AddDialogProp
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
+          Authorization: `Bearer ${authToken}`,
         },
         body: JSON.stringify({
           amount: Number(form.amount),
