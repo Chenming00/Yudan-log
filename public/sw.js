@@ -1,5 +1,5 @@
-const CACHE_NAME = 'yudanhuafei-v3';
-const PRECACHE_URLS = ['/', '/blog', '/ledger', '/logo.png', '/apple-icon.png', '/offline.html'];
+const CACHE_NAME = 'yudanhuafei-v4';
+const PRECACHE_URLS = ['/offline.html'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -21,9 +21,10 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
   const { request } = event;
-  const acceptsHtml = request.headers.get('accept')?.includes('text/html');
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
 
-  if (acceptsHtml) {
+  if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request)
         .then((response) => {
@@ -36,13 +37,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  if (!url.pathname.startsWith('/_astro/') && request.destination !== 'image') return;
+
   event.respondWith(
-    fetch(request)
-      .then((response) => {
-        const clone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-        return response;
-      })
-      .catch(() => caches.match(request))
+    caches.match(request).then((cached) => {
+      const refresh = fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return response;
+        })
+        .catch((error) => {
+          if (cached) return cached;
+          throw error;
+        });
+
+      return cached || refresh;
+    })
   );
 });

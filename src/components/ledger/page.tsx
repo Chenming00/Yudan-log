@@ -2,7 +2,7 @@
 
 import { Suspense, lazy, useState, useEffect, useCallback, useMemo } from "react";
 import { Settings, Plus, ChevronLeft, ChevronRight } from "lucide-react";
-import type { Session } from "@supabase/supabase-js";
+import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { isGitHubProvider, isOwnerEmail } from "@/lib/auth";
 import { getBrowserSupabaseClient } from "@/lib/supabase-browser";
 import { SummaryCards } from "./dashboard/summary-cards";
@@ -73,10 +73,7 @@ export default function LedgerPage({
   supabaseUrl = "",
   supabasePublishableKey = "",
 }: LedgerPageProps) {
-  const supabase = useMemo(
-    () => getBrowserSupabaseClient(supabaseUrl, supabasePublishableKey),
-    [supabasePublishableKey, supabaseUrl]
-  );
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return localStorage.getItem("api_key");
@@ -100,6 +97,16 @@ export default function LedgerPage({
   const [activeView, setActiveView] = useState<"home" | "history">("home");
   const [selectedMonth, setSelectedMonth] = useState(() => getMonthKey(new Date()));
   const [viewAll, setViewAll] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    void getBrowserSupabaseClient(supabaseUrl, supabasePublishableKey).then((client) => {
+      if (active) setSupabase(client);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabasePublishableKey, supabaseUrl]);
 
   useEffect(() => {
     if (!supabase) return;

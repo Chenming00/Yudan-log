@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import {
-  Activity,
   ArrowRight,
   Baby,
   Bell,
@@ -13,7 +12,6 @@ import {
   Cloud,
   CloudOff,
   ClipboardList,
-  Filter,
   CircleUserRound,
   HeartPulse,
   Info,
@@ -24,18 +22,8 @@ import {
   ShieldCheck,
   Syringe,
   Trash2,
-  Utensils,
   Weight,
 } from "lucide-react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import {
@@ -52,6 +40,8 @@ import type { WeightAssessment } from "@/src/lib/growth-standards";
 import { YUDAN_BIRTHDAY } from "@/src/lib/yudan-profile";
 import { getBrowserSupabaseClient } from "@/lib/supabase-browser";
 import { cn } from "@/lib/utils";
+
+const WeightChart = lazy(() => import("./weight-chart"));
 
 type GrowthEntry = {
   id: string;
@@ -602,17 +592,15 @@ export default function YudanDashboard({
   supabasePublishableKey = "",
   view = "dashboard",
 }: YudanDashboardProps) {
-  const supabase = useMemo(
-    () => getBrowserSupabaseClient(supabaseUrl, supabasePublishableKey),
-    [supabasePublishableKey, supabaseUrl]
-  );
-  const [data, setData] = useState<DashboardData>(defaultData);
+  const hasSupabase = Boolean(supabaseUrl && supabasePublishableKey);
+  const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
+  const [data, setData] = useState<DashboardData>(hasSupabase ? previewData : defaultData);
   const [vaccineCatalog, setVaccineCatalog] = useState<CloudVaccinePlan[]>([]);
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(true);
   const [authReady, setAuthReady] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [cloudReady, setCloudReady] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>(supabase ? "loading" : "local");
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>(hasSupabase ? "loading" : "local");
   const [cloudError, setCloudError] = useState("");
   const [loginPending, setLoginPending] = useState(false);
   const [loginError, setLoginError] = useState("");
@@ -637,25 +625,36 @@ export default function YudanDashboard({
     detail: "",
   });
   const isOwner = isOwnerEmail(session?.user.email) && isGitHubProvider(session?.user.app_metadata);
-  const isPreview = Boolean(supabase && (!session || !isOwner));
-  const canEdit = !supabase || Boolean(session && isOwner);
+  const isPreview = Boolean(hasSupabase && (!session || !isOwner));
+  const canEdit = !hasSupabase || Boolean(session && isOwner);
 
   useEffect(() => {
-    setData(supabase ? previewData : readStoredData());
+    let active = true;
+    void getBrowserSupabaseClient(supabaseUrl, supabasePublishableKey).then((client) => {
+      if (active) setSupabase(client);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabasePublishableKey, supabaseUrl]);
+
+  useEffect(() => {
+    setData(hasSupabase ? previewData : readStoredData());
     if (view === "health") {
       const tab = new URLSearchParams(window.location.search).get("tab");
       setActiveView(tab === "vaccine" || tab === "vaccines" ? "vaccines" : "growth");
     }
     setReady(true);
-  }, [supabase, view]);
+  }, [hasSupabase, view]);
 
   useEffect(() => {
-    if (!supabase) {
+    if (!hasSupabase) {
       setAuthReady(true);
       setCloudReady(true);
       setSyncStatus("local");
       return;
     }
+    if (!supabase) return;
 
     let active = true;
     setAuthReady(false);
@@ -684,7 +683,7 @@ export default function YudanDashboard({
       active = false;
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [hasSupabase, supabase]);
 
   useEffect(() => {
     if (!ready || !supabase || !session?.user.id || !isOwner) return;
@@ -745,13 +744,13 @@ export default function YudanDashboard({
 
   useEffect(() => {
     if (!ready) return;
-    if (supabase && (!session?.user.id || !isOwner || !cloudReady)) return;
+    if (hasSupabase && (!session?.user.id || !isOwner || !cloudReady)) return;
 
     const storageKey = session?.user.id
       ? `yudan-dashboard-v2:${session.user.id}`
       : "yudan-dashboard-v2";
     window.localStorage.setItem(storageKey, JSON.stringify(data));
-  }, [cloudReady, data, isOwner, ready, session?.user.id, supabase]);
+  }, [cloudReady, data, hasSupabase, isOwner, ready, session?.user.id]);
 
   useEffect(() => {
     if (!ready || !cloudReady || !supabase || !session?.user.id || !isOwner) return;
@@ -925,7 +924,7 @@ export default function YudanDashboard({
     }
   }
 
-  if (!ready || !authReady || (supabase && session && isOwner && !cloudReady)) {
+  if (!ready || (authReady && supabase && session && isOwner && !cloudReady)) {
     return (
       <main className="grid min-h-screen place-items-center bg-[#f7f8f5] text-stone-500">
         <div className="flex items-center gap-2 text-sm">
@@ -1002,7 +1001,7 @@ export default function YudanDashboard({
                 </div>
                 {weightAssessments.length > 0 && <WeightStandardComparison assessments={weightAssessments} />}
                 <div className="mt-4 h-40">
-                  {chartData.length ? <WeightChart data={chartData} id="dashboardWeight" /> : <EmptyState text="还没有体重记录" compact />}
+                  {chartData.length ? <Suspense fallback={<ChartLoading />}><WeightChart data={chartData} id="dashboardWeight" /></Suspense> : <EmptyState text="还没有体重记录" compact />}
                 </div>
                 <a href="/health?tab=weight" className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50">进入体重档案 <ArrowRight className="h-4 w-4" /></a>
               </section>
@@ -1092,7 +1091,7 @@ export default function YudanDashboard({
               <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
                 <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
                   <div className="flex items-start justify-between gap-4"><div><h2 className="font-semibold text-stone-950">体重趋势</h2><p className="mt-1 text-xs text-stone-500">按测量日期连续记录，直观看变化</p></div>{canEdit ? <Button onClick={() => setWeightDialogOpen(true)}><Plus className="h-4 w-4" />记录体重</Button> : <Button variant="outline" onClick={() => void handleLogin()}><CircleUserRound className="h-4 w-4" />登录后记录</Button>}</div>
-                  <div className="mt-5 h-72">{chartData.length ? <WeightChart data={chartData} id="healthWeight" /> : <EmptyState text="还没有体重记录" compact />}</div>
+                  <div className="mt-5 h-72">{chartData.length ? <Suspense fallback={<ChartLoading />}><WeightChart data={chartData} id="healthWeight" /></Suspense> : <EmptyState text="还没有体重记录" compact />}</div>
                 </section>
                 <section className="rounded-lg border border-stone-200 bg-white shadow-sm">
                   <div className="border-b border-stone-100 px-4 py-4"><p className="text-xs text-stone-500">最新体重</p><div className="mt-1 flex items-end justify-between"><p className="text-2xl font-semibold text-stone-950">{latestGrowth ? `${latestGrowth.weight} kg` : "待记录"}</p>{weightChange !== null && <p className={cn("text-xs font-medium", weightChange >= 0 ? "text-emerald-700" : "text-rose-700")}>较上次 {weightChange >= 0 ? "+" : ""}{weightChange} kg</p>}</div>{latestGrowth && <p className="mt-1 text-xs text-stone-500">{formatDate(latestGrowth.date)} · 男宝宝</p>}</div>
@@ -1241,37 +1240,8 @@ function WeightStandardComparison({
   );
 }
 
-function WeightChart({
-  data,
-  id,
-}: {
-  data: Array<{ date: string; weight: number; height: number; head: number }>;
-  id: string;
-}) {
-  const weights = data.map((item) => item.weight);
-  const minimum = Math.min(...weights);
-  const maximum = Math.max(...weights);
-  const padding = Math.max(0.15, (maximum - minimum) * 0.35);
-  const domainMinimum = Math.max(0, Math.floor((minimum - padding) * 10) / 10);
-  const domainMaximum = Math.ceil((maximum + padding) * 10) / 10;
-
-  return (
-    <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 2 }}>
-        <defs>
-          <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#0284c7" stopOpacity={0.24} />
-            <stop offset="95%" stopColor="#0284c7" stopOpacity={0.02} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e7e5e4" vertical={false} />
-        <XAxis dataKey="date" tickLine={false} axisLine={false} fontSize={11} minTickGap={28} tickMargin={10} />
-        <YAxis domain={[domainMinimum, domainMaximum]} tickCount={4} tickLine={false} axisLine={false} fontSize={11} width={42} tickMargin={8} tickFormatter={(value: number) => value.toFixed(1)} />
-        <Tooltip cursor={{ stroke: "#bae6fd", strokeWidth: 1 }} contentStyle={{ border: "1px solid #e7e5e4", borderRadius: 6, boxShadow: "0 8px 24px rgba(28,25,23,0.08)", fontSize: 12 }} labelStyle={{ color: "#57534e", marginBottom: 4 }} itemStyle={{ color: "#0369a1" }} formatter={(value) => [`${value} kg`, "体重"]} />
-        <Area type="monotone" dataKey="weight" stroke="#0284c7" fill={`url(#${id})`} strokeWidth={2.25} dot={data.length <= 12 ? { r: 2.5, fill: "#ffffff", stroke: "#0284c7", strokeWidth: 2 } : false} activeDot={{ r: 4, fill: "#0284c7", stroke: "#ffffff", strokeWidth: 2 }} />
-      </AreaChart>
-    </ResponsiveContainer>
-  );
+function ChartLoading() {
+  return <div className="h-full w-full animate-pulse rounded-lg bg-stone-100" aria-label="图表加载中" />;
 }
 
 function QuickLink({
