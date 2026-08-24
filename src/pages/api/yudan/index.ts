@@ -1,18 +1,18 @@
 import type { APIRoute } from 'astro';
-import { getErrorMessage, json } from '../../../lib/http';
+import { getErrorMessage, json, validateApiKey } from '../../../lib/http';
 import {
   getOwnerDashboard,
-  getVaccineCatalog,
   getVaccineRecords,
   getWeightRecords,
 } from '../../../lib/yudan-api';
 
-export const GET: APIRoute = async () => {
+export const GET: APIRoute = async ({ request }) => {
+  if (!validateApiKey(request)) {
+    return json({ error: 'API Key 无效或未提供' }, { status: 401 });
+  }
+
   try {
-    const [{ row }, vaccineCatalog] = await Promise.all([
-      getOwnerDashboard(),
-      getVaccineCatalog(),
-    ]);
+    const { row } = await getOwnerDashboard();
     return json(
       {
         success: true,
@@ -20,7 +20,6 @@ export const GET: APIRoute = async () => {
           birthday: row.birthday,
           vaccine_records: getVaccineRecords(row),
           weight_records: getWeightRecords(row),
-          vaccine_catalog: vaccineCatalog,
           updated_at: row.updated_at,
         },
       },

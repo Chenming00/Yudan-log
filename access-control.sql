@@ -22,22 +22,21 @@ to anon, authenticated
 using (true);
 
 drop policy if exists "Users can read their own Yudan dashboard" on public.yudan_dashboards;
-drop policy if exists "Public can read the Yudan dashboard" on public.yudan_dashboards;
 drop policy if exists "Users can create their own Yudan dashboard" on public.yudan_dashboards;
 drop policy if exists "Users can update their own Yudan dashboard" on public.yudan_dashboards;
 drop policy if exists "Users can delete their own Yudan dashboard" on public.yudan_dashboards;
 
-alter table public.yudan_dashboards enable row level security;
-
-revoke all on table public.yudan_dashboards from anon;
-revoke all on table public.yudan_dashboards from authenticated;
-grant select on table public.yudan_dashboards to anon;
-grant select, insert, update, delete on table public.yudan_dashboards to authenticated;
-
 drop policy if exists "Owner can read the Yudan dashboard" on public.yudan_dashboards;
-create policy "Public can read the Yudan dashboard"
-on public.yudan_dashboards for select to anon, authenticated
-using (true);
+create policy "Owner can read the Yudan dashboard"
+on public.yudan_dashboards for select to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt()) ->> 'email', '')) = 'william.chen@utah.edu'
+  and (
+    (select auth.jwt()) -> 'app_metadata' ->> 'provider' = 'github'
+    or ((select auth.jwt()) -> 'app_metadata' -> 'providers') ? 'github'
+  )
+);
 
 drop policy if exists "Owner can create the Yudan dashboard" on public.yudan_dashboards;
 create policy "Owner can create the Yudan dashboard"
