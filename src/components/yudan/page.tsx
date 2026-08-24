@@ -131,6 +131,15 @@ type CloudDashboardRow = {
   weight_records: unknown;
 };
 
+type PublicDashboardResponse = {
+  success?: boolean;
+  data?: CloudDashboardRow & {
+    vaccine_catalog?: unknown;
+    updated_at?: string;
+  };
+  error?: string;
+};
+
 type CloudVaccinePlan = {
   id: string;
   sort_order: number;
@@ -388,21 +397,6 @@ const defaultData: DashboardData = {
   ],
 };
 
-const previewBirthday = YUDAN_BIRTHDAY;
-const previewVaccines = createVaccineSchedule(previewBirthday).map((item, index) =>
-  index < 2 ? { ...item, doneDate: item.plannedDate, status: "done" as VaccineStatus } : item
-);
-const previewData: DashboardData = {
-  birthday: previewBirthday,
-  growth: [
-    { id: "preview-weight-1", date: previewBirthday, weight: 3.4, height: 0, head: 0, note: "" },
-    { id: "preview-weight-2", date: "2026-08-16", weight: 3.32, height: 0, head: 0, note: "" },
-    { id: "preview-weight-3", date: "2026-08-21", weight: 3.56, height: 0, head: 0, note: "" },
-  ],
-  vaccines: previewVaccines,
-  care: [],
-};
-
 function newId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -623,6 +617,7 @@ export default function YudanDashboard({
   const [weightDialogOpen, setWeightDialogOpen] = useState(false);
   const saveChainRef = useRef<Promise<void>>(Promise.resolve());
   const latestSaveRef = useRef(0);
+  const hasLocalEditsRef = useRef(false);
   const [growthForm, setGrowthForm] = useState({
     date: today,
     weight: "",
@@ -637,17 +632,53 @@ export default function YudanDashboard({
     detail: "",
   });
   const isOwner = isOwnerEmail(session?.user.email) && isGitHubProvider(session?.user.app_metadata);
-  const isPreview = Boolean(supabase && (!session || !isOwner));
-  const canEdit = !supabase || Boolean(session && isOwner);
+  const canEdit = Boolean(supabase && session && isOwner);
+  const isReadOnly = !canEdit;
 
   useEffect(() => {
-    setData(supabase ? previewData : readStoredData());
+    let active = true;
+
     if (view === "health") {
       const tab = new URLSearchParams(window.location.search).get("tab");
       setActiveView(tab === "vaccine" || tab === "vaccines" ? "vaccines" : "growth");
     }
-    setReady(true);
-  }, [supabase, view]);
+
+    setReady(false);
+    setSyncStatus("loading");
+    setCloudError("");
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/yudan", {
+          headers: { Accept: "application/json" },
+          cache: "no-store",
+        });
+        const payload = (await response.json()) as PublicDashboardResponse;
+        if (!response.ok || !payload.success || !payload.data) {
+          throw new Error(payload.error || "读取看板失败");
+        }
+        if (!active) return;
+
+        const catalog = Array.isArray(payload.data.vaccine_catalog)
+          ? (payload.data.vaccine_catalog as CloudVaccinePlan[])
+          : [];
+        setVaccineCatalog(catalog);
+        setData(dashboardFromCloud(payload.data, defaultData, catalog));
+        setSyncStatus("saved");
+      } catch (error) {
+        if (!active) return;
+        setData(defaultData);
+        setCloudError(getCloudErrorMessage(error));
+        setSyncStatus("error");
+      } finally {
+        if (active) setReady(true);
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [view]);
 
   useEffect(() => {
     if (!supabase) {
@@ -674,9 +705,8 @@ export default function YudanDashboard({
       setSession(nextSession);
       setAuthReady(true);
       if (!nextSession) {
-        setData(previewData);
         setCloudReady(false);
-        setSyncStatus("loading");
+        setSyncStatus("saved");
       }
     });
 
@@ -691,7 +721,6 @@ export default function YudanDashboard({
 
     let active = true;
     const userId = session.user.id;
-    const localSnapshot = readStoredData(userId);
     setCloudReady(false);
     setSyncStatus("loading");
     setCloudError("");
@@ -719,18 +748,19 @@ export default function YudanDashboard({
         setVaccineCatalog(catalog);
 
         if (cloudRow) {
-          setData(dashboardFromCloud(cloudRow as CloudDashboardRow, localSnapshot, catalog));
+          setData(dashboardFromCloud(cloudRow as CloudDashboardRow, defaultData, catalog));
         } else {
+          const localSnapshot = readStoredData(userId);
           await saveCloudDashboard(supabase, userId, localSnapshot);
           if (!active) return;
           setData(localSnapshot);
         }
 
         window.localStorage.setItem("yudan-dashboard-v2-migrated", userId);
+        hasLocalEditsRef.current = false;
         setSyncStatus("saved");
       } catch (error) {
         if (!active) return;
-        setData(localSnapshot);
         setCloudError(getCloudErrorMessage(error));
         setSyncStatus("error");
       } finally {
@@ -755,6 +785,7 @@ export default function YudanDashboard({
 
   useEffect(() => {
     if (!ready || !cloudReady || !supabase || !session?.user.id || !isOwner) return;
+    if (!hasLocalEditsRef.current) return;
 
     const userId = session.user.id;
     const snapshot = data;
@@ -767,6 +798,7 @@ export default function YudanDashboard({
         .then(() => saveCloudDashboard(supabase, userId, snapshot))
         .then(() => {
           if (saveId !== latestSaveRef.current) return;
+          hasLocalEditsRef.current = false;
           setCloudError("");
           setSyncStatus("saved");
         })
@@ -819,6 +851,8 @@ export default function YudanDashboard({
   }));
 
   function updateVaccine(id: string, patch: Partial<VaccineEntry>) {
+    if (!canEdit) return;
+    hasLocalEditsRef.current = true;
     setData((current) => ({
       ...current,
       vaccines: current.vaccines.map((item) => (item.id === id ? { ...item, ...patch } : item)),
@@ -826,11 +860,13 @@ export default function YudanDashboard({
   }
 
   function addGrowth() {
+    if (!canEdit) return;
     const weight = Number(growthForm.weight);
     const height = Number(growthForm.height);
     const head = Number(growthForm.head);
     if (!growthForm.date || !weight) return;
 
+    hasLocalEditsRef.current = true;
     setData((current) => {
       const existing = current.growth.find((item) => item.date === growthForm.date);
       const record: GrowthEntry = {
@@ -853,19 +889,21 @@ export default function YudanDashboard({
   }
 
   function openVaccineRecorder(item: VaccineEntry) {
+    if (!canEdit) return;
     setRecordingVaccineId(item.id);
     setVaccineDateDraft(item.doneDate || today);
   }
 
   function saveVaccineRecord() {
-    if (!recordingVaccineId || !vaccineDateDraft) return;
+    if (!canEdit || !recordingVaccineId || !vaccineDateDraft) return;
     updateVaccine(recordingVaccineId, { doneDate: vaccineDateDraft, status: "done" });
     setRecordingVaccineId(null);
   }
 
   function addCare() {
-    if (!careForm.time || !careForm.title.trim()) return;
+    if (!canEdit || !careForm.time || !careForm.title.trim()) return;
 
+    hasLocalEditsRef.current = true;
     setData((current) => ({
       ...current,
       care: [
@@ -883,6 +921,8 @@ export default function YudanDashboard({
   }
 
   function removeEntry(section: keyof Pick<DashboardData, "growth" | "care">, id: string) {
+    if (!canEdit) return;
+    hasLocalEditsRef.current = true;
     setData((current) => ({
       ...current,
       [section]: current[section].filter((item) => item.id !== id),
@@ -901,8 +941,8 @@ export default function YudanDashboard({
     }
 
     await supabase.auth.signOut();
-    setData(previewData);
     setCloudReady(false);
+    setSyncStatus("saved");
   }
 
   async function handleLogin() {
@@ -961,7 +1001,7 @@ export default function YudanDashboard({
                 <p className="mt-1 text-sm text-stone-500">出生第 {babyAgeDays} 天 · {formatDate(data.birthday)} 出生</p>
               </div>
               <div className="flex items-center gap-2 pt-1">
-                {isPreview ? <PreviewBadge /> : <SyncIndicator status={syncStatus} />}
+                {isReadOnly ? <ReadOnlyBadge /> : <SyncIndicator status={syncStatus} />}
                 {supabase && session && isOwner && (
                   <button type="button" className="grid h-9 w-9 place-items-center rounded-lg text-stone-400 hover:bg-white hover:text-stone-700" onClick={handleSignOut} aria-label="退出登录" title="退出登录">
                     <LogOut className="h-4 w-4" />
@@ -970,8 +1010,8 @@ export default function YudanDashboard({
               </div>
             </header>
 
-            {isPreview && <PreviewNotice email={session?.user.email} error={loginError} pending={loginPending} onLogin={() => void handleLogin()} />}
-            {canEdit && cloudError && <CloudError message={cloudError} />}
+            {isReadOnly && <ReadOnlyNotice email={session?.user.email} error={loginError} pending={loginPending} onLogin={() => void handleLogin()} />}
+            {cloudError && <CloudError message={cloudError} />}
 
             <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               <MetricCard icon={Baby} label="出生天数" value={`${babyAgeDays} 天`} detail={formatDate(data.birthday)} tone="emerald" />
@@ -1042,16 +1082,16 @@ export default function YudanDashboard({
               <div>
                 <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700"><HeartPulse className="h-4 w-4" />保健</div>
                 <h1 className="mt-2 text-2xl font-semibold text-stone-950 sm:text-3xl">体重与疫苗档案</h1>
-                <p className="mt-1 text-sm leading-6 text-stone-500">{isPreview ? "预览体重趋势、同龄标准和接种记录的呈现方式。" : "记录男宝宝的体重趋势与接种日期，接种安排以门诊和接种本为准。"}</p>
+                <p className="mt-1 text-sm leading-6 text-stone-500">记录男宝宝的体重趋势与接种日期，接种安排以门诊和接种本为准。</p>
               </div>
               <div className="flex items-end gap-3">
                 <BirthInfo />
-                <div className="mb-1 flex items-center gap-2">{isPreview ? <PreviewBadge /> : <SyncIndicator status={syncStatus} />}{supabase && session && isOwner && <button type="button" className="grid h-9 w-9 place-items-center rounded-lg text-stone-400 hover:bg-white hover:text-stone-700" onClick={handleSignOut} aria-label="退出登录" title="退出登录"><LogOut className="h-4 w-4" /></button>}</div>
+                <div className="mb-1 flex items-center gap-2">{isReadOnly ? <ReadOnlyBadge /> : <SyncIndicator status={syncStatus} />}{supabase && session && isOwner && <button type="button" className="grid h-9 w-9 place-items-center rounded-lg text-stone-400 hover:bg-white hover:text-stone-700" onClick={handleSignOut} aria-label="退出登录" title="退出登录"><LogOut className="h-4 w-4" /></button>}</div>
               </div>
             </header>
 
-            {isPreview && <PreviewNotice email={session?.user.email} error={loginError} pending={loginPending} onLogin={() => void handleLogin()} />}
-            {canEdit && cloudError && <CloudError message={cloudError} />}
+            {isReadOnly && <ReadOnlyNotice email={session?.user.email} error={loginError} pending={loginPending} onLogin={() => void handleLogin()} />}
+            {cloudError && <CloudError message={cloudError} />}
 
             <div className="grid grid-cols-2 rounded-lg bg-stone-200/70 p-1 sm:w-72">
               <button type="button" onClick={() => setActiveView("growth")} className={cn("flex h-10 items-center justify-center gap-2 rounded-md text-sm font-medium", activeView === "growth" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><Weight className="h-4 w-4" />体重</button>
@@ -1068,7 +1108,7 @@ export default function YudanDashboard({
 
                 <section className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm">
                   <div className="flex flex-col gap-3 border-b border-stone-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
-                    <div><h2 className="font-semibold text-stone-950">接种计划</h2><p className="mt-1 text-xs text-stone-500">{canEdit ? "按建议接种日期排序，点击“登记”填写实际日期" : "示例项目按建议接种日期排序，登录后显示真实记录"}</p></div>
+                    <div><h2 className="font-semibold text-stone-950">接种计划</h2><p className="mt-1 text-xs text-stone-500">{canEdit ? "按建议接种日期排序，点击“登记”填写实际日期" : "按建议接种日期排序；当前为真实记录的只读视图"}</p></div>
                     <div className="grid grid-cols-3 rounded-lg bg-stone-100 p-1">
                       {(["all", "free", "paid"] as VaccineFilter[]).map((filter) => <button key={filter} type="button" onClick={() => setVaccineFilter(filter)} className={cn("h-8 rounded-md px-3 text-xs font-medium", vaccineFilter === filter ? "bg-white text-stone-950 shadow-sm" : "text-stone-500")}>{filter === "all" ? "全部" : filter === "free" ? "免费" : "自费"}</button>)}
                     </div>
@@ -1140,7 +1180,7 @@ function BirthInfo() {
   );
 }
 
-function PreviewBadge() {
+function ReadOnlyBadge() {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-md bg-stone-100 px-2 py-1 text-xs font-medium text-stone-600">
       <CloudOff className="h-3.5 w-3.5" />
@@ -1149,7 +1189,7 @@ function PreviewBadge() {
   );
 }
 
-function PreviewNotice({
+function ReadOnlyNotice({
   email,
   error,
   pending,
