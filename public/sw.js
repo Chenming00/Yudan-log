@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yudanhuafei-v5';
+const CACHE_NAME = 'yudanhuafei-v6';
 const PRECACHE_URLS = ['/offline.html'];
 
 self.addEventListener('install', (event) => {
@@ -16,9 +16,13 @@ self.addEventListener('activate', (event) => {
       )
       .then(() => self.clients.claim())
       .then(() => self.clients.matchAll({ type: 'window' }))
-      .then((clients) =>
-        Promise.all(clients.map((client) => client.navigate(client.url).catch(() => undefined)))
-      )
+      .then((clients) => {
+        setTimeout(() => {
+          clients.forEach((client) => {
+            client.navigate(client.url).catch(() => undefined);
+          });
+        }, 0);
+      })
   );
 });
 
