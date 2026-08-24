@@ -1,6 +1,6 @@
 "use client";
 
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import {
   ArrowRight,
@@ -40,8 +40,7 @@ import type { WeightAssessment } from "@/src/lib/growth-standards";
 import { YUDAN_BIRTHDAY } from "@/src/lib/yudan-profile";
 import { getBrowserSupabaseClient } from "@/lib/supabase-browser";
 import { cn } from "@/lib/utils";
-
-const WeightChart = lazy(() => import("./weight-chart"));
+import WeightChart from "./weight-chart";
 
 type GrowthEntry = {
   id: string;
@@ -1001,7 +1000,7 @@ export default function YudanDashboard({
                 </div>
                 {weightAssessments.length > 0 && <WeightStandardComparison assessments={weightAssessments} />}
                 <div className="mt-4 h-40">
-                  {chartData.length ? <Suspense fallback={<ChartLoading />}><WeightChart data={chartData} id="dashboardWeight" /></Suspense> : <EmptyState text="还没有体重记录" compact />}
+                  {chartData.length ? <WeightChart data={chartData} id="dashboardWeight" /> : <EmptyState text="还没有体重记录" compact />}
                 </div>
                 <a href="/health?tab=weight" className="mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50">进入体重档案 <ArrowRight className="h-4 w-4" /></a>
               </section>
@@ -1091,7 +1090,7 @@ export default function YudanDashboard({
               <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
                 <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
                   <div className="flex items-start justify-between gap-4"><div><h2 className="font-semibold text-stone-950">体重趋势</h2><p className="mt-1 text-xs text-stone-500">按测量日期连续记录，直观看变化</p></div>{canEdit ? <Button onClick={() => setWeightDialogOpen(true)}><Plus className="h-4 w-4" />记录体重</Button> : <Button variant="outline" onClick={() => void handleLogin()}><CircleUserRound className="h-4 w-4" />登录后记录</Button>}</div>
-                  <div className="mt-5 h-72">{chartData.length ? <Suspense fallback={<ChartLoading />}><WeightChart data={chartData} id="healthWeight" /></Suspense> : <EmptyState text="还没有体重记录" compact />}</div>
+                  <div className="mt-5 h-72">{chartData.length ? <WeightChart data={chartData} id="healthWeight" /> : <EmptyState text="还没有体重记录" compact />}</div>
                 </section>
                 <section className="rounded-lg border border-stone-200 bg-white shadow-sm">
                   <div className="border-b border-stone-100 px-4 py-4"><p className="text-xs text-stone-500">最新体重</p><div className="mt-1 flex items-end justify-between"><p className="text-2xl font-semibold text-stone-950">{latestGrowth ? `${latestGrowth.weight} kg` : "待记录"}</p>{weightChange !== null && <p className={cn("text-xs font-medium", weightChange >= 0 ? "text-emerald-700" : "text-rose-700")}>较上次 {weightChange >= 0 ? "+" : ""}{weightChange} kg</p>}</div>{latestGrowth && <p className="mt-1 text-xs text-stone-500">{formatDate(latestGrowth.date)} · 男宝宝</p>}</div>
@@ -1238,10 +1237,6 @@ function WeightStandardComparison({
       <p className={cn("pb-3 text-[11px] leading-5 text-stone-500", compact && "pt-3")}>男宝宝年龄别体重用于观察位置与趋势；单次结果需结合身长、喂养和儿保评估。</p>
     </div>
   );
-}
-
-function ChartLoading() {
-  return <div className="h-full w-full animate-pulse rounded-lg bg-stone-100" aria-label="图表加载中" />;
 }
 
 function QuickLink({

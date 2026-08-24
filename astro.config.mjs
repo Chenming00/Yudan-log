@@ -7,6 +7,9 @@ export default defineConfig({
   adapter: vercel(),
   integrations: [react()],
   vite: {
+    build: {
+      target: 'safari13',
+    },
     resolve: {
       alias: {
         '@': new URL('.', import.meta.url).pathname,

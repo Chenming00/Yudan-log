@@ -55,6 +55,11 @@ const imageUrl = new URL(image, siteUrl).toString();
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={imageUrl} />
+    <script is:inline>
+      if (!Object.hasOwn) {
+        Object.hasOwn = (object, property) => Object.prototype.hasOwnProperty.call(Object(object), property);
+      }
+    </script>
     <slot name="head" />
   </head>
   <body class="bg-background font-sans text-foreground">
