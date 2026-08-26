@@ -37,7 +37,7 @@ import { Input } from "@/components/ui/input";
 import { isGitHubProvider, isOwnerEmail, OWNER_EMAIL } from "@/lib/auth";
 import { getMaleWeightAssessments } from "@/src/lib/growth-standards";
 import type { WeightAssessment } from "@/src/lib/growth-standards";
-import { YUDAN_BIRTHDAY } from "@/src/lib/yudan-profile";
+import { YUDAN_BIRTHDAY, ZHENGZHENG_CARE_MILESTONES } from "@/src/lib/yudan-profile";
 import { getBrowserSupabaseClient } from "@/lib/supabase-browser";
 import { cn } from "@/lib/utils";
 import WeightChart from "./weight-chart";
@@ -603,7 +603,7 @@ export default function YudanDashboard({
   const [cloudError, setCloudError] = useState("");
   const [loginPending, setLoginPending] = useState(false);
   const [loginError, setLoginError] = useState("");
-  const [activeView, setActiveView] = useState<"vaccines" | "growth">("growth");
+  const [activeView, setActiveView] = useState<"vaccines" | "growth" | "care">("growth");
   const [vaccineFilter, setVaccineFilter] = useState<VaccineFilter>("all");
   const [recordingVaccineId, setRecordingVaccineId] = useState<string | null>(null);
   const [vaccineDateDraft, setVaccineDateDraft] = useState(today);
@@ -641,7 +641,7 @@ export default function YudanDashboard({
     setData(hasSupabase ? previewData : readStoredData());
     if (view === "health") {
       const tab = new URLSearchParams(window.location.search).get("tab");
-      setActiveView(tab === "vaccine" || tab === "vaccines" ? "vaccines" : "growth");
+      setActiveView(tab === "vaccine" || tab === "vaccines" ? "vaccines" : tab === "care" ? "care" : "growth");
     }
     setReady(true);
   }, [hasSupabase, view]);
@@ -944,6 +944,7 @@ export default function YudanDashboard({
     const weightAssessments = latestGrowth
       ? getMaleWeightAssessments(data.birthday, latestGrowth.date, latestGrowth.weight)
       : [];
+    const nextCareMilestone = ZHENGZHENG_CARE_MILESTONES.find((item) => item.date >= today);
 
     if (view === "dashboard") {
       return (
@@ -992,6 +993,20 @@ export default function YudanDashboard({
               </section>
             )}
 
+            {nextCareMilestone && (
+              <section className="grid gap-4 rounded-lg border border-sky-200 bg-sky-50 p-4 sm:grid-cols-[auto_1fr_auto] sm:items-center sm:p-5">
+                <span className="grid h-11 w-11 place-items-center rounded-lg bg-white text-sky-700 shadow-sm"><HeartPulse className="h-5 w-5" /></span>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-sky-700">下一次卓正儿童保健</p>
+                  <h2 className="mt-1 text-lg font-semibold text-stone-950">{nextCareMilestone.label}</h2>
+                  <p className="mt-1 text-sm text-stone-600">{formatDate(nextCareMilestone.date)} · {nextCareMilestone.weekday}</p>
+                </div>
+                <a href="/health?tab=care" className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-sky-700 px-4 text-sm font-medium text-white hover:bg-sky-800">
+                  查看保健时间 <ArrowRight className="h-4 w-4" />
+                </a>
+              </section>
+            )}
+
             <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
               <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
                 <div className="flex items-start justify-between gap-4">
@@ -1023,7 +1038,7 @@ export default function YudanDashboard({
             </div>
 
             <section className="grid gap-3 sm:grid-cols-3">
-              <QuickLink href="/health" icon={HeartPulse} label="保健档案" detail="体重与疫苗" />
+              <QuickLink href="/health?tab=care" icon={HeartPulse} label="保健档案" detail="体重、疫苗与卓正儿保时间" />
               <QuickLink href="/ledger" icon={ClipboardList} label="家庭账本" detail="收支与月度汇总" />
               <QuickLink href="/blog" icon={NotebookPen} label="成长日志" detail="保存值得记住的日子" />
             </section>
@@ -1051,9 +1066,10 @@ export default function YudanDashboard({
             {isPreview && <PreviewNotice email={session?.user.email} error={loginError} pending={loginPending} onLogin={() => void handleLogin()} />}
             {canEdit && cloudError && <CloudError message={cloudError} />}
 
-            <div className="grid grid-cols-2 rounded-lg bg-stone-200/70 p-1 sm:w-72">
+            <div className="grid grid-cols-3 rounded-lg bg-stone-200/70 p-1 sm:w-[27rem]">
               <button type="button" onClick={() => setActiveView("growth")} className={cn("flex h-10 items-center justify-center gap-2 rounded-md text-sm font-medium", activeView === "growth" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><Weight className="h-4 w-4" />体重</button>
               <button type="button" onClick={() => setActiveView("vaccines")} className={cn("flex h-10 items-center justify-center gap-2 rounded-md text-sm font-medium", activeView === "vaccines" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><Syringe className="h-4 w-4" />疫苗</button>
+              <button type="button" onClick={() => setActiveView("care")} className={cn("flex h-10 items-center justify-center gap-2 rounded-md text-sm font-medium", activeView === "care" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><HeartPulse className="h-4 w-4" />卓正儿保</button>
             </div>
 
             {activeView === "vaccines" ? (
@@ -1086,6 +1102,8 @@ export default function YudanDashboard({
                   </div>
                 </section>
               </div>
+            ) : activeView === "care" ? (
+              <PediatricCareSchedule />
             ) : (
               <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
                 <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
@@ -1122,6 +1140,27 @@ export default function YudanDashboard({
     );
   }
 
+}
+
+function PediatricCareSchedule() {
+  return (
+    <section className="overflow-hidden rounded-lg border border-sky-200 bg-white shadow-sm">
+      <div className="border-b border-sky-100 bg-sky-50 px-4 py-4 sm:px-5">
+        <div className="flex items-start gap-3">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-sky-700"><HeartPulse className="h-4 w-4" /></span>
+          <div><h2 className="font-semibold text-stone-950">卓正儿童保健时间</h2><p className="mt-1 text-xs leading-5 text-stone-600">按鱼蛋 2026 年 8 月 12 日出生计算，具体预约以卓正门诊安排为准。</p></div>
+        </div>
+      </div>
+      <div className="grid gap-2 p-3 sm:grid-cols-2 sm:p-4 lg:grid-cols-3">
+        {ZHENGZHENG_CARE_MILESTONES.map((item) => (
+          <article key={item.id} className={cn("rounded-lg border p-3", item.date === today ? "border-sky-300 bg-sky-50" : "border-stone-200 bg-white")}>
+            <div className="flex items-center justify-between gap-3"><p className="font-medium text-stone-950">{item.label}</p>{item.date === today && <span className="rounded-full bg-sky-600 px-2 py-0.5 text-[11px] font-medium text-white">今天</span>}</div>
+            <p className="mt-2 text-sm font-semibold text-sky-700">{formatDate(item.date)}</p><p className="mt-0.5 text-xs text-stone-500">{item.weekday}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function BirthInfo() {
