@@ -1,9 +1,12 @@
+import { useState } from "react";
+
 type WeightChartProps = {
   data: Array<{ date: string; weight: number; height: number; head: number }>;
   id: string;
 };
 
 export default function WeightChart({ data, id }: WeightChartProps) {
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const width = 640;
   const height = 240;
   const padding = { top: 18, right: 18, bottom: 36, left: 48 };
@@ -28,6 +31,18 @@ export default function WeightChart({ data, id }: WeightChartProps) {
   const gridValues = Array.from({ length: 4 }, (_, index) =>
     domainMaximum - (index / 3) * domainRange
   );
+  const activeItem = activeIndex === null ? null : data[activeIndex];
+  const activeX = activeIndex === null ? 0 : x(activeIndex);
+  const activeY = activeItem ? y(activeItem.weight) : 0;
+  const tooltipWidth = 132;
+  const tooltipHeight = 52;
+  const tooltipX = Math.min(
+    width - padding.right - tooltipWidth,
+    Math.max(padding.left, activeX - tooltipWidth / 2)
+  );
+  const tooltipY = activeY - tooltipHeight - 14 < padding.top
+    ? Math.min(padding.top + plotHeight - tooltipHeight, activeY + 14)
+    : activeY - tooltipHeight - 14;
 
   return (
     <svg
@@ -53,11 +68,62 @@ export default function WeightChart({ data, id }: WeightChartProps) {
       })}
       <polygon points={areaPoints} fill={`url(#${id})`} />
       <polyline points={points} fill="none" stroke="#0284c7" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-      {data.length <= 12 && data.map((item, index) => (
-        <circle key={`${item.date}-${item.weight}`} cx={x(index)} cy={y(item.weight)} r="3.5" fill="#ffffff" stroke="#0284c7" strokeWidth="2" vectorEffect="non-scaling-stroke">
-          <title>{`${item.date}: ${item.weight} kg`}</title>
-        </circle>
+      {data.map((item, index) => (
+        <g key={`${item.date}-${item.weight}`}>
+          <circle
+            cx={x(index)}
+            cy={y(item.weight)}
+            r="16"
+            fill="transparent"
+            className="cursor-crosshair outline-none"
+            tabIndex={0}
+            role="button"
+            aria-label={`${item.date}，体重 ${item.weight} 千克`}
+            onMouseEnter={() => setActiveIndex(index)}
+            onMouseLeave={() => setActiveIndex(null)}
+            onFocus={() => setActiveIndex(index)}
+            onBlur={() => setActiveIndex(null)}
+            onClick={() => setActiveIndex((current) => current === index ? null : index)}
+          />
+          <circle
+            cx={x(index)}
+            cy={y(item.weight)}
+            r={activeIndex === index ? "5" : "3.5"}
+            fill="#ffffff"
+            stroke="#0284c7"
+            strokeWidth={activeIndex === index ? "3" : "2"}
+            vectorEffect="non-scaling-stroke"
+            pointerEvents="none"
+          />
+        </g>
       ))}
+      {activeItem && (
+        <g pointerEvents="none">
+          <line
+            x1={activeX}
+            x2={activeX}
+            y1={activeY + 8}
+            y2={padding.top + plotHeight}
+            stroke="#7dd3fc"
+            strokeWidth="1"
+            strokeDasharray="3 4"
+          />
+          <rect
+            x={tooltipX}
+            y={tooltipY}
+            width={tooltipWidth}
+            height={tooltipHeight}
+            rx="10"
+            fill="#0c4a6e"
+          />
+          <text x={tooltipX + 12} y={tooltipY + 20} fontSize="11" fill="#bae6fd">
+            {activeItem.date}
+          </text>
+          <text x={tooltipX + 12} y={tooltipY + 40} fontSize="14" fontWeight="700" fill="#ffffff">
+            {activeItem.weight} kg
+          </text>
+        </g>
+      )}
       {labelIndexes.map((index) => (
         <text key={data[index].date} x={x(index)} y={height - 10} textAnchor={index === 0 ? "start" : index === data.length - 1 ? "end" : "middle"} fontSize="11" fill="#78716c">
           {data[index].date.slice(5)}

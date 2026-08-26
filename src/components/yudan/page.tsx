@@ -966,6 +966,9 @@ export default function YudanDashboard({
           weightAssessments={weightAssessments}
           nextVaccine={nextVaccine}
           nextCareMilestone={nextCareMilestone}
+          doneVaccines={doneVaccines}
+          totalVaccines={sortedVaccines.length}
+          dueVaccineCount={dueVaccines.length}
           chartData={chartData}
           weightChange={weightChange}
         />
@@ -1083,59 +1086,141 @@ type DashboardLayoutProps = {
   weightAssessments: WeightAssessment[];
   nextVaccine?: VaccineEntry;
   nextCareMilestone?: (typeof ZHENGZHENG_CARE_MILESTONES)[number];
+  doneVaccines: number;
+  totalVaccines: number;
+  dueVaccineCount: number;
   chartData: { date: string; weight: number; height: number; head: number }[];
   weightChange: number | null;
 };
 
 function DashboardLayout({
   isPreview, previewEmail, previewError, loginPending, onLogin, syncStatus, canEdit, cloudError, onSignOut,
-  babyAgeDays, birthday, latestGrowth, weightAssessments, nextVaccine, nextCareMilestone, chartData, weightChange,
+  babyAgeDays, birthday, latestGrowth, weightAssessments, nextVaccine, nextCareMilestone,
+  doneVaccines, totalVaccines, dueVaccineCount, chartData, weightChange,
 }: DashboardLayoutProps) {
   const nextAction = nextCareMilestone && nextVaccine
     ? new Date(nextCareMilestone.date).getTime() <= new Date(nextVaccine.plannedDate).getTime()
-      ? { type: "care" as const, title: `${nextCareMilestone.label}儿保`, detail: `${formatDate(nextCareMilestone.date)} · ${nextCareMilestone.weekday}`, href: "/health?tab=care", action: "查看儿保" }
-      : { type: "vaccine" as const, title: `${nextVaccine.vaccine} ${nextVaccine.dose}`, detail: `${nextVaccine.ageLabel} · ${formatDate(nextVaccine.plannedDate)}`, href: "/health?tab=vaccine", action: "查看疫苗" }
+      ? { type: "care" as const, title: `${nextCareMilestone.label}儿保`, detail: `${formatDate(nextCareMilestone.date)} · ${nextCareMilestone.weekday}`, date: nextCareMilestone.date, href: "/health?tab=care", action: "查看儿保" }
+      : { type: "vaccine" as const, title: `${nextVaccine.vaccine} ${nextVaccine.dose}`, detail: `${nextVaccine.ageLabel} · ${formatDate(nextVaccine.plannedDate)}`, date: nextVaccine.plannedDate, href: "/health?tab=vaccine", action: "查看疫苗" }
     : nextCareMilestone
-      ? { type: "care" as const, title: `${nextCareMilestone.label}儿保`, detail: `${formatDate(nextCareMilestone.date)} · ${nextCareMilestone.weekday}`, href: "/health?tab=care", action: "查看儿保" }
+      ? { type: "care" as const, title: `${nextCareMilestone.label}儿保`, detail: `${formatDate(nextCareMilestone.date)} · ${nextCareMilestone.weekday}`, date: nextCareMilestone.date, href: "/health?tab=care", action: "查看儿保" }
       : nextVaccine
-        ? { type: "vaccine" as const, title: `${nextVaccine.vaccine} ${nextVaccine.dose}`, detail: `${nextVaccine.ageLabel} · ${formatDate(nextVaccine.plannedDate)}`, href: "/health?tab=vaccine", action: "查看疫苗" }
-        : { type: "weight" as const, title: "记录一次体重", detail: "持续观察鱼蛋的成长趋势", href: "/health?tab=weight", action: "去记录" };
+        ? { type: "vaccine" as const, title: `${nextVaccine.vaccine} ${nextVaccine.dose}`, detail: `${nextVaccine.ageLabel} · ${formatDate(nextVaccine.plannedDate)}`, date: nextVaccine.plannedDate, href: "/health?tab=vaccine", action: "查看疫苗" }
+        : { type: "weight" as const, title: "记录一次体重", detail: "持续观察鱼蛋的成长趋势", date: today, href: "/health?tab=weight", action: "去记录" };
+  const vaccineProgress = totalVaccines ? Math.round((doneVaccines / totalVaccines) * 100) : 0;
+  const actionDays = daysBetween(today, nextAction.date);
+  const actionDayLabel = actionDays === 0 ? "今天" : actionDays === 1 ? "明天" : actionDays > 1 ? `${actionDays} 天后` : `已过 ${Math.abs(actionDays)} 天`;
+  const careDays = nextCareMilestone ? daysBetween(today, nextCareMilestone.date) : null;
 
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#f5f7f4] px-4 py-4 text-stone-900 sm:px-6 sm:py-6" style={{ paddingBottom: "var(--nav-height)" }}>
-      <div className="mx-auto max-w-7xl space-y-4 sm:space-y-5">
-        <header className="rounded-2xl border border-stone-200 bg-white px-4 py-4 shadow-sm sm:px-6 sm:py-5">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><div className="flex items-center gap-2 text-sm font-semibold text-emerald-700"><Baby className="h-4 w-4" />鱼蛋看板</div><div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1"><h1 className="text-2xl font-semibold tracking-tight text-stone-950 sm:text-3xl">今天的鱼蛋</h1><span className="text-sm text-stone-500">出生第 {babyAgeDays} 天</span></div><p className="mt-1 text-sm text-stone-500">{formatDate(birthday)} 出生 · 先看需要处理的事项</p></div>
-            <div className="flex items-center justify-between gap-3 sm:justify-end">{isPreview ? <PreviewBadge /> : <SyncIndicator status={syncStatus} />}{canEdit && <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">可编辑</span>}{canEdit && <button type="button" className="grid h-9 w-9 place-items-center rounded-lg text-stone-400 hover:bg-stone-100 hover:text-stone-700" onClick={onSignOut} aria-label="退出登录" title="退出登录"><LogOut className="h-4 w-4" /></button>}</div>
+    <main className="relative min-h-screen overflow-x-hidden bg-[#f5f2eb] px-4 py-4 text-stone-900 sm:px-6 sm:py-6" style={{ paddingBottom: "var(--nav-height)" }}>
+      <div className="pointer-events-none absolute -left-32 top-40 h-80 w-80 rounded-full bg-[#dfe9d7]/70 blur-3xl" />
+      <div className="pointer-events-none absolute -right-32 top-[34rem] h-80 w-80 rounded-full bg-[#f3dfcb]/70 blur-3xl" />
+
+      <div className="relative mx-auto max-w-7xl space-y-5 sm:space-y-6">
+        <header className="flex items-center justify-between gap-4 px-1 py-1">
+          <div className="flex min-w-0 items-center gap-3">
+            <img src="/apple-home-logo.png" alt="鱼蛋" className="h-11 w-11 rounded-2xl object-cover shadow-sm ring-1 ring-stone-900/5" />
+            <div className="min-w-0">
+              <h1 className="truncate text-lg font-bold tracking-tight text-[#183c2f]">鱼蛋成长看板</h1>
+              <p className="mt-0.5 text-xs text-stone-500">把每一个小变化，好好收在这里</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            {isPreview ? <PreviewBadge /> : <SyncIndicator status={syncStatus} />}
+            {canEdit && <button type="button" className="grid h-9 w-9 place-items-center rounded-full bg-white/80 text-stone-400 shadow-sm ring-1 ring-stone-900/5 hover:text-stone-700" onClick={onSignOut} aria-label="退出登录" title="退出登录"><LogOut className="h-4 w-4" /></button>}
           </div>
         </header>
 
         {isPreview && <PreviewNotice email={previewEmail} error={previewError} pending={loginPending} onLogin={onLogin} />}
         {canEdit && cloudError && <CloudError message={cloudError} />}
 
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(260px,0.65fr)]">
-          <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm sm:p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div><p className="text-sm font-medium text-emerald-700">下一步</p><h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-950 sm:text-3xl">{nextAction.title}</h2><p className="mt-2 text-sm leading-6 text-stone-600">{nextAction.detail}</p></div>
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white text-emerald-700">{nextAction.type === "vaccine" ? <Syringe className="h-5 w-5" /> : nextAction.type === "care" ? <HeartPulse className="h-5 w-5" /> : <Weight className="h-5 w-5" />}</span>
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
+          <article className="relative min-h-[300px] overflow-hidden rounded-[28px] bg-[#183c2f] p-6 text-white shadow-[0_24px_60px_-32px_rgba(24,60,47,0.75)] sm:p-8">
+            <div className="pointer-events-none absolute -right-12 -top-12 h-52 w-52 rounded-full border-[36px] border-white/5" />
+            <div className="pointer-events-none absolute bottom-6 right-10 h-24 w-24 rounded-full bg-[#d6e4a9]/10" />
+            <div className="relative flex h-full flex-col justify-between gap-10">
+              <div>
+                <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-[#e3edc8] ring-1 ring-white/10"><Baby className="h-3.5 w-3.5" />出生第 {babyAgeDays} 天</span>
+                <h2 className="mt-5 max-w-xl text-3xl font-semibold leading-tight tracking-[-0.03em] sm:text-5xl">今天的鱼蛋，<br className="hidden sm:block" />又长大了一点点。</h2>
+                <p className="mt-3 text-sm text-white/60">出生于 {formatDate(birthday)}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:max-w-lg sm:grid-cols-[1.15fr_0.85fr]">
+                <div className="rounded-2xl bg-white/10 px-4 py-3 ring-1 ring-white/10 backdrop-blur-sm">
+                  <p className="text-[11px] font-medium tracking-wide text-white/55">最新体重</p>
+                  <p className="mt-1 text-2xl font-semibold">{latestGrowth ? `${latestGrowth.weight} kg` : "待记录"}</p>
+                </div>
+                <div className="rounded-2xl bg-[#d6e4a9] px-4 py-3 text-[#183c2f]">
+                  <p className="text-[11px] font-medium tracking-wide text-[#183c2f]/60">接种进度</p>
+                  <p className="mt-1 text-2xl font-semibold">{doneVaccines}<span className="ml-1 text-sm font-medium opacity-60">/ {totalVaccines}</span></p>
+                </div>
+              </div>
             </div>
-            <a href={nextAction.href} className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800">{nextAction.action} <ArrowRight className="h-4 w-4" /></a>
           </article>
-          <article className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
-            <div className="flex items-center gap-2 text-sm font-medium text-sky-700"><Weight className="h-4 w-4" />最新体重</div>
-            <p className="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{latestGrowth ? `${latestGrowth.weight} kg` : "待记录"}</p>
-            <p className="mt-1 text-sm text-stone-500">{latestGrowth ? formatDate(latestGrowth.date) : "还没有体重记录"}</p>
-            {weightChange !== null && <p className={cn("mt-3 text-xs font-medium", weightChange >= 0 ? "text-emerald-700" : "text-rose-700")}>较上次 {weightChange >= 0 ? "+" : ""}{weightChange} kg</p>}
-            <a href="/health?tab=weight" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-stone-700">查看趋势 <ArrowRight className="h-4 w-4" /></a>
+
+          <article className="flex flex-col justify-between rounded-[28px] bg-[#f0cfaa] p-6 shadow-[0_18px_50px_-34px_rgba(92,58,28,0.55)] sm:p-7">
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#70451f]"><Bell className="h-4 w-4" />最近要做</span>
+                <span className={cn("rounded-full px-3 py-1 text-xs font-semibold", actionDays <= 1 ? "bg-[#183c2f] text-white" : "bg-white/65 text-[#70451f]")}>{actionDayLabel}</span>
+              </div>
+              <span className="mt-8 grid h-12 w-12 place-items-center rounded-2xl bg-white/65 text-[#70451f]">
+                {nextAction.type === "vaccine" ? <Syringe className="h-6 w-6" /> : nextAction.type === "care" ? <HeartPulse className="h-6 w-6" /> : <Weight className="h-6 w-6" />}
+              </span>
+              <h2 className="mt-5 text-2xl font-semibold leading-tight tracking-tight text-[#3f2b1a]">{nextAction.title}</h2>
+              <p className="mt-2 text-sm leading-6 text-[#70451f]/75">{nextAction.detail}</p>
+            </div>
+            <a href={nextAction.href} className="mt-8 inline-flex h-12 items-center justify-between rounded-2xl bg-white/75 px-4 text-sm font-semibold text-[#3f2b1a] transition hover:bg-white">{nextAction.action}<span className="grid h-8 w-8 place-items-center rounded-full bg-[#3f2b1a] text-white"><ArrowRight className="h-4 w-4" /></span></a>
           </article>
         </section>
 
-        <section className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
-          <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6"><div className="flex items-start justify-between gap-4"><div><h2 className="font-semibold text-stone-950">体重趋势</h2><p className="mt-1 text-xs text-stone-500">最近一次测量与男宝宝同龄位置</p></div><div className="text-right"><p className="text-xl font-semibold text-sky-700">{latestGrowth ? `${latestGrowth.weight} kg` : "-"}</p>{weightChange !== null && <p className={cn("mt-1 text-xs", weightChange >= 0 ? "text-emerald-700" : "text-rose-700")}>较上次 {weightChange >= 0 ? "+" : ""}{weightChange} kg</p>}</div></div>{weightAssessments.length > 0 && <WeightStandardComparison assessments={weightAssessments} compact />}<div className="mt-4 h-52 sm:h-64">{chartData.length ? <WeightChart data={chartData} id="dashboardWeight" /> : <EmptyState text="还没有体重记录" compact />}</div><a href="/health?tab=weight" className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50">进入体重档案 <ArrowRight className="h-4 w-4" /></a></section>
+        <section aria-label="成长摘要" className="grid gap-3 sm:grid-cols-3">
+          <a href="/health?tab=weight" className="group rounded-3xl bg-white/85 p-5 shadow-sm ring-1 ring-stone-900/5 transition hover:-translate-y-0.5 hover:shadow-md">
+            <div className="flex items-center justify-between"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-sky-50 text-sky-700"><Weight className="h-5 w-5" /></span><ChevronRight className="h-4 w-4 text-stone-300 transition group-hover:translate-x-0.5 group-hover:text-stone-600" /></div>
+            <p className="mt-5 text-xs font-medium text-stone-500">体重变化</p>
+            <div className="mt-1 flex items-baseline gap-2"><p className="text-2xl font-semibold text-stone-950">{latestGrowth ? `${latestGrowth.weight} kg` : "待记录"}</p>{weightChange !== null && <span className={cn("text-xs font-semibold", weightChange >= 0 ? "text-emerald-700" : "text-rose-700")}>{weightChange >= 0 ? "+" : ""}{weightChange} kg</span>}</div>
+            <p className="mt-1 text-xs text-stone-400">{latestGrowth ? `${formatDate(latestGrowth.date)} 测量` : "还没有测量记录"}</p>
+          </a>
+          <a href="/health?tab=care" className="group rounded-3xl bg-white/85 p-5 shadow-sm ring-1 ring-stone-900/5 transition hover:-translate-y-0.5 hover:shadow-md">
+            <div className="flex items-center justify-between"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><HeartPulse className="h-5 w-5" /></span><ChevronRight className="h-4 w-4 text-stone-300 transition group-hover:translate-x-0.5 group-hover:text-stone-600" /></div>
+            <p className="mt-5 text-xs font-medium text-stone-500">下次儿保</p>
+            <p className="mt-1 text-2xl font-semibold text-stone-950">{nextCareMilestone?.label || "待安排"}</p>
+            <p className="mt-1 text-xs text-stone-400">{nextCareMilestone ? `${formatDate(nextCareMilestone.date)} · ${careDays === 0 ? "今天" : `${careDays} 天后`}` : "暂无近期安排"}</p>
+          </a>
+          <a href="/health?tab=vaccine" className="group rounded-3xl bg-white/85 p-5 shadow-sm ring-1 ring-stone-900/5 transition hover:-translate-y-0.5 hover:shadow-md">
+            <div className="flex items-center justify-between"><span className="grid h-10 w-10 place-items-center rounded-2xl bg-amber-50 text-amber-700"><Syringe className="h-5 w-5" /></span><ChevronRight className="h-4 w-4 text-stone-300 transition group-hover:translate-x-0.5 group-hover:text-stone-600" /></div>
+            <p className="mt-5 text-xs font-medium text-stone-500">疫苗接种</p>
+            <div className="mt-1 flex items-baseline gap-2"><p className="text-2xl font-semibold text-stone-950">{vaccineProgress}%</p><span className="text-xs text-stone-400">已完成 {doneVaccines} 项</span></div>
+            <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-stone-100"><div className="h-full rounded-full bg-amber-400" style={{ width: `${vaccineProgress}%` }} /></div>
+            <p className="mt-2 text-xs text-stone-400">{dueVaccineCount ? `${dueVaccineCount} 项临近或逾期` : "目前没有临近事项"}</p>
+          </a>
         </section>
 
-        <section className="grid gap-3 sm:grid-cols-3"><QuickLink href="/health?tab=care" icon={HeartPulse} label="保健档案" detail="体重、疫苗与卓正儿保" /><QuickLink href="/ledger" icon={ClipboardList} label="家庭账本" detail="收支与月度汇总" /><QuickLink href="/blog" icon={NotebookPen} label="成长日志" detail="保存值得记住的日子" /></section>
+        <section className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(340px,0.75fr)]">
+          <section className="rounded-[28px] bg-white/90 p-5 shadow-sm ring-1 ring-stone-900/5 sm:p-7">
+            <div className="flex items-start justify-between gap-4">
+              <div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">Growth curve</p><h2 className="mt-1 text-xl font-semibold tracking-tight text-stone-950">体重成长曲线</h2><p className="mt-1 text-xs text-stone-500">鼠标放在数据点上，可查看日期与体重</p></div>
+              <a href="/health?tab=weight" className="inline-flex h-9 items-center gap-1 rounded-full bg-stone-100 px-3 text-xs font-semibold text-stone-600 hover:bg-stone-200">完整档案 <ArrowRight className="h-3.5 w-3.5" /></a>
+            </div>
+            {weightAssessments.length > 0 && <WeightStandardComparison assessments={weightAssessments} compact />}
+            <div className="mt-4 h-56 sm:h-72">{chartData.length ? <WeightChart data={chartData} id="dashboardWeight" /> : <EmptyState text="记录第一次体重后，这里会出现成长曲线" compact />}</div>
+          </section>
+
+          <aside className="rounded-[28px] bg-[#e5ebdb] p-5 shadow-sm ring-1 ring-stone-900/5 sm:p-6">
+            <div className="flex items-center justify-between"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#49613d]">Coming up</p><h2 className="mt-1 text-xl font-semibold text-[#24341e]">接下来</h2></div><span className="grid h-10 w-10 place-items-center rounded-2xl bg-white/70 text-[#49613d]"><CalendarCheck className="h-5 w-5" /></span></div>
+            <div className="mt-6 space-y-3">
+              {nextCareMilestone && <a href="/health?tab=care" className="block rounded-2xl bg-white/70 p-4 transition hover:bg-white"><div className="flex items-start gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-700"><HeartPulse className="h-4 w-4" /></span><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><p className="font-semibold text-stone-900">{nextCareMilestone.label}儿保</p><span className="rounded-full bg-[#e5ebdb] px-2 py-0.5 text-[10px] font-semibold text-[#49613d]">{careDays === 0 ? "今天" : `${careDays} 天后`}</span></div><p className="mt-1 text-xs leading-5 text-stone-500">{formatDate(nextCareMilestone.date)} · {nextCareMilestone.weekday}</p></div></div></a>}
+              {nextVaccine && <a href="/health?tab=vaccine" className="block rounded-2xl bg-white/70 p-4 transition hover:bg-white"><div className="flex items-start gap-3"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700"><Syringe className="h-4 w-4" /></span><div className="min-w-0"><p className="font-semibold leading-5 text-stone-900">{nextVaccine.vaccine} {nextVaccine.dose}</p><p className="mt-1 text-xs leading-5 text-stone-500">{nextVaccine.ageLabel} · {formatDate(nextVaccine.plannedDate)}</p></div></div></a>}
+              {!nextCareMilestone && !nextVaccine && <div className="rounded-2xl bg-white/60 p-5 text-sm text-stone-500">近期没有需要处理的事项。</div>}
+            </div>
+            <a href="/health" className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#24341e] px-4 py-3 text-sm font-semibold text-white hover:bg-[#182314]">打开保健档案 <ArrowRight className="h-4 w-4" /></a>
+          </aside>
+        </section>
+
+        <section>
+          <div className="mb-3 flex items-end justify-between px-1"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">More</p><h2 className="mt-1 text-lg font-semibold text-stone-900">常用入口</h2></div></div>
+          <div className="grid gap-3 sm:grid-cols-3"><QuickLink href="/health?tab=care" icon={HeartPulse} label="保健档案" detail="体重、疫苗与卓正儿保" /><QuickLink href="/ledger" icon={ClipboardList} label="家庭账本" detail="收支与月度汇总" /><QuickLink href="/blog" icon={NotebookPen} label="成长日志" detail="保存值得记住的日子" /></div>
+        </section>
       </div>
     </main>
   );
@@ -1289,10 +1374,10 @@ function QuickLink({
   detail: string;
 }) {
   return (
-    <a href={href} className="group flex items-center gap-3 rounded-lg border border-stone-200 bg-white p-4 shadow-sm transition-colors hover:border-stone-300 hover:bg-stone-50">
-      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-stone-100 text-stone-700"><Icon className="h-5 w-5" /></span>
-      <div className="min-w-0 flex-1"><p className="font-medium text-stone-950">{label}</p><p className="mt-0.5 truncate text-xs text-stone-500">{detail}</p></div>
-      <ChevronRight className="h-4 w-4 text-stone-400 transition-transform group-hover:translate-x-0.5" />
+    <a href={href} className="group flex items-center gap-3 rounded-3xl bg-white/75 p-4 shadow-sm ring-1 ring-stone-900/5 transition hover:-translate-y-0.5 hover:bg-white hover:shadow-md">
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#eef1e8] text-[#49613d]"><Icon className="h-5 w-5" /></span>
+      <div className="min-w-0 flex-1"><p className="font-semibold text-stone-950">{label}</p><p className="mt-0.5 truncate text-xs text-stone-500">{detail}</p></div>
+      <ChevronRight className="h-4 w-4 text-stone-300 transition-transform group-hover:translate-x-0.5 group-hover:text-stone-600" />
     </a>
   );
 }
