@@ -793,7 +793,6 @@ export default function YudanDashboard({
   const freeVaccines = sortedVaccines.filter((item) => item.type === "free");
   const paidVaccines = sortedVaccines.filter((item) => item.type === "paid");
   const doneFreeVaccines = freeVaccines.filter((item) => item.doneDate).length;
-  const completionPercent = sortedVaccines.length ? Math.round((doneVaccines / sortedVaccines.length) * 100) : 0;
   const undoneFree = sortedVaccines.filter((item) => item.type === "free" && !item.doneDate);
   const nextVaccine = sortedVaccines.find((item) => !item.doneDate);
   const babyAgeDays = Math.max(0, daysBetween(data.birthday, today));
@@ -940,7 +939,6 @@ export default function YudanDashboard({
 
   if (ready) {
     const recordingVaccine = sortedVaccines.find((item) => item.id === recordingVaccineId);
-    const upcomingVaccines = sortedVaccines.filter((item) => !item.doneDate).slice(0, 3);
     const previousGrowth = sortedGrowth.at(-2);
     const weightChange = latestGrowth && previousGrowth
       ? Number((latestGrowth.weight - previousGrowth.weight).toFixed(2))
@@ -966,15 +964,8 @@ export default function YudanDashboard({
           birthday={data.birthday}
           latestGrowth={latestGrowth}
           weightAssessments={weightAssessments}
-          doneFreeVaccines={doneFreeVaccines}
-          freeVaccines={freeVaccines.length}
-          completionPercent={completionPercent}
-          reminderCount={dueVaccines.length + dueCareMilestones.length}
-          reminderDetail={dueVaccines.length || dueCareMilestones.length ? `疫苗 ${dueVaccines.length} 项 · 卓正儿保 ${dueCareMilestones.length} 项` : "暂无临近项目"}
-          hasOverdueVaccine={dueVaccines.some((item) => getDueState(item) === "overdue")}
           nextVaccine={nextVaccine}
           nextCareMilestone={nextCareMilestone}
-          upcomingVaccines={upcomingVaccines}
           chartData={chartData}
           weightChange={weightChange}
         />
@@ -1090,24 +1081,26 @@ type DashboardLayoutProps = {
   birthday: string;
   latestGrowth?: GrowthEntry;
   weightAssessments: WeightAssessment[];
-  doneFreeVaccines: number;
-  freeVaccines: number;
-  completionPercent: number;
-  reminderCount: number;
-  reminderDetail: string;
-  hasOverdueVaccine: boolean;
   nextVaccine?: VaccineEntry;
   nextCareMilestone?: (typeof ZHENGZHENG_CARE_MILESTONES)[number];
-  upcomingVaccines: VaccineEntry[];
   chartData: { date: string; weight: number; height: number; head: number }[];
   weightChange: number | null;
 };
 
 function DashboardLayout({
   isPreview, previewEmail, previewError, loginPending, onLogin, syncStatus, canEdit, cloudError, onSignOut,
-  babyAgeDays, birthday, latestGrowth, weightAssessments, doneFreeVaccines, freeVaccines, completionPercent,
-  reminderCount, reminderDetail, hasOverdueVaccine, nextVaccine, nextCareMilestone, upcomingVaccines, chartData, weightChange,
+  babyAgeDays, birthday, latestGrowth, weightAssessments, nextVaccine, nextCareMilestone, chartData, weightChange,
 }: DashboardLayoutProps) {
+  const nextAction = nextCareMilestone && nextVaccine
+    ? new Date(nextCareMilestone.date).getTime() <= new Date(nextVaccine.plannedDate).getTime()
+      ? { type: "care" as const, title: `${nextCareMilestone.label}儿保`, detail: `${formatDate(nextCareMilestone.date)} · ${nextCareMilestone.weekday}`, href: "/health?tab=care", action: "查看儿保" }
+      : { type: "vaccine" as const, title: `${nextVaccine.vaccine} ${nextVaccine.dose}`, detail: `${nextVaccine.ageLabel} · ${formatDate(nextVaccine.plannedDate)}`, href: "/health?tab=vaccine", action: "查看疫苗" }
+    : nextCareMilestone
+      ? { type: "care" as const, title: `${nextCareMilestone.label}儿保`, detail: `${formatDate(nextCareMilestone.date)} · ${nextCareMilestone.weekday}`, href: "/health?tab=care", action: "查看儿保" }
+      : nextVaccine
+        ? { type: "vaccine" as const, title: `${nextVaccine.vaccine} ${nextVaccine.dose}`, detail: `${nextVaccine.ageLabel} · ${formatDate(nextVaccine.plannedDate)}`, href: "/health?tab=vaccine", action: "查看疫苗" }
+        : { type: "weight" as const, title: "记录一次体重", detail: "持续观察鱼蛋的成长趋势", href: "/health?tab=weight", action: "去记录" };
+
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#f5f7f4] px-4 py-4 text-stone-900 sm:px-6 sm:py-6" style={{ paddingBottom: "var(--nav-height)" }}>
       <div className="mx-auto max-w-7xl space-y-4 sm:space-y-5">
@@ -1121,37 +1114,31 @@ function DashboardLayout({
         {isPreview && <PreviewNotice email={previewEmail} error={previewError} pending={loginPending} onLogin={onLogin} />}
         {canEdit && cloudError && <CloudError message={cloudError} />}
 
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)]">
-          <div className="rounded-2xl bg-stone-950 p-5 text-white shadow-sm sm:p-7"><div className="flex items-start justify-between gap-4"><div><p className="text-sm font-medium text-emerald-300">今天优先关注</p><h2 className="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">{nextCareMilestone ? `${nextCareMilestone.label}儿保` : "成长记录"}</h2><p className="mt-2 text-sm leading-6 text-stone-300">{nextCareMilestone ? `${formatDate(nextCareMilestone.date)} · ${nextCareMilestone.weekday} · 卓正儿童保健` : "记录最新体重，持续观察成长趋势"}</p></div><span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/10 text-emerald-300"><HeartPulse className="h-5 w-5" /></span></div><div className="mt-6 grid gap-2 sm:grid-cols-2"><a href="/health?tab=care" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-500 px-4 text-sm font-semibold text-stone-950 hover:bg-emerald-400">查看儿保时间 <ArrowRight className="h-4 w-4" /></a><a href="/health?tab=weight" className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-white/15 px-4 text-sm font-medium text-white hover:bg-white/10">记录体重 <Weight className="h-4 w-4" /></a></div></div>
-          <div className="grid grid-cols-2 gap-3"><MetricCard icon={Weight} label="最新体重" value={latestGrowth ? `${latestGrowth.weight} kg` : "待记录"} detail={latestGrowth ? formatDate(latestGrowth.date) : "进入保健记录"} tone="sky" /><MetricCard icon={Bell} label="近期提醒" value={`${reminderCount} 项`} detail={reminderDetail} tone={hasOverdueVaccine ? "rose" : "emerald"} /><MetricCard icon={Syringe} label="免费疫苗" value={`${doneFreeVaccines}/${freeVaccines}`} detail={`计划完成 ${completionPercent}%`} tone="amber" /><MetricCard icon={Baby} label="出生天数" value={`${babyAgeDays} 天`} detail={formatDate(birthday)} tone="emerald" /></div>
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(260px,0.65fr)]">
+          <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div><p className="text-sm font-medium text-emerald-700">下一步</p><h2 className="mt-2 text-2xl font-semibold tracking-tight text-stone-950 sm:text-3xl">{nextAction.title}</h2><p className="mt-2 text-sm leading-6 text-stone-600">{nextAction.detail}</p></div>
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white text-emerald-700">{nextAction.type === "vaccine" ? <Syringe className="h-5 w-5" /> : nextAction.type === "care" ? <HeartPulse className="h-5 w-5" /> : <Weight className="h-5 w-5" />}</span>
+            </div>
+            <a href={nextAction.href} className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800">{nextAction.action} <ArrowRight className="h-4 w-4" /></a>
+          </article>
+          <article className="rounded-2xl border border-stone-200 bg-white p-5 shadow-sm sm:p-6">
+            <div className="flex items-center gap-2 text-sm font-medium text-sky-700"><Weight className="h-4 w-4" />最新体重</div>
+            <p className="mt-3 text-3xl font-semibold tracking-tight text-stone-950">{latestGrowth ? `${latestGrowth.weight} kg` : "待记录"}</p>
+            <p className="mt-1 text-sm text-stone-500">{latestGrowth ? formatDate(latestGrowth.date) : "还没有体重记录"}</p>
+            {weightChange !== null && <p className={cn("mt-3 text-xs font-medium", weightChange >= 0 ? "text-emerald-700" : "text-rose-700")}>较上次 {weightChange >= 0 ? "+" : ""}{weightChange} kg</p>}
+            <a href="/health?tab=weight" className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-stone-700">查看趋势 <ArrowRight className="h-4 w-4" /></a>
+          </article>
         </section>
-
-        <section className="grid gap-4 lg:grid-cols-2">{nextVaccine && <ActionCard icon={Syringe} tone="emerald" eyebrow="下一项接种建议" title={`${nextVaccine.vaccine} ${nextVaccine.dose}`} detail={`${nextVaccine.ageLabel} · ${formatDate(nextVaccine.plannedDate)}`} href="/health?tab=vaccine" action="查看疫苗" />}{nextCareMilestone && <ActionCard icon={HeartPulse} tone="sky" eyebrow="下一次卓正儿童保健" title={nextCareMilestone.label} detail={`${formatDate(nextCareMilestone.date)} · ${nextCareMilestone.weekday}`} href="/health?tab=care" action="查看时间表" />}</section>
 
         <section className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
           <section className="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm sm:p-6"><div className="flex items-start justify-between gap-4"><div><h2 className="font-semibold text-stone-950">体重趋势</h2><p className="mt-1 text-xs text-stone-500">最近一次测量与男宝宝同龄位置</p></div><div className="text-right"><p className="text-xl font-semibold text-sky-700">{latestGrowth ? `${latestGrowth.weight} kg` : "-"}</p>{weightChange !== null && <p className={cn("mt-1 text-xs", weightChange >= 0 ? "text-emerald-700" : "text-rose-700")}>较上次 {weightChange >= 0 ? "+" : ""}{weightChange} kg</p>}</div></div>{weightAssessments.length > 0 && <WeightStandardComparison assessments={weightAssessments} compact />}<div className="mt-4 h-52 sm:h-64">{chartData.length ? <WeightChart data={chartData} id="dashboardWeight" /> : <EmptyState text="还没有体重记录" compact />}</div><a href="/health?tab=weight" className="mt-4 inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-stone-200 text-sm font-medium text-stone-700 hover:bg-stone-50">进入体重档案 <ArrowRight className="h-4 w-4" /></a></section>
-          <section className="rounded-2xl border border-stone-200 bg-white shadow-sm"><div className="flex items-center justify-between border-b border-stone-100 px-4 py-4 sm:px-5"><div><h2 className="font-semibold text-stone-950">接种安排</h2><p className="mt-1 text-xs text-stone-500">按建议日期排列，先看最近项目</p></div><a href="/health?tab=vaccine" className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700">全部 <ChevronRight className="h-4 w-4" /></a></div><div className="divide-y divide-stone-100">{upcomingVaccines.map((item) => <div key={item.id} className="flex items-center gap-3 px-4 py-3.5 sm:px-5"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-stone-100 text-stone-600"><Syringe className="h-4 w-4" /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-stone-950">{item.vaccine} {item.dose}</p><p className="mt-0.5 text-xs text-stone-500">{item.ageLabel}</p></div><div className="shrink-0 text-right"><p className="text-sm font-medium text-stone-700">{formatDate(item.plannedDate)}</p><DueBadge item={item} /></div></div>)}</div></section>
         </section>
 
         <section className="grid gap-3 sm:grid-cols-3"><QuickLink href="/health?tab=care" icon={HeartPulse} label="保健档案" detail="体重、疫苗与卓正儿保" /><QuickLink href="/ledger" icon={ClipboardList} label="家庭账本" detail="收支与月度汇总" /><QuickLink href="/blog" icon={NotebookPen} label="成长日志" detail="保存值得记住的日子" /></section>
       </div>
     </main>
   );
-}
-
-function ActionCard({
-  icon: Icon, tone, eyebrow, title, detail, href, action,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  tone: "emerald" | "sky";
-  eyebrow: string;
-  title: string;
-  detail: string;
-  href: string;
-  action: string;
-}) {
-  const styles = tone === "emerald" ? { border: "border-emerald-200", bg: "bg-emerald-50", icon: "text-emerald-700", button: "bg-emerald-700 hover:bg-emerald-800" } : { border: "border-sky-200", bg: "bg-sky-50", icon: "text-sky-700", button: "bg-sky-700 hover:bg-sky-800" };
-  return <article className={cn("flex items-center gap-3 rounded-2xl border p-4 sm:gap-4 sm:p-5", styles.border, styles.bg)}><span className={cn("grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white", styles.icon)}><Icon className="h-5 w-5" /></span><div className="min-w-0 flex-1"><p className={cn("text-xs font-semibold", styles.icon)}>{eyebrow}</p><h2 className="mt-1 truncate font-semibold text-stone-950">{title}</h2><p className="mt-1 text-sm text-stone-600">{detail}</p></div><a href={href} className={cn("inline-flex h-9 shrink-0 items-center gap-1 rounded-xl px-2 text-xs font-medium text-white sm:h-10 sm:px-3 sm:text-sm", styles.button)}>{action}<ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></a></article>;
 }
 
 function PediatricCareSchedule() {
@@ -1524,40 +1511,6 @@ function ProgressBlock({ label, done, total }: { label: string; done: number; to
       </div>
       <p className="mt-2 text-xs text-stone-500">完成 {percent}%</p>
     </div>
-  );
-}
-
-function MetricCard({
-  icon: Icon,
-  label,
-  value,
-  detail,
-  tone,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-  detail: string;
-  tone: "emerald" | "amber" | "sky" | "rose";
-}) {
-  const tones = {
-    emerald: "bg-emerald-50 text-emerald-700",
-    amber: "bg-amber-50 text-amber-700",
-    sky: "bg-sky-50 text-sky-700",
-    rose: "bg-rose-50 text-rose-700",
-  };
-
-  return (
-    <article className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-medium text-stone-500">{label}</p>
-        <span className={cn("flex h-9 w-9 items-center justify-center rounded-lg", tones[tone])}>
-          <Icon className="h-4 w-4" />
-        </span>
-      </div>
-      <p className="mt-3 text-2xl font-semibold text-stone-950">{value}</p>
-      <p className="mt-1 truncate text-sm text-stone-500">{detail}</p>
-    </article>
   );
 }
 
