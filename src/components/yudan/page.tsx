@@ -101,23 +101,21 @@ type YudanDashboardProps = {
 
 type CloudVaccineRecord = {
   id: string;
-  planId?: string;
-  vaccine: string;
-  dose: string;
-  ageLabel: string;
-  doneDate: string;
+  plan_id: string;
+  administered_on: string;
 };
 
 type CloudWeightRecord = {
   id: string;
-  date: string;
-  weight: number;
+  measured_on: string;
+  weight_kg: number | string;
+  height_cm: number | string | null;
+  head_circumference_cm: number | string | null;
+  note: string;
 };
 
 type CloudDashboardRow = {
   birthday: string;
-  vaccine_records: unknown;
-  weight_records: unknown;
 };
 
 type CloudVaccinePlan = {
@@ -468,92 +466,34 @@ function readStoredData(userId?: string): DashboardData {
   }
 }
 
-function readCloudVaccineRecords(value: unknown): CloudVaccineRecord[] {
-  if (!Array.isArray(value)) return [];
-
-  return value.filter((item): item is CloudVaccineRecord => {
-    if (!item || typeof item !== "object") return false;
-    const record = item as Record<string, unknown>;
-    return (
-      typeof record.id === "string" &&
-      (record.planId === undefined || typeof record.planId === "string") &&
-      typeof record.vaccine === "string" &&
-      typeof record.dose === "string" &&
-      typeof record.ageLabel === "string" &&
-      typeof record.doneDate === "string"
-    );
-  });
-}
-
-function readCloudWeightRecords(value: unknown): CloudWeightRecord[] {
-  if (!Array.isArray(value)) return [];
-
-  return value.filter((item): item is CloudWeightRecord => {
-    if (!item || typeof item !== "object") return false;
-    const record = item as Record<string, unknown>;
-    return (
-      typeof record.id === "string" &&
-      typeof record.date === "string" &&
-      typeof record.weight === "number" &&
-      Number.isFinite(record.weight)
-    );
-  });
-}
-
 function dashboardFromCloud(
   row: CloudDashboardRow,
+  weightRecords: CloudWeightRecord[],
+  vaccineRecords: CloudVaccineRecord[],
   localData: DashboardData,
   catalog: CloudVaccinePlan[]
 ): DashboardData {
-  const birthday = defaultBirthday;
-  const vaccineRecords = readCloudVaccineRecords(row.vaccine_records);
-  const weightRecords = readCloudWeightRecords(row.weight_records);
+  const birthday = row.birthday || defaultBirthday;
 
   return {
     ...localData,
     birthday,
     vaccines: scheduleForBirthday(birthday, catalog).map((fresh) => {
       const stored = vaccineRecords.find(
-        (item) =>
-          item.planId === fresh.planId ||
-          item.id === fresh.id ||
-          (item.vaccine === fresh.vaccine && item.dose === fresh.dose && item.ageLabel === fresh.ageLabel)
+        (item) => item.plan_id === fresh.planId || item.plan_id === fresh.id
       );
       return stored
-        ? { ...fresh, doneDate: stored.doneDate, status: stored.doneDate ? "done" : "planned" }
+        ? { ...fresh, doneDate: stored.administered_on, status: "done" }
         : fresh;
     }),
     growth: weightRecords.map((item) => ({
-      ...item,
-      height: 0,
-      head: 0,
-      note: "",
-    })),
-  };
-}
-
-function dashboardToCloud(data: DashboardData) {
-  const vaccineRecords: CloudVaccineRecord[] = data.vaccines
-    .filter((item) => item.doneDate)
-    .map((item) => ({
       id: item.id,
-      planId: item.planId,
-      vaccine: item.vaccine,
-      dose: item.dose,
-      ageLabel: item.ageLabel,
-      doneDate: item.doneDate,
-    }));
-  const weightRecords: CloudWeightRecord[] = data.growth.map(({ id, date, weight }) => ({
-    id,
-    date,
-    weight,
-  }));
-
-  return {
-    birthday: defaultBirthday,
-    vaccine_records: vaccineRecords,
-    weight_records: weightRecords,
-    updated_at: new Date().toISOString(),
+      date: item.measured_on,
+      weight: Number(item.weight_kg),
+      height: item.height_cm === null ? 0 : Number(item.height_cm),
+      head: item.head_circumference_cm === null ? 0 : Number(item.head_circumference_cm),
+      note: item.note || "",
+    })),
   };
 }
 
@@ -562,11 +502,66 @@ async function saveCloudDashboard(
   userId: string,
   data: DashboardData
 ) {
-  const { error } = await supabase
-    .from("yudan_dashboards")
-    .upsert({ user_id: userId, ...dashboardToCloud(data) }, { onConflict: "user_id" });
+  const updatedAt = new Date().toISOString();
+  const weightRows = data.growth.map((item) => ({
+    user_id: userId,
+    measured_on: item.date,
+    weight_kg: item.weight,
+    height_cm: item.height > 0 ? item.height : null,
+    head_circumference_cm: item.head > 0 ? item.head : null,
+    note: item.note,
+    updated_at: updatedAt,
+  }));
+  const vaccineRows = data.vaccines
+    .filter((item) => item.doneDate && item.planId)
+    .map((item) => ({
+      user_id: userId,
+      plan_id: item.planId as string,
+      administered_on: item.doneDate,
+      place: item.place,
+      batch_no: item.batchNo,
+      manufacturer: item.manufacturer,
+      note: item.note,
+      updated_at: updatedAt,
+    }));
 
-  if (error) throw error;
+  const [profileResult, currentWeights, currentVaccines] = await Promise.all([
+    supabase
+      .from("yudan_dashboards")
+      .upsert({ user_id: userId, birthday: defaultBirthday, updated_at: updatedAt }, { onConflict: "user_id" }),
+    supabase.from("yudan_weight_records").select("id, measured_on").eq("user_id", userId),
+    supabase.from("yudan_vaccine_records").select("id, plan_id").eq("user_id", userId),
+  ]);
+
+  if (profileResult.error) throw profileResult.error;
+  if (currentWeights.error) throw currentWeights.error;
+  if (currentVaccines.error) throw currentVaccines.error;
+
+  const savedDates = new Set(weightRows.map((item) => item.measured_on));
+  const savedPlans = new Set(vaccineRows.map((item) => item.plan_id));
+  const staleWeightIds = (currentWeights.data || [])
+    .filter((item) => !savedDates.has(item.measured_on))
+    .map((item) => item.id);
+  const staleVaccineIds = (currentVaccines.data || [])
+    .filter((item) => !savedPlans.has(item.plan_id))
+    .map((item) => item.id);
+
+  const results = await Promise.all([
+    weightRows.length
+      ? supabase.from("yudan_weight_records").upsert(weightRows, { onConflict: "user_id,measured_on" })
+      : Promise.resolve({ error: null }),
+    vaccineRows.length
+      ? supabase.from("yudan_vaccine_records").upsert(vaccineRows, { onConflict: "user_id,plan_id" })
+      : Promise.resolve({ error: null }),
+    staleWeightIds.length
+      ? supabase.from("yudan_weight_records").delete().in("id", staleWeightIds)
+      : Promise.resolve({ error: null }),
+    staleVaccineIds.length
+      ? supabase.from("yudan_vaccine_records").delete().in("id", staleVaccineIds)
+      : Promise.resolve({ error: null }),
+  ]);
+  const failed = results.find((result) => result.error);
+  if (failed?.error) throw failed.error;
 }
 
 function getCloudErrorMessage(error: unknown) {
@@ -608,6 +603,7 @@ export default function YudanDashboard({
   const [recordingVaccineId, setRecordingVaccineId] = useState<string | null>(null);
   const [vaccineDateDraft, setVaccineDateDraft] = useState(today);
   const [weightDialogOpen, setWeightDialogOpen] = useState(false);
+  const cloudReadSucceededRef = useRef(false);
   const saveChainRef = useRef<Promise<void>>(Promise.resolve());
   const latestSaveRef = useRef(0);
   const [growthForm, setGrowthForm] = useState({
@@ -690,16 +686,17 @@ export default function YudanDashboard({
     let active = true;
     const userId = session.user.id;
     const localSnapshot = readStoredData(userId);
+    cloudReadSucceededRef.current = false;
     setCloudReady(false);
     setSyncStatus("loading");
     setCloudError("");
 
     void (async () => {
       try {
-        const [dashboardResult, catalogResult] = await Promise.all([
+        const [dashboardResult, catalogResult, weightResult, vaccineResult] = await Promise.all([
           supabase
             .from("yudan_dashboards")
-            .select("birthday, vaccine_records, weight_records")
+            .select("birthday")
             .eq("user_id", userId)
             .maybeSingle(),
           supabase
@@ -707,17 +704,35 @@ export default function YudanDashboard({
             .select("id, sort_order, age_months, age_label, vaccine, dose, funding, date_rule, date_offset_days, region, schedule_version, prevents, aliases, audience, schedule_note, source")
             .eq("active", true)
             .order("sort_order"),
+          supabase
+            .from("yudan_weight_records")
+            .select("id, measured_on, weight_kg, height_cm, head_circumference_cm, note")
+            .eq("user_id", userId)
+            .order("measured_on"),
+          supabase
+            .from("yudan_vaccine_records")
+            .select("id, plan_id, administered_on")
+            .eq("user_id", userId)
+            .order("administered_on"),
         ]);
 
         if (dashboardResult.error) throw dashboardResult.error;
         if (catalogResult.error) throw catalogResult.error;
+        if (weightResult.error) throw weightResult.error;
+        if (vaccineResult.error) throw vaccineResult.error;
         if (!active) return;
         const cloudRow = dashboardResult.data;
         const catalog = (catalogResult.data || []) as CloudVaccinePlan[];
         setVaccineCatalog(catalog);
 
         if (cloudRow) {
-          setData(dashboardFromCloud(cloudRow as CloudDashboardRow, localSnapshot, catalog));
+          setData(dashboardFromCloud(
+            cloudRow as CloudDashboardRow,
+            (weightResult.data || []) as CloudWeightRecord[],
+            (vaccineResult.data || []) as CloudVaccineRecord[],
+            localSnapshot,
+            catalog
+          ));
         } else {
           await saveCloudDashboard(supabase, userId, localSnapshot);
           if (!active) return;
@@ -725,6 +740,7 @@ export default function YudanDashboard({
         }
 
         window.localStorage.setItem("yudan-dashboard-v2-migrated", userId);
+        cloudReadSucceededRef.current = true;
         setSyncStatus("saved");
       } catch (error) {
         if (!active) return;
@@ -752,7 +768,7 @@ export default function YudanDashboard({
   }, [cloudReady, data, hasSupabase, isOwner, ready, session?.user.id]);
 
   useEffect(() => {
-    if (!ready || !cloudReady || !supabase || !session?.user.id || !isOwner) return;
+    if (!ready || !cloudReady || !cloudReadSucceededRef.current || !supabase || !session?.user.id || !isOwner) return;
 
     const userId = session.user.id;
     const snapshot = data;

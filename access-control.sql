@@ -82,3 +82,52 @@ using (
   )
 );
 
+-- Normalized health records use the same owner-only access model.
+alter table public.yudan_weight_records enable row level security;
+alter table public.yudan_vaccine_records enable row level security;
+
+revoke all on table public.yudan_weight_records from anon, authenticated;
+revoke all on table public.yudan_vaccine_records from anon, authenticated;
+grant select, insert, update, delete on table public.yudan_weight_records to authenticated;
+grant select, insert, update, delete on table public.yudan_vaccine_records to authenticated;
+
+drop policy if exists "Owner manages Yudan weights" on public.yudan_weight_records;
+create policy "Owner manages Yudan weights"
+on public.yudan_weight_records for all to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt()) ->> 'email', '')) = 'william.chen@utah.edu'
+  and (
+    (select auth.jwt()) -> 'app_metadata' ->> 'provider' = 'github'
+    or ((select auth.jwt()) -> 'app_metadata' -> 'providers') ? 'github'
+  )
+)
+with check (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt()) ->> 'email', '')) = 'william.chen@utah.edu'
+  and (
+    (select auth.jwt()) -> 'app_metadata' ->> 'provider' = 'github'
+    or ((select auth.jwt()) -> 'app_metadata' -> 'providers') ? 'github'
+  )
+);
+
+drop policy if exists "Owner manages Yudan vaccines" on public.yudan_vaccine_records;
+create policy "Owner manages Yudan vaccines"
+on public.yudan_vaccine_records for all to authenticated
+using (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt()) ->> 'email', '')) = 'william.chen@utah.edu'
+  and (
+    (select auth.jwt()) -> 'app_metadata' ->> 'provider' = 'github'
+    or ((select auth.jwt()) -> 'app_metadata' -> 'providers') ? 'github'
+  )
+)
+with check (
+  (select auth.uid()) = user_id
+  and lower(coalesce((select auth.jwt()) ->> 'email', '')) = 'william.chen@utah.edu'
+  and (
+    (select auth.jwt()) -> 'app_metadata' ->> 'provider' = 'github'
+    or ((select auth.jwt()) -> 'app_metadata' -> 'providers') ? 'github'
+  )
+);
+

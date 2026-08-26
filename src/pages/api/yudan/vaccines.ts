@@ -16,7 +16,7 @@ export const GET: APIRoute = async ({ request }) => {
     const { supabase, row } = await getOwnerDashboard();
     const [catalog, records] = await Promise.all([
       getVaccineCatalog(supabase),
-      Promise.resolve(getVaccineRecords(row)),
+      getVaccineRecords(supabase, row.user_id),
     ]);
 
     const plans = catalog.map((plan) => {

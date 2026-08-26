@@ -1,10 +1,9 @@
 import type { APIRoute } from 'astro';
 import { getErrorMessage, json, validateApiKey } from '../../../lib/http';
 import {
-  getWeightRecords,
+  getOwnerDashboard,
   readDate,
-  updateOwnerDashboard,
-  type YudanWeightRecord,
+  upsertWeightRecord,
 } from '../../../lib/yudan-api';
 
 export const POST: APIRoute = async ({ request }) => {
@@ -28,24 +27,8 @@ export const POST: APIRoute = async ({ request }) => {
       return json({ error: 'weight 必须是 0.1 到 200 之间的公斤数' }, { status: 400 });
     }
 
-    const saved = await updateOwnerDashboard((row) => {
-      const records = getWeightRecords(row);
-      const existingIndex = records.findIndex((item) => item.date === date);
-      const record: YudanWeightRecord = {
-        id: existingIndex >= 0 ? records[existingIndex].id : `weight-api-${date}`,
-        date,
-        weight,
-      };
-
-      if (existingIndex >= 0) records[existingIndex] = record;
-      else records.push(record);
-      records.sort((left, right) => left.date.localeCompare(right.date));
-
-      return {
-        changes: { weight_records: records },
-        result: { record, created: existingIndex < 0 },
-      };
-    });
+    const { supabase, row } = await getOwnerDashboard();
+    const saved = await upsertWeightRecord(supabase, row.user_id, date, weight);
 
     return json({ success: true, data: saved });
   } catch (error: unknown) {

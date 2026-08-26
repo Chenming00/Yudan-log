@@ -2,12 +2,10 @@ import type { APIRoute } from 'astro';
 import { getErrorMessage, json, validateApiKey } from '../../../lib/http';
 import {
   getOwnerDashboard,
-  getVaccineRecords,
   readDate,
   resolveVaccinePlan,
-  updateOwnerDashboard,
+  upsertVaccineRecord,
   VaccineCatalogMatchError,
-  type YudanVaccineRecord,
 } from '../../../lib/yudan-api';
 
 export const POST: APIRoute = async ({ request }) => {
@@ -33,34 +31,9 @@ export const POST: APIRoute = async ({ request }) => {
       : typeof body.dose === 'string'
         ? body.dose.trim()
         : undefined;
-    const { row } = await getOwnerDashboard();
+    const { supabase, row } = await getOwnerDashboard();
     const plan = await resolveVaccinePlan({ birthday: row.birthday, planId, vaccine, dose });
-
-    const saved = await updateOwnerDashboard((row) => {
-      const records = getVaccineRecords(row);
-      const existingIndex = records.findIndex(
-        (item) =>
-          item.planId === plan.id ||
-          item.id === plan.id ||
-          (item.vaccine === plan.vaccine && item.dose === plan.dose && item.ageLabel === plan.age_label)
-      );
-      const record: YudanVaccineRecord = {
-        id: existingIndex >= 0 ? records[existingIndex].id : plan.id,
-        planId: plan.id,
-        vaccine: plan.vaccine,
-        dose: plan.dose,
-        ageLabel: plan.age_label,
-        doneDate,
-      };
-
-      if (existingIndex >= 0) records[existingIndex] = record;
-      else records.push(record);
-
-      return {
-        changes: { vaccine_records: records },
-        result: { record, plan, created: existingIndex < 0 },
-      };
-    });
+    const saved = await upsertVaccineRecord(supabase, row.user_id, plan, doneDate);
 
     return json({ success: true, data: saved });
   } catch (error: unknown) {

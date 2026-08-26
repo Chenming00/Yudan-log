@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isGitHubProvider, isOwnerEmail } from '../../lib/auth';
 import { getSupabaseAdminClient } from '../../lib/supabase';
@@ -6,7 +5,7 @@ import { YUDAN_BIRTHDAY } from './yudan-profile';
 
 export type YudanVaccineRecord = {
   id: string;
-  planId?: string;
+  planId: string;
   vaccine: string;
   dose: string;
   ageLabel: string;
@@ -57,29 +56,22 @@ export type YudanWeightRecord = {
 export type YudanDashboardRow = {
   user_id: string;
   birthday: string;
-  vaccine_records: unknown;
-  weight_records: unknown;
   updated_at: string;
 };
 
+type YudanWeightDatabaseRow = {
+  id: string;
+  measured_on: string;
+  weight_kg: number | string;
+};
+
+type YudanVaccineDatabaseRow = {
+  id: string;
+  plan_id: string;
+  administered_on: string;
+};
+
 let ownerUserIdPromise: Promise<string> | null = null;
-
-function readVaccineRecords(value: unknown): YudanVaccineRecord[] {
-  if (!Array.isArray(value)) return [];
-
-  return value.filter((item): item is YudanVaccineRecord => {
-    if (!item || typeof item !== 'object') return false;
-    const record = item as Record<string, unknown>;
-    return (
-      typeof record.id === 'string' &&
-      (record.planId === undefined || typeof record.planId === 'string') &&
-      typeof record.vaccine === 'string' &&
-      typeof record.dose === 'string' &&
-      typeof record.ageLabel === 'string' &&
-      typeof record.doneDate === 'string'
-    );
-  });
-}
 
 export async function getVaccineCatalog(supabase?: SupabaseClient) {
   const client = supabase || getSupabaseAdminClient();
@@ -193,21 +185,6 @@ export async function resolveVaccinePlan({
   );
 }
 
-function readWeightRecords(value: unknown): YudanWeightRecord[] {
-  if (!Array.isArray(value)) return [];
-
-  return value.filter((item): item is YudanWeightRecord => {
-    if (!item || typeof item !== 'object') return false;
-    const record = item as Record<string, unknown>;
-    return (
-      typeof record.id === 'string' &&
-      typeof record.date === 'string' &&
-      typeof record.weight === 'number' &&
-      Number.isFinite(record.weight)
-    );
-  });
-}
-
 async function findOwnerUserId(supabase: SupabaseClient) {
   for (let page = 1; page <= 10; page += 1) {
     const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: 1000 });
@@ -241,7 +218,7 @@ export async function getOwnerDashboard() {
   const userId = await getOwnerUserId(supabase);
   const { data, error } = await supabase
     .from('yudan_dashboards')
-    .select('user_id, birthday, vaccine_records, weight_records, updated_at')
+    .select('user_id, birthday, updated_at')
     .eq('user_id', userId)
     .maybeSingle<YudanDashboardRow>();
 
@@ -251,38 +228,126 @@ export async function getOwnerDashboard() {
   return { supabase, row: { ...data, birthday: YUDAN_BIRTHDAY } };
 }
 
-type DashboardChanges = Partial<
-  Pick<YudanDashboardRow, 'vaccine_records' | 'weight_records'>
->;
+export async function getWeightRecords(supabase: SupabaseClient, userId: string) {
+  const { data, error } = await supabase
+    .from('yudan_weight_records')
+    .select('id, measured_on, weight_kg')
+    .eq('user_id', userId)
+    .order('measured_on');
 
-export async function updateOwnerDashboard<T>(
-  mutate: (row: YudanDashboardRow) => { changes: DashboardChanges; result: T }
+  if (error) throw error;
+  return ((data || []) as YudanWeightDatabaseRow[]).map((record) => ({
+    id: record.id,
+    date: record.measured_on,
+    weight: Number(record.weight_kg),
+  } satisfies YudanWeightRecord));
+}
+
+export async function getVaccineRecords(supabase: SupabaseClient, userId: string) {
+  const [recordsResult, catalog] = await Promise.all([
+    supabase
+      .from('yudan_vaccine_records')
+      .select('id, plan_id, administered_on')
+      .eq('user_id', userId)
+      .order('administered_on'),
+    getVaccineCatalog(supabase),
+  ]);
+
+  if (recordsResult.error) throw recordsResult.error;
+  return ((recordsResult.data || []) as YudanVaccineDatabaseRow[])
+    .map((record) => {
+      const plan = catalog.find((item) => item.id === record.plan_id);
+      if (!plan) return null;
+      return {
+        id: record.id,
+        planId: record.plan_id,
+        vaccine: plan.vaccine,
+        dose: plan.dose,
+        ageLabel: plan.age_label,
+        doneDate: record.administered_on,
+      } satisfies YudanVaccineRecord;
+    })
+    .filter((record): record is YudanVaccineRecord => Boolean(record));
+}
+
+export async function upsertWeightRecord(
+  supabase: SupabaseClient,
+  userId: string,
+  date: string,
+  weight: number
 ) {
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const { supabase, row } = await getOwnerDashboard();
-    const { changes, result } = mutate(row);
-    const updatedAt = new Date(Date.now() + attempt).toISOString();
-    const { data, error } = await supabase
-      .from('yudan_dashboards')
-      .update({ ...changes, updated_at: updatedAt })
-      .eq('user_id', row.user_id)
-      .eq('updated_at', row.updated_at)
-      .select('updated_at')
-      .maybeSingle();
+  const updatedAt = new Date().toISOString();
+  const { data: existing, error: lookupError } = await supabase
+    .from('yudan_weight_records')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('measured_on', date)
+    .maybeSingle<{ id: string }>();
+  if (lookupError) throw lookupError;
 
-    if (error) throw error;
-    if (data) return result;
-  }
+  const { data, error } = await supabase
+    .from('yudan_weight_records')
+    .upsert(
+      { user_id: userId, measured_on: date, weight_kg: weight, updated_at: updatedAt },
+      { onConflict: 'user_id,measured_on' }
+    )
+    .select('id, measured_on, weight_kg')
+    .single<YudanWeightDatabaseRow>();
 
-  throw new Error('看板数据同时被修改，请重试。');
+  if (error) throw error;
+  const { error: dashboardError } = await supabase
+    .from('yudan_dashboards')
+    .update({ updated_at: updatedAt })
+    .eq('user_id', userId);
+  if (dashboardError) throw dashboardError;
+  return {
+    record: { id: data.id, date: data.measured_on, weight: Number(data.weight_kg) },
+    created: !existing,
+  };
 }
 
-export function getVaccineRecords(row: YudanDashboardRow) {
-  return readVaccineRecords(row.vaccine_records);
-}
+export async function upsertVaccineRecord(
+  supabase: SupabaseClient,
+  userId: string,
+  plan: YudanVaccinePlan,
+  doneDate: string
+) {
+  const updatedAt = new Date().toISOString();
+  const { data: existing, error: lookupError } = await supabase
+    .from('yudan_vaccine_records')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('plan_id', plan.id)
+    .maybeSingle<{ id: string }>();
+  if (lookupError) throw lookupError;
 
-export function getWeightRecords(row: YudanDashboardRow) {
-  return readWeightRecords(row.weight_records);
+  const { data, error } = await supabase
+    .from('yudan_vaccine_records')
+    .upsert(
+      { user_id: userId, plan_id: plan.id, administered_on: doneDate, updated_at: updatedAt },
+      { onConflict: 'user_id,plan_id' }
+    )
+    .select('id, plan_id, administered_on')
+    .single<YudanVaccineDatabaseRow>();
+
+  if (error) throw error;
+  const { error: dashboardError } = await supabase
+    .from('yudan_dashboards')
+    .update({ updated_at: updatedAt })
+    .eq('user_id', userId);
+  if (dashboardError) throw dashboardError;
+  return {
+    record: {
+      id: data.id,
+      planId: data.plan_id,
+      vaccine: plan.vaccine,
+      dose: plan.dose,
+      ageLabel: plan.age_label,
+      doneDate: data.administered_on,
+    } satisfies YudanVaccineRecord,
+    plan,
+    created: !existing,
+  };
 }
 
 export function readDate(value: unknown, fieldName: string) {
@@ -326,12 +391,4 @@ export function readText(value: unknown, fieldName: string, maxLength: number) {
   }
 
   return normalized;
-}
-
-export function vaccineRecordId(vaccine: string, dose: string, ageLabel: string) {
-  const digest = createHash('sha256')
-    .update(`${vaccine}\u0000${dose}\u0000${ageLabel}`)
-    .digest('hex')
-    .slice(0, 16);
-  return `vaccine-api-${digest}`;
 }

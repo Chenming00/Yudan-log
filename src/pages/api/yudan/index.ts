@@ -12,14 +12,18 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   try {
-    const { row } = await getOwnerDashboard();
+    const { supabase, row } = await getOwnerDashboard();
+    const [vaccineRecords, weightRecords] = await Promise.all([
+      getVaccineRecords(supabase, row.user_id),
+      getWeightRecords(supabase, row.user_id),
+    ]);
     return json(
       {
         success: true,
         data: {
           birthday: row.birthday,
-          vaccine_records: getVaccineRecords(row),
-          weight_records: getWeightRecords(row),
+          vaccine_records: vaccineRecords,
+          weight_records: weightRecords,
           updated_at: row.updated_at,
         },
       },

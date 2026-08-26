@@ -19,6 +19,7 @@
 - 记录体重、身高、头围与备注，展示体重趋势
 - 手机和 PC 自适应布局
 - 通过 Supabase 跨设备同步
+- 体重和接种均按独立数据库行保存，不再使用 JSON 数组字段
 
 > 生长标准用于观察位置和连续趋势，单次结果需结合身长、喂养和儿保评估；看板不代替接种门诊、儿科医生或当地卫生部门的个体化建议。
 
@@ -52,7 +53,7 @@
 - `transactions` 开启 RLS，`anon` 和 `authenticated` 只授予 `SELECT`
 - 所有账本写入先在服务端验证 GitHub 身份或 API Key
 - 通过验证后，服务端使用 Supabase Secret Key 执行写入
-- `yudan_dashboards` 的 RLS 同时检查用户 ID、GitHub Provider 和指定邮箱
+- `yudan_dashboards`、`yudan_weight_records` 和 `yudan_vaccine_records` 的 RLS 同时检查用户 ID、GitHub Provider 和指定邮箱
 - Supabase Secret Key 只存在服务端环境变量中，不会发送到浏览器
 
 ## 技术栈
@@ -98,12 +99,23 @@ MIMO_API_KEY=your_mimo_api_key
 新建数据库时，在 Supabase SQL Editor 中依次执行：
 
 1. `schema.sql`：创建账本表、索引和聚合函数。
-2. `yudan-schema.sql`：创建疫苗与体重看板表和所有者 RLS。
-3. `health-schema.sql`：创建标准疫苗目录，并写入当前 46 个常规接种项目（浙江省杭州市 `2026-08` 版本）。
+2. `health-schema.sql`：创建标准疫苗目录，并写入当前 46 个常规接种项目（浙江省杭州市 `2026-08` 版本）。
+3. `yudan-schema.sql`：创建宝宝资料、逐条体重记录、逐条接种记录和所有者 RLS。
 
 已有数据库升级权限时执行：
 
-1. `access-control.sql`：开启账本 RLS、限制表权限、更新看板策略并撤销管理函数的公开执行权。
+1. 先备份 `yudan_dashboards`，再依次执行 `health-schema.sql` 和 `yudan-schema.sql`；后者会把旧 JSON 数组复制到标准化记录表，并暂时保留旧字段用于回退。
+2. 执行 `access-control.sql`：开启账本 RLS、限制表权限、更新看板策略并撤销管理函数的公开执行权。
+3. 新版网站验证通过后，再删除旧的 `weight_records` 和 `vaccine_records` JSONB 字段。
+
+标准化后的数据表：
+
+| 表 | 用途 | 业务唯一键 |
+| --- | --- | --- |
+| `yudan_dashboards` | 宝宝资料与出生日期 | `user_id` |
+| `yudan_weight_records` | 每次体重、身高和头围测量 | `user_id + measured_on` |
+| `yudan_vaccine_records` | 每次实际接种记录 | `user_id + plan_id` |
+| `yudan_vaccine_catalog` | 标准疫苗计划目录 | `id` |
 
 ### 4. 配置 GitHub OAuth
 
@@ -143,6 +155,9 @@ npm run start
 向功能分支推送时，Vercel 自动创建 Preview Deployment；合并到 `main` 后自动发布生产环境。
 
 ## API
+
+完整请求字段、响应结构和错误码见 [API 使用指南](./API.md)。API 继续使用 JSON 作为
+HTTP 传输格式，但数据库内部记录已改为标准关系表，不再保存 JSON 数组。
 
 | 方法 | 路径 | 说明 | 认证 |
 | --- | --- | --- | --- |
@@ -213,6 +228,7 @@ curl https://cost.ykn.cm/api/yudan \
 
 ```text
 .
+|-- API.md
 |-- astro.config.mjs
 |-- access-control.sql
 |-- health-schema.sql
