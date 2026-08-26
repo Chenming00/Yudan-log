@@ -803,6 +803,10 @@ export default function YudanDashboard({
     const state = getDueState(item);
     return state === "soon" || state === "overdue";
   });
+  const dueCareMilestones = ZHENGZHENG_CARE_MILESTONES.filter((item) => {
+    const diff = daysBetween(today, item.date);
+    return diff >= 0 && diff <= 14;
+  });
 
   const filteredVaccines = sortedVaccines.filter((item) => {
     if (vaccineFilter === "all") return true;
@@ -976,7 +980,7 @@ export default function YudanDashboard({
               <MetricCard icon={Baby} label="出生天数" value={`${babyAgeDays} 天`} detail={formatDate(data.birthday)} tone="emerald" />
               <MetricCard icon={Weight} label="最新体重" value={latestGrowth ? `${latestGrowth.weight} kg` : "待记录"} detail={weightAssessments.length ? weightAssessments.map((item) => `${item.source === "CN" ? "中国" : item.source} ${item.percentileLabel}`).join(" · ") : latestGrowth ? formatDate(latestGrowth.date) : "进入保健模块记录"} tone="sky" />
               <MetricCard icon={Syringe} label="免费疫苗" value={`${doneFreeVaccines}/${freeVaccines.length}`} detail={`全部计划完成 ${completionPercent}%`} tone="amber" />
-              <MetricCard icon={Bell} label="近期提醒" value={`${dueVaccines.length} 项`} detail={dueVaccines.length ? "需要留意接种时间" : "暂无临近项目"} tone={dueVaccines.some((item) => getDueState(item) === "overdue") ? "rose" : "emerald"} />
+              <MetricCard icon={Bell} label="近期提醒" value={`${dueVaccines.length + dueCareMilestones.length} 项`} detail={dueVaccines.length || dueCareMilestones.length ? `疫苗 ${dueVaccines.length} 项 · 卓正儿保 ${dueCareMilestones.length} 项` : "暂无临近项目"} tone={dueVaccines.some((item) => getDueState(item) === "overdue") ? "rose" : "emerald"} />
             </section>
 
             {nextVaccine && (
