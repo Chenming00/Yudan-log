@@ -104,9 +104,9 @@ MIMO_API_KEY=your_mimo_api_key
 
 已有数据库升级权限时执行：
 
-1. 先备份 `yudan_dashboards`，再依次执行 `health-schema.sql` 和 `yudan-schema.sql`；后者会把旧 JSON 数组复制到标准化记录表，并暂时保留旧字段用于回退。
-2. 执行 `access-control.sql`：开启账本 RLS、限制表权限、更新看板策略并撤销管理函数的公开执行权。
-3. 新版网站验证通过后，再删除旧的 `weight_records` 和 `vaccine_records` JSONB 字段。
+1. 先备份 `yudan_dashboards`，再依次执行 `health-schema.sql` 和 `yudan-schema.sql`。
+2. `yudan-schema.sql` 会把旧 JSON 数组复制到标准化记录表，核对每位用户的记录条数，并在一致时自动删除旧字段；条数不一致会直接中止。
+3. 执行 `access-control.sql`，然后部署新版网站并确认登录后能读取原有体重和接种记录。
 
 标准化后的数据表：
 

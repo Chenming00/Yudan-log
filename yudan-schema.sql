@@ -43,8 +43,8 @@ create index if not exists yudan_vaccine_records_plan_id_idx
   on public.yudan_vaccine_records (plan_id);
 
 -- Existing installations may still have the former JSONB array columns.
--- Copy them once into normalized rows. The legacy columns remain untouched as
--- a rollback backup until the new application version has been verified.
+-- Copy them once into normalized rows, validate the row counts, then remove the
+-- legacy columns so the final schema never keeps health records as JSON arrays.
 do $$
 begin
   if exists (
@@ -120,6 +120,49 @@ begin
         legacy_id = coalesce(public.yudan_vaccine_records.legacy_id, excluded.legacy_id),
         updated_at = excluded.updated_at
     $migration$;
+  end if;
+end
+$$;
+
+do $$
+declare
+  mismatch_count integer;
+  has_weight_records boolean;
+  has_vaccine_records boolean;
+begin
+  select exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'yudan_dashboards'
+      and column_name = 'weight_records'
+  ) into has_weight_records;
+
+  select exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'yudan_dashboards'
+      and column_name = 'vaccine_records'
+  ) into has_vaccine_records;
+
+  if has_weight_records <> has_vaccine_records then
+    raise exception 'Legacy Yudan JSON columns are incomplete; refusing cleanup';
+  end if;
+
+  if has_weight_records and has_vaccine_records then
+    execute $validation$
+      select count(*)
+      from public.yudan_dashboards d
+      where jsonb_array_length(coalesce(d.weight_records, '[]'::jsonb))
+            <> (select count(*) from public.yudan_weight_records w where w.user_id = d.user_id)
+         or jsonb_array_length(coalesce(d.vaccine_records, '[]'::jsonb))
+            <> (select count(*) from public.yudan_vaccine_records v where v.user_id = d.user_id)
+    $validation$ into mismatch_count;
+
+    if mismatch_count <> 0 then
+      raise exception 'Normalized rows do not match legacy JSON for % dashboard(s)', mismatch_count;
+    end if;
+
+    execute 'alter table public.yudan_dashboards drop column weight_records, drop column vaccine_records';
   end if;
 end
 $$;
