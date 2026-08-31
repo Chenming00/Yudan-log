@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { ChevronDown, BookOpen } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 
 interface BlogHeading {
   level: number;
@@ -37,11 +40,12 @@ export function TocCard({ headings, defaultOpen = true }: { headings: BlogHeadin
   if (headings.length === 0) return null;
 
   return (
-    <div className="flex max-h-[calc(100vh-8rem-var(--nav-height))] flex-col overflow-hidden rounded-2xl border border-border/50 bg-card p-5">
-      <button
+    <Card className="flex max-h-[calc(100vh-8rem-var(--nav-height))] flex-col overflow-hidden p-5">
+      <Button
         type="button"
+        variant="ghost"
         onClick={() => setIsOpen((open) => !open)}
-        className="flex w-full items-center justify-between gap-3 text-left group"
+        className="group h-auto w-full justify-between p-0 text-left hover:bg-transparent"
         aria-expanded={isOpen}
         aria-controls="blog-toc-content"
       >
@@ -50,10 +54,11 @@ export function TocCard({ headings, defaultOpen = true }: { headings: BlogHeadin
           <p className="text-base font-semibold text-foreground">文章目录</p>
         </div>
         <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform duration-300 group-hover:text-foreground ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
+      </Button>
 
       {isOpen && (
-        <div id="blog-toc-content" className="mt-4 min-h-0 flex-1 space-y-0.5 overflow-y-auto border-t border-border/30 pt-3 pr-1 pb-1 scrollbar-hide">
+        <div id="blog-toc-content" className="mt-4 min-h-0 flex-1 space-y-0.5 overflow-y-auto pr-1 pb-1 scrollbar-hide">
+          <Separator className="mb-3" />
           {headings.map((heading) => (
             <a
               key={heading.id}
@@ -71,6 +76,6 @@ export function TocCard({ headings, defaultOpen = true }: { headings: BlogHeadin
           ))}
         </div>
       )}
-    </div>
+    </Card>
   );
 }

@@ -1,5 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Calendar, Clock3, Search } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 interface Post {
   slug: string;
@@ -71,28 +75,24 @@ export default function BlogList({ posts }: { posts: Post[] }) {
 
       {allTags.length > 0 && (
         <div className="mb-4 flex flex-wrap gap-2">
-          <button
+          <Button
+            size="sm"
+            variant={selectedTag === null ? 'default' : 'secondary'}
             onClick={() => setSelectedTag(null)}
-            className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-              selectedTag === null
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground hover:text-foreground'
-            }`}
+            className="rounded-full"
           >
             全部
-          </button>
+          </Button>
           {allTags.map((tag) => (
-            <button
+            <Button
               key={tag}
+              size="sm"
+              variant={selectedTag === tag ? 'default' : 'secondary'}
               onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-              className={`rounded-full px-3 py-1.5 text-xs font-medium transition-all ${
-                selectedTag === tag
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-muted text-muted-foreground hover:text-foreground'
-              }`}
+              className="rounded-full"
             >
               {tag}
-            </button>
+            </Button>
           ))}
         </div>
       )}
@@ -100,12 +100,12 @@ export default function BlogList({ posts }: { posts: Post[] }) {
       <div className="mb-8">
         <div className="relative group">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-          <input
+          <Input
             type="text"
             placeholder="搜索文章..."
             value={searchQuery}
             onChange={(event) => setSearchQuery(event.target.value)}
-            className="w-full h-12 pl-12 pr-5 rounded-xl bg-card text-base placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all shadow-sm border border-border"
+            className="h-12 pl-12 pr-5 text-base shadow-sm"
           />
         </div>
       </div>
@@ -114,7 +114,7 @@ export default function BlogList({ posts }: { posts: Post[] }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {filteredPosts.map((post) => (
             <a key={post.slug} href={`/blog/${post.slug}`}>
-              <article className="group relative h-full rounded-2xl bg-card border border-border/50 p-5 transition-all duration-300 hover:shadow-md hover:-translate-y-0.5 active:scale-[0.99] cursor-pointer">
+              <Card className="group relative h-full cursor-pointer p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]">
                 <h2 className="text-base sm:text-lg font-semibold text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors">
                   {post.title}
                 </h2>
@@ -125,12 +125,13 @@ export default function BlogList({ posts }: { posts: Post[] }) {
                 {post.tags.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-1.5">
                     {post.tags.slice(0, 3).map((tag) => (
-                      <span
+                      <Badge
                         key={tag}
-                        className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary"
+                        variant="secondary"
+                        className="bg-primary/10 text-[11px] text-primary"
                       >
                         {tag}
-                      </span>
+                      </Badge>
                     ))}
                   </div>
                 )}
@@ -145,7 +146,7 @@ export default function BlogList({ posts }: { posts: Post[] }) {
                     <span>{post.readingTime} 分钟</span>
                   </div>
                 </div>
-              </article>
+              </Card>
             </a>
           ))}
         </div>

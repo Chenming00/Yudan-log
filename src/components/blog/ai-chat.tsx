@@ -2,6 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, Send, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -120,17 +123,19 @@ export function AiChat({ slug }: { slug: string }) {
 
   return (
     <div className="mt-12 sm:mt-16 pt-8 sm:pt-10 border-t border-border/40 max-w-full sm:max-w-3xl">
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-2 text-sm font-medium text-foreground hover:text-primary transition-colors"
+        className="px-0 hover:bg-transparent hover:text-primary"
       >
         <MessageCircle className="h-4 w-4" />
         文章问答
         {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-      </button>
+      </Button>
 
       {expanded && (
-        <div className="mt-4">
+        <Card className="mt-4 p-4 sm:p-5">
           {/* 消息列表 */}
           <div className="space-y-3 mb-4 max-h-96 overflow-y-auto">
             {messages.length === 0 && (
@@ -168,7 +173,7 @@ export function AiChat({ slug }: { slug: string }) {
           ) : (
             <>
               <div className="flex gap-2">
-                <input
+                <Input
                   ref={inputRef}
                   type="text"
                   value={input}
@@ -176,26 +181,27 @@ export function AiChat({ slug }: { slug: string }) {
                   onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
                   placeholder="输入你的问题..."
                   disabled={loading}
-                  className="flex-1 rounded-xl border border-border/50 bg-card px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 disabled:opacity-50 transition-all"
+                  className="flex-1"
                 />
-                <button
+                <Button
+                  size="icon"
                   onClick={handleSend}
                   disabled={loading || !input.trim()}
-                  className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 active:bg-primary/80 active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none transition-all"
+                  aria-label="发送问题"
                 >
                   {loading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Send className="h-4 w-4" />
                   )}
-                </button>
+                </Button>
               </div>
               <p className="text-xs text-muted-foreground/60 mt-2 text-right">
                 剩余 {remaining} 次提问机会
               </p>
             </>
           )}
-        </div>
+        </Card>
       )}
     </div>
   );

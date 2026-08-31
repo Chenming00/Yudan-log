@@ -10,6 +10,10 @@ import { DetailList } from "./dashboard/detail-list";
 import { TransactionDialog } from "./components/transaction-dialog";
 import { AddDialog } from "./components/add-dialog";
 import { SettingsDialog } from "./components/settings-dialog";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@/components/ui/card";
 import type { Transaction, MonthlyData } from "./types";
 
 const TrendChart = lazy(() =>
@@ -39,33 +43,33 @@ interface LedgerPageProps {
 function LoadingSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl bg-card border border-border p-6 animate-pulse">
-        <div className="h-3 w-16 bg-muted rounded mb-3" />
-        <div className="h-8 w-36 bg-muted rounded mb-4" />
-        <div className="h-px bg-muted mb-4" />
+      <Card className="p-6">
+        <Skeleton className="mb-3 h-3 w-16" />
+        <Skeleton className="mb-4 h-8 w-36" />
+        <Skeleton className="mb-4 h-px" />
         <div className="flex justify-between">
-          <div className="h-3 w-10 bg-muted rounded" />
-          <div className="h-4 w-20 bg-muted rounded" />
+          <Skeleton className="h-3 w-10" />
+          <Skeleton className="h-4 w-20" />
         </div>
-      </div>
-      <div className="rounded-2xl bg-card border border-border p-5 animate-pulse">
-        <div className="h-3 w-20 bg-muted rounded mb-4" />
+      </Card>
+      <Card className="p-5">
+        <Skeleton className="mb-4 h-3 w-20" />
         <div className="grid grid-cols-7 gap-1">
           {Array.from({ length: 35 }).map((_, i) => (
-            <div key={i} className="aspect-square bg-muted rounded-md" />
+            <Skeleton key={i} className="aspect-square" />
           ))}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }
 
 function ChartSkeleton({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="rounded-2xl bg-card border border-border p-5 animate-pulse">
-      <div className="h-3 w-24 bg-muted rounded mb-4" />
-      <div className={compact ? "h-40 bg-muted rounded-xl" : "h-44 bg-muted rounded-xl"} />
-    </div>
+    <Card className="p-5">
+      <Skeleton className="mb-4 h-3 w-24" />
+      <Skeleton className={compact ? "h-40 rounded-xl" : "h-44 rounded-xl"} />
+    </Card>
   );
 }
 
@@ -249,81 +253,69 @@ export default function LedgerPage({
               <p className="mt-1.5 text-sm text-muted-foreground">记录每一笔支出</p>
             </div>
             <div className="flex items-center gap-2">
-              <button
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => setSettingsOpen(true)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-muted/60 text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-95"
+                className="bg-muted/60 text-muted-foreground"
                 aria-label="设置"
                 title={githubAuthorized ? "GitHub 已授权" : canManageTransactions ? "API Key 已授权" : "设置写入权限"}
               >
                 <Settings className="h-[18px] w-[18px]" />
-              </button>
+              </Button>
             </div>
           </div>
         </div>
 
         {/* 视图切换 + 月份导航 */}
         <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
-            <button
-              onClick={() => setActiveView("home")}
-              className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all ${
-                activeView === "home"
-                  ? "bg-card shadow-sm text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              首页
-            </button>
-            <button
-              onClick={() => setActiveView("history")}
-              className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all ${
-                activeView === "history"
-                  ? "bg-card shadow-sm text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              历史
-            </button>
-          </div>
+          <Tabs value={activeView} onValueChange={(value) => setActiveView(value as "home" | "history")}>
+            <TabsList className="h-9 rounded-lg p-0.5">
+              <TabsTrigger value="home" className="h-8 rounded-md px-3 text-xs">
+                首页
+              </TabsTrigger>
+              <TabsTrigger value="history" className="h-8 rounded-md px-3 text-xs">
+                历史
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
           <div className="flex items-center gap-1">
             {!(activeView === "history" && viewAll) && (
               <>
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => navigateMonth(-1)}
-                  className="p-1.5 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  className="h-8 w-8 text-muted-foreground"
                   aria-label="上个月"
                 >
                   <ChevronLeft className="h-4 w-4" />
-                </button>
+                </Button>
                 <span className="text-sm font-medium text-foreground min-w-[72px] text-center">
                   {monthLabel}
                 </span>
-                <button
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={() => navigateMonth(1)}
                   disabled={isCurrentMonth}
-                  className={`p-1.5 rounded-lg transition-colors ${
-                    isCurrentMonth
-                      ? "text-muted-foreground/30 cursor-not-allowed"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                  }`}
+                  className="h-8 w-8 text-muted-foreground"
                   aria-label="下个月"
                 >
                   <ChevronRight className="h-4 w-4" />
-                </button>
+                </Button>
               </>
             )}
             {activeView === "history" && (
-              <button
+              <Button
+                variant={viewAll ? "secondary" : "ghost"}
+                size="sm"
                 onClick={() => setViewAll((v) => !v)}
-                className={`px-2.5 py-1 text-xs rounded-lg transition-all ${
-                  viewAll
-                    ? "bg-expense/10 text-expense font-medium"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                }`}
+                className={viewAll ? "h-8 bg-expense/10 text-xs text-expense" : "h-8 text-xs text-muted-foreground"}
               >
                 {viewAll ? "按月" : "全部"}
-              </button>
+              </Button>
             )}
           </div>
         </div>
@@ -401,7 +393,8 @@ export default function LedgerPage({
 
       {/* 悬浮记账按钮 — 右下角，底部导航上方 */}
       <div className="fixed right-5 bottom-[calc(var(--nav-height)+16px)] z-30 sm:right-8">
-        <button
+        <Button
+          size="icon"
           onClick={() => {
             if (!canManageTransactions) {
               setSettingsOpen(true);
@@ -409,7 +402,7 @@ export default function LedgerPage({
             }
             setAddOpen(true);
           }}
-          className={`rounded-full p-4 shadow-lg transition-all hover:shadow-xl active:scale-95 ${
+          className={`h-14 w-14 rounded-full shadow-lg hover:shadow-xl ${
             canManageTransactions
               ? "bg-expense text-expense-foreground"
               : "bg-muted text-muted-foreground"
@@ -418,7 +411,7 @@ export default function LedgerPage({
           title={canManageTransactions ? "记一笔" : "使用 GitHub 登录或填写 API Key 后记账"}
         >
           <Plus className="h-6 w-6" />
-        </button>
+        </Button>
       </div>
 
       {/* 交易详情对话框 */}

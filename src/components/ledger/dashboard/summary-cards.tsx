@@ -2,6 +2,9 @@
 
 import { TrendingDown, TrendingUp } from "lucide-react";
 import { AnimatedCounter } from "@/components/animated-counter";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { categoryLabel } from "@/lib/categories";
 import type { LastTransaction } from "../types";
 
@@ -40,7 +43,7 @@ export function SummaryCards({
   const up = deltaPct >= 0;
 
   return (
-    <div className="rounded-2xl bg-card border border-border p-6 shadow-sm">
+    <Card className="p-6 shadow-sm">
       {/* 所选月支出 — 主数字 */}
       <div className="flex items-baseline justify-between">
         <p className="text-sm text-muted-foreground">{monthLabel}</p>
@@ -53,20 +56,21 @@ export function SummaryCards({
       {/* 环比上月 */}
       {hasDelta && (
         <div className="mt-2 flex items-center gap-1.5 text-xs">
-          <span
+          <Badge
+            variant="secondary"
             className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 font-medium ${
               up ? "bg-expense/10 text-expense" : "bg-primary/10 text-primary"
             }`}
           >
             {up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
             {Math.abs(deltaPct).toFixed(0)}%
-          </span>
+          </Badge>
           <span className="text-muted-foreground">较上月 ¥{prevMonthExpense.toLocaleString()}</span>
         </div>
       )}
 
       {/* 分隔线 */}
-      <div className="h-px bg-border my-4" />
+      <Separator className="my-4" />
 
       {/* 累计总支出 */}
       <div className="flex items-center justify-between">
@@ -86,6 +90,6 @@ export function SummaryCards({
           </span>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { Download } from "lucide-react";
+import { Download, Search, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { categoryEmoji, categoryLabel } from "@/lib/categories";
 import type { Transaction } from "../types";
 
@@ -82,7 +86,7 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
 
   if (transactions.length === 0) {
     return (
-      <div className="rounded-2xl bg-card border border-dashed border-border p-10 text-center">
+      <Card className="border-dashed p-10 text-center">
         <div className="w-14 h-14 rounded-full bg-expense/10 mx-auto flex items-center justify-center mb-4">
           <span className="text-2xl">📭</span>
         </div>
@@ -90,7 +94,7 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
         <p className="mt-1 text-xs text-muted-foreground">
           点击 + 号开始记账吧
         </p>
-      </div>
+      </Card>
     );
   }
 
@@ -106,84 +110,69 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
     <div className="space-y-4">
       {/* 搜索栏 */}
       <div className="relative">
-        <svg
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none"
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        >
-          <circle cx="11" cy="11" r="8" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <input
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
           type="text"
           placeholder="搜索备注、分类或金额..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2.5 text-sm rounded-xl bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-expense/30 focus:border-expense/50 transition-colors"
+          className="pl-9 pr-10 focus-visible:border-expense/50 focus-visible:ring-expense/30"
         />
         {search && (
-          <button
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setSearch("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute right-1 top-1/2 -translate-y-1/2 text-muted-foreground"
+            aria-label="清除搜索"
           >
-            <svg
-              className="w-4 h-4"
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
+            <X className="h-4 w-4" />
+          </Button>
         )}
       </div>
 
       {/* 筛选器 */}
       <div className="flex flex-wrap gap-2">
         {categories.length > 1 && (
-          <select
+          <Select
             value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="px-3 py-1.5 text-xs rounded-lg bg-muted border-0 text-foreground cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary/30"
+            onValueChange={setCategoryFilter}
           >
-            <option value="all">全部分类</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
+            <SelectTrigger className="h-8 w-auto min-w-28 bg-muted text-xs">
+              <SelectValue placeholder="全部分类" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">全部分类</SelectItem>
+              {categories.map((cat) => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
+            </SelectContent>
+          </Select>
         )}
 
         {categoryFilter !== "all" && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setCategoryFilter("all")}
-            className="px-3 py-1.5 text-xs rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="h-8 text-xs text-muted-foreground"
           >
             清除筛选
-          </button>
+          </Button>
         )}
 
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={handleExport}
-          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          className="ml-auto h-8 text-xs text-muted-foreground"
         >
           <Download className="h-3.5 w-3.5" />
           导出 CSV
-        </button>
+        </Button>
       </div>
 
       {/* 搜索结果为空 */}
       {search.trim() && filtered.length === 0 ? (
-        <div className="rounded-2xl bg-card border border-dashed border-border p-10 text-center">
+        <Card className="border-dashed p-10 text-center">
           <div className="w-14 h-14 rounded-full bg-muted mx-auto flex items-center justify-center mb-4">
             <svg
               className="w-6 h-6 text-muted-foreground"
@@ -203,7 +192,7 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
           <p className="mt-1 text-xs text-muted-foreground">
             试试其他关键词吧
           </p>
-        </div>
+        </Card>
       ) : (
         <div className="space-y-4">
           {Object.entries(grouped).map(([date, items]) => (
@@ -213,10 +202,11 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
               </div>
               <div className="space-y-3">
                 {items.map((t) => (
-                  <button
+                  <Button
                     key={t.id}
+                    variant="outline"
                     onClick={() => onSelect(t)}
-                    className="w-full flex items-center gap-3 rounded-2xl bg-card border border-border p-4 hover:bg-accent active:scale-[0.99] transition-all text-left"
+                    className="h-auto w-full justify-start rounded-2xl p-4 text-left"
                   >
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-lg">
                       {categoryEmoji(t.category)}
@@ -232,7 +222,7 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
                     <span className="text-sm font-semibold text-expense">
                       -¥{Number(t.amount).toLocaleString()}
                     </span>
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -240,13 +230,14 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
 
           {/* 加载更多 */}
           {hasMore && (
-            <button
+            <Button
+              variant="secondary"
               onClick={onLoadMore}
               disabled={loadingMore}
-              className="w-full py-3 rounded-xl bg-muted text-sm text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+              className="w-full text-muted-foreground"
             >
               {loadingMore ? "加载中..." : "加载更多"}
-            </button>
+            </Button>
           )}
         </div>
       )}

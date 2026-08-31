@@ -3,6 +3,8 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import type { CategorySummary } from "../types";
 
 interface CategoryBreakdownProps {
@@ -59,7 +61,7 @@ export function CategoryBreakdown({ categoryBreakdown, title = "支出分类" }:
   }
 
   return (
-    <div className="rounded-2xl bg-card border border-border p-4">
+    <Card className="p-4">
       <p className="text-sm font-medium text-muted-foreground mb-4">{title}</p>
       <div className="flex flex-col sm:flex-row gap-6">
         {/* 饼图 */}
@@ -133,9 +135,11 @@ export function CategoryBreakdown({ categoryBreakdown, title = "支出分类" }:
           </div>
 
           {categoryList.length > 5 && (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setExpanded(!expanded)}
-              className="mt-3 pt-3 border-t border-border/50 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
+              className="mt-3 h-auto w-full justify-start rounded-none border-t border-border/50 pt-3 text-xs text-muted-foreground"
             >
               {expanded ? (
                 <>
@@ -148,10 +152,10 @@ export function CategoryBreakdown({ categoryBreakdown, title = "支出分类" }:
                   展开更多 ({categoryList.length - 5})
                 </>
               )}
-            </button>
+            </Button>
           )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

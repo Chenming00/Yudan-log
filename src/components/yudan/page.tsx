@@ -34,6 +34,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { isGitHubProvider, isOwnerEmail, OWNER_EMAIL } from "@/lib/auth";
 import { getMaleWeightAssessments } from "@/src/lib/growth-standards";
 import type { WeightAssessment } from "@/src/lib/growth-standards";
@@ -1003,7 +1006,7 @@ export default function YudanDashboard({
               </div>
               <div className="flex items-end gap-3">
                 <BirthInfo />
-                <div className="mb-1 flex items-center gap-2">{isPreview ? <PreviewBadge /> : <SyncIndicator status={syncStatus} />}{supabase && session && isOwner && <button type="button" className="grid h-9 w-9 place-items-center rounded-lg text-stone-400 hover:bg-white hover:text-stone-700" onClick={handleSignOut} aria-label="退出登录" title="退出登录"><LogOut className="h-4 w-4" /></button>}</div>
+                <div className="mb-1 flex items-center gap-2">{isPreview ? <PreviewBadge /> : <SyncIndicator status={syncStatus} />}{supabase && session && isOwner && <Button type="button" variant="ghost" size="icon" className="text-stone-400 hover:bg-white hover:text-stone-700" onClick={handleSignOut} aria-label="退出登录" title="退出登录"><LogOut className="h-4 w-4" /></Button>}</div>
               </div>
             </header>
 
@@ -1011,9 +1014,9 @@ export default function YudanDashboard({
             {canEdit && cloudError && <CloudError message={cloudError} />}
 
             <div className="grid grid-cols-3 rounded-lg bg-stone-200/70 p-1 sm:w-[27rem]">
-              <button type="button" onClick={() => setActiveView("growth")} className={cn("flex h-10 items-center justify-center gap-2 rounded-md text-sm font-medium", activeView === "growth" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><Weight className="h-4 w-4" />体重</button>
-              <button type="button" onClick={() => setActiveView("vaccines")} className={cn("flex h-10 items-center justify-center gap-2 rounded-md text-sm font-medium", activeView === "vaccines" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><Syringe className="h-4 w-4" />疫苗</button>
-              <button type="button" onClick={() => setActiveView("care")} className={cn("flex h-10 items-center justify-center gap-2 rounded-md text-sm font-medium", activeView === "care" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><HeartPulse className="h-4 w-4" />卓正儿保</button>
+              <Button type="button" variant="ghost" onClick={() => setActiveView("growth")} className={cn("h-10 rounded-md", activeView === "growth" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><Weight className="h-4 w-4" />体重</Button>
+              <Button type="button" variant="ghost" onClick={() => setActiveView("vaccines")} className={cn("h-10 rounded-md", activeView === "vaccines" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><Syringe className="h-4 w-4" />疫苗</Button>
+              <Button type="button" variant="ghost" onClick={() => setActiveView("care")} className={cn("h-10 rounded-md", activeView === "care" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><HeartPulse className="h-4 w-4" />卓正儿保</Button>
             </div>
 
             {activeView === "vaccines" ? (
@@ -1028,7 +1031,7 @@ export default function YudanDashboard({
                   <div className="flex flex-col gap-3 border-b border-stone-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                     <div><h2 className="font-semibold text-stone-950">接种计划</h2><p className="mt-1 text-xs text-stone-500">{canEdit ? "按建议接种日期排序，点击“登记”填写实际日期" : "示例项目按建议接种日期排序，登录后显示真实记录"}</p></div>
                     <div className="grid grid-cols-3 rounded-lg bg-stone-100 p-1">
-                      {(["all", "free", "paid"] as VaccineFilter[]).map((filter) => <button key={filter} type="button" onClick={() => setVaccineFilter(filter)} className={cn("h-8 rounded-md px-3 text-xs font-medium", vaccineFilter === filter ? "bg-white text-stone-950 shadow-sm" : "text-stone-500")}>{filter === "all" ? "全部" : filter === "free" ? "免费" : "自费"}</button>)}
+                      {(["all", "free", "paid"] as VaccineFilter[]).map((filter) => <Button key={filter} type="button" variant="ghost" size="sm" onClick={() => setVaccineFilter(filter)} className={cn("h-8 rounded-md px-3 text-xs", vaccineFilter === filter ? "bg-white text-stone-950 shadow-sm" : "text-stone-500")}>{filter === "all" ? "全部" : filter === "free" ? "免费" : "自费"}</Button>)}
                     </div>
                   </div>
                   <div className="border-b border-sky-100 bg-sky-50/70 px-4 py-3 text-xs leading-5 text-sky-950 sm:px-5"><div className="flex gap-2"><Info className="mt-0.5 h-4 w-4 shrink-0 text-sky-700" /><p>五联、四联属于替代方案，不是额外加打；具体品牌、程序和补种安排请由接种门诊确认。</p></div></div>
@@ -1069,7 +1072,7 @@ export default function YudanDashboard({
             <DialogHeader><DialogTitle>登记实际接种日期</DialogTitle><DialogDescription>{recordingVaccine ? `${recordingVaccine.vaccine} ${recordingVaccine.dose} · 建议 ${formatDate(recordingVaccine.plannedDate)}` : ""}</DialogDescription></DialogHeader>
             <Field label="实际接种日期"><Input type="date" max={today} value={vaccineDateDraft} onChange={(event) => setVaccineDateDraft(event.target.value)} /></Field>
             <div className="grid grid-cols-2 gap-3"><Button variant="outline" onClick={() => setVaccineDateDraft(today)}>设为今天</Button><Button disabled={!vaccineDateDraft} onClick={saveVaccineRecord}><CheckCircle2 className="h-4 w-4" />保存记录</Button></div>
-            {recordingVaccine?.doneDate && <button type="button" className="text-sm font-medium text-rose-700" onClick={() => { updateVaccine(recordingVaccine.id, { doneDate: "", status: "planned" }); setRecordingVaccineId(null); }}>清除实际接种日期</button>}
+            {recordingVaccine?.doneDate && <Button type="button" variant="ghost" className="text-rose-700 hover:bg-rose-50 hover:text-rose-700" onClick={() => { updateVaccine(recordingVaccine.id, { doneDate: "", status: "planned" }); setRecordingVaccineId(null); }}>清除实际接种日期</Button>}
           </DialogContent>
         </Dialog>
 
@@ -1144,7 +1147,7 @@ function DashboardLayout({
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {isPreview ? <PreviewBadge /> : <SyncIndicator status={syncStatus} />}
-            {canEdit && <button type="button" className="grid h-9 w-9 place-items-center rounded-full bg-white/80 text-stone-400 shadow-sm ring-1 ring-stone-900/5 hover:text-stone-700" onClick={onSignOut} aria-label="退出登录" title="退出登录"><LogOut className="h-4 w-4" /></button>}
+            {canEdit && <Button type="button" variant="ghost" size="icon" className="rounded-full bg-white/80 text-stone-400 shadow-sm ring-1 ring-stone-900/5 hover:text-stone-700" onClick={onSignOut} aria-label="退出登录" title="退出登录"><LogOut className="h-4 w-4" /></Button>}
           </div>
         </header>
 
@@ -1484,10 +1487,10 @@ function VaccineCard({
           <DueBadge item={item} />
         </div>
       </div>
-      <button className="mt-3 flex w-full items-center justify-between rounded-lg bg-stone-50 px-3 py-2 text-sm font-medium text-stone-700" onClick={onEdit}>
+      <Button variant="ghost" className="mt-3 w-full justify-between bg-stone-50 text-stone-700" onClick={onEdit}>
         接种档案和批号
         <ChevronRight className={cn("h-4 w-4 transition-transform", isEditing && "rotate-90")} />
-      </button>
+      </Button>
       {isEditing && <div className="mt-3"><VaccineEditor item={item} onUpdate={onUpdate} /></div>}
     </article>
   );
@@ -1532,21 +1535,17 @@ function StatusSelect({
   compact?: boolean;
 }) {
   return (
-    <select
+    <Select
       value={value}
-      onChange={(event) => onChange(event.target.value as VaccineStatus)}
-      className={cn(
-        "rounded-lg border px-2 py-1.5 text-xs font-medium outline-none",
-        statusStyles[value],
-        compact ? "max-w-24" : "w-28"
-      )}
+      onValueChange={(nextValue) => onChange(nextValue as VaccineStatus)}
     >
-      {Object.entries(statusLabels).map(([key, label]) => (
-        <option key={key} value={key}>
-          {label}
-        </option>
-      ))}
-    </select>
+      <SelectTrigger className={cn("h-8 text-xs font-medium", statusStyles[value], compact ? "w-24" : "w-28")}>
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {Object.entries(statusLabels).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -1558,9 +1557,9 @@ function DateInput({ value, onChange }: { value: string; onChange: (value: strin
 
 function TypeBadge({ type }: { type: VaccineType }) {
   return (
-    <span className={cn("inline-flex rounded border px-1.5 py-0.5 text-[11px] font-medium", type === "free" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-indigo-200 bg-indigo-50 text-indigo-700")}>
+    <Badge variant="outline" className={cn("rounded text-[11px]", type === "free" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-indigo-200 bg-indigo-50 text-indigo-700")}>
       {type === "free" ? "中国免费" : "自费补充"}
-    </span>
+    </Badge>
   );
 }
 
@@ -1585,17 +1584,17 @@ function DueBadge({ item }: { item: VaccineEntry }) {
 function ReminderItem({ vaccine, onOpen }: { vaccine: VaccineEntry; onOpen: () => void }) {
   const state = getDueState(vaccine);
   return (
-    <button className="w-full rounded-lg border border-stone-200 bg-white p-3 text-left transition-colors hover:bg-stone-50" onClick={onOpen}>
+    <Button variant="outline" className="h-auto w-full justify-start rounded-lg border-stone-200 bg-white p-3 text-left hover:bg-stone-50" onClick={onOpen}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-medium text-stone-950">{vaccine.vaccine} {vaccine.dose}</p>
           <p className="mt-1 text-sm text-stone-600">{vaccine.ageLabel} · {formatDate(vaccine.plannedDate)}</p>
         </div>
-        <span className={cn("rounded-full px-2 py-0.5 text-xs font-medium", state === "overdue" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700")}>
+        <Badge variant="secondary" className={cn(state === "overdue" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700")}>
           {state === "overdue" ? "逾期" : "临近"}
-        </span>
+        </Badge>
       </div>
-    </button>
+    </Button>
   );
 }
 
@@ -1625,7 +1624,7 @@ function Panel({
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:p-5">
+    <Card className="rounded-lg border-stone-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex items-center gap-2">
         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-100 text-stone-700">
           <Icon className="h-4 w-4" />
@@ -1633,7 +1632,7 @@ function Panel({
         <h2 className="text-base font-semibold text-stone-950">{title}</h2>
       </div>
       {children}
-    </section>
+    </Card>
   );
 }
 
@@ -1649,16 +1648,17 @@ function TabButton({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Button
+      variant={active ? "default" : "secondary"}
       className={cn(
-        "flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors",
+        "h-10 rounded-lg",
         active ? "bg-emerald-600 text-white shadow-sm" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
       )}
       onClick={onClick}
     >
       <Icon className="h-4 w-4" />
       {label}
-    </button>
+    </Button>
   );
 }
 
@@ -1674,16 +1674,17 @@ function FilterButton({
   onClick: () => void;
 }) {
   return (
-    <button
+    <Button
+      variant="outline"
       className={cn(
-        "flex items-center justify-between rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+        "h-10 justify-between rounded-lg px-3",
         active ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50"
       )}
       onClick={onClick}
     >
       <span>{label}</span>
-      <span className="rounded-full bg-white px-2 py-0.5 text-xs text-stone-500">{count}</span>
-    </button>
+      <Badge variant="secondary" className="bg-white text-stone-500">{count}</Badge>
+    </Button>
   );
 }
 
@@ -1706,14 +1707,16 @@ function Field({
 
 function IconButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button
-      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-stone-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+    <Button
+      variant="ghost"
+      size="icon"
+      className="h-8 w-8 shrink-0 text-stone-400 hover:bg-rose-50 hover:text-rose-600"
       onClick={onClick}
       aria-label={label}
       title={label}
     >
       <Trash2 className="h-4 w-4" />
-    </button>
+    </Button>
   );
 }
 

@@ -5,7 +5,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { CATEGORIES } from "@/lib/categories";
 import { toLocalDatetimeInput } from "@/lib/utils";
 import type { Transaction } from "../types";
@@ -155,14 +156,6 @@ export function TransactionDialog({
       {/* 交易详情对话框 */}
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-[425px]">
-          <button
-            onClick={() => onOpenChange(false)}
-            className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-          >
-            <X className="h-4 w-4 text-muted-foreground" />
-            <span className="sr-only">Close</span>
-          </button>
-
           <DialogHeader className="pt-4 pb-4">
             <DialogTitle className="text-center">
               {editing ? (
@@ -182,43 +175,45 @@ export function TransactionDialog({
                 </span>
               )}
             </DialogTitle>
-            <span className="mt-3 text-xs px-3 py-1.5 rounded-full font-medium bg-expense/10 text-expense mx-auto w-fit">
+            <Badge variant="secondary" className="mx-auto mt-3 w-fit bg-expense/10 text-expense">
               支出
-            </span>
+            </Badge>
           </DialogHeader>
 
           {editing ? (
             <div className="space-y-4 pt-2">
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">备注</Label>
-                <textarea
+                <Textarea
                   value={editForm.note}
                   onChange={(e) => setEditForm((f) => ({ ...f, note: e.target.value }))}
                   rows={2}
-                  className="flex min-h-[60px] w-full rounded-xl bg-muted px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
+                  className="min-h-[60px] resize-none bg-muted"
                 />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">分类</Label>
                 <div className="flex flex-wrap gap-2">
                   {CATEGORIES.map((cat) => (
-                    <button
+                    <Button
                       key={cat.value}
                       type="button"
+                      size="sm"
+                      variant="outline"
                       onClick={() =>
                         setEditForm((f) => ({
                           ...f,
                           category: f.category === cat.label ? "" : cat.label,
                         }))
                       }
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all active:scale-95 ${
+                      className={`rounded-full ${
                         editForm.category === cat.label
                           ? "bg-expense/10 text-expense border border-expense/30"
-                          : "bg-muted text-muted-foreground border border-transparent hover:bg-muted/80"
+                          : "bg-muted text-muted-foreground border-transparent hover:bg-muted/80"
                       }`}
                     >
                       {cat.emoji} {cat.label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
                 <Input

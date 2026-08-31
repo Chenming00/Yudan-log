@@ -2,8 +2,8 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   --radius: 0.75rem;
 }
 
@@ -67,6 +67,11 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --radius-xs: calc(var(--radius) * 0.5);
+  --radius-sm: calc(var(--radius) * 0.75);
+  --radius-md: calc(var(--radius) * 0.875);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.5);
 }
 
 @utility pt-safe {
@@ -136,13 +141,20 @@
 
 /* Markdown code block */
 .prose pre {
+  width: 100%;
+  min-width: 0;
   overflow-x: auto;
   max-width: 100%;
+  padding: 0;
+  border-radius: var(--radius);
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
 }
 .prose pre code.hljs {
   display: block;
   padding: 1rem;
-  border-radius: 0.75rem;
+  border-radius: inherit;
+  background: transparent;
   font-size: 0.8125rem;
   line-height: 1.6;
   font-family: var(--font-mono);
@@ -167,12 +179,7 @@
   scroll-margin-top: calc(5rem + env(safe-area-inset-top));
 }
 
-@media (max-width: 640px) {
-  .blog-content pre {
-    border-radius: 0;
-    margin-left: -20px;
-    margin-right: -20px;
-    padding-left: 20px;
-    padding-right: 20px;
-  }
+.blog-content {
+  width: 100%;
+  min-width: 0;
 }

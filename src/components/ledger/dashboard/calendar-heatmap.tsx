@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { Transaction } from "../types";
 
 interface CalendarHeatmapProps {
@@ -70,7 +73,7 @@ export function CalendarHeatmap({ calendarData, year, month }: CalendarHeatmapPr
 
   return (
     <>
-      <div className="rounded-2xl bg-card border border-border p-5">
+      <Card className="p-5">
         <div className="flex items-center justify-between mb-4">
           <p className="text-sm font-medium text-muted-foreground">支出日历</p>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -98,10 +101,11 @@ export function CalendarHeatmap({ calendarData, year, month }: CalendarHeatmapPr
             const hasData = amount > 0;
             const heat = getHeatStyle(amount, maxAmount);
             return (
-              <button
+              <Button
                 key={day}
+                variant="ghost"
                 onClick={() => handleDayClick(day)}
-                className={`aspect-square rounded-md flex flex-col items-center justify-center text-xs transition-all ${heat.bg} ${
+                className={`h-auto aspect-square rounded-md p-0 flex flex-col items-center justify-center text-xs ${heat.bg} ${
                   isToday ? "ring-2 ring-primary ring-offset-1 ring-offset-card" : ""
                 } cursor-pointer hover:ring-2 hover:ring-expense/30 hover:ring-offset-1 hover:ring-offset-card active:scale-95`}
               >
@@ -113,11 +117,11 @@ export function CalendarHeatmap({ calendarData, year, month }: CalendarHeatmapPr
                     {amount >= 1000 ? `${(amount / 1000).toFixed(1)}k` : amount.toFixed(0)}
                   </span>
                 )}
-              </button>
+              </Button>
             );
           })}
         </div>
-      </div>
+      </Card>
 
       {/* 当日详情弹窗 */}
       <Dialog open={selectedDay !== null} onOpenChange={(open) => { if (!open) { setSelectedDay(null); setDayTransactions([]); } }}>
@@ -138,12 +142,12 @@ export function CalendarHeatmap({ calendarData, year, month }: CalendarHeatmapPr
             {loadingDay ? (
               <div className="space-y-2">
                 {[0, 1, 2].map((i) => (
-                  <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-muted animate-pulse">
+                  <div key={i} className="flex items-center justify-between rounded-xl bg-muted p-3">
                     <div className="space-y-1">
-                      <div className="h-3 w-20 bg-muted-foreground/20 rounded" />
-                      <div className="h-2 w-14 bg-muted-foreground/20 rounded" />
+                      <Skeleton className="h-3 w-20 bg-muted-foreground/20" />
+                      <Skeleton className="h-2 w-14 bg-muted-foreground/20" />
                     </div>
-                    <div className="h-3 w-12 bg-muted-foreground/20 rounded" />
+                    <Skeleton className="h-3 w-12 bg-muted-foreground/20" />
                   </div>
                 ))}
               </div>
