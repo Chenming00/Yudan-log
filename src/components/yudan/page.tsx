@@ -1079,7 +1079,7 @@ export default function YudanDashboard({
         <Dialog open={canEdit && weightDialogOpen} onOpenChange={setWeightDialogOpen}>
           <DialogContent className="w-[calc(100%-2rem)] max-w-md rounded-lg p-5 sm:p-6">
             <DialogHeader><DialogTitle>记录体重</DialogTitle><DialogDescription>同一天再次保存会更新原记录，不会生成重复数据。</DialogDescription></DialogHeader>
-            <div className="grid grid-cols-2 gap-3"><Field label="测量日期"><Input type="date" max={today} value={growthForm.date} onChange={(event) => setGrowthForm({ ...growthForm, date: event.target.value })} /></Field><Field label="体重（kg）"><Input type="number" min="0.1" max="200" step="0.01" inputMode="decimal" value={growthForm.weight} onChange={(event) => setGrowthForm({ ...growthForm, weight: event.target.value })} placeholder="例如 6.80" autoFocus /></Field></div>
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3"><Field label="测量日期"><Input className="min-w-0 max-w-full appearance-none" type="date" max={today} value={growthForm.date} onChange={(event) => setGrowthForm({ ...growthForm, date: event.target.value })} /></Field><Field label="体重（kg）"><Input className="min-w-0 max-w-full" type="number" min="0.1" max="200" step="0.01" inputMode="decimal" value={growthForm.weight} onChange={(event) => setGrowthForm({ ...growthForm, weight: event.target.value })} placeholder="例如 6.80" autoFocus /></Field></div>
             <Button className="w-full" disabled={!growthForm.date || !Number(growthForm.weight)} onClick={addGrowth}><CheckCircle2 className="h-4 w-4" />保存体重</Button>
           </DialogContent>
         </Dialog>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 
 type WeightChartProps = {
   data: Array<{ date: string; weight: number; height: number; head: number }>;
@@ -6,7 +6,8 @@ type WeightChartProps = {
 };
 
 export default function WeightChart({ data, id }: WeightChartProps) {
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [previewIndex, setPreviewIndex] = useState<number | null>(null);
   const width = 640;
   const height = 240;
   const padding = { top: 18, right: 18, bottom: 36, left: 48 };
@@ -31,6 +32,7 @@ export default function WeightChart({ data, id }: WeightChartProps) {
   const gridValues = Array.from({ length: 4 }, (_, index) =>
     domainMaximum - (index / 3) * domainRange
   );
+  const activeIndex = previewIndex ?? selectedIndex;
   const activeItem = activeIndex === null ? null : data[activeIndex];
   const activeX = activeIndex === null ? 0 : x(activeIndex);
   const activeY = activeItem ? y(activeItem.weight) : 0;
@@ -44,12 +46,44 @@ export default function WeightChart({ data, id }: WeightChartProps) {
     ? Math.min(padding.top + plotHeight - tooltipHeight, activeY + 14)
     : activeY - tooltipHeight - 14;
 
+  const toggleSelectedIndex = (index: number) => {
+    setSelectedIndex((current) => current === index ? null : index);
+  };
+
+  const handleChartClick = (event: MouseEvent<SVGSVGElement>) => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const chartX = ((event.clientX - bounds.left) / bounds.width) * width;
+    const nearestIndex = data.reduce(
+      (nearest, _item, index) =>
+        Math.abs(x(index) - chartX) < Math.abs(x(nearest) - chartX) ? index : nearest,
+      0
+    );
+
+    toggleSelectedIndex(nearestIndex);
+  };
+
+  const handlePointPointerEnter = (event: PointerEvent<SVGCircleElement>, index: number) => {
+    if (event.pointerType === "mouse") setPreviewIndex(index);
+  };
+
+  const handlePointPointerLeave = (event: PointerEvent<SVGCircleElement>) => {
+    if (event.pointerType === "mouse") setPreviewIndex(null);
+  };
+
+  const handlePointKeyDown = (event: KeyboardEvent<SVGCircleElement>, index: number) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    event.stopPropagation();
+    toggleSelectedIndex(index);
+  };
+
   return (
     <svg
-      className="h-full w-full"
+      className="h-full w-full touch-manipulation"
       viewBox={`0 0 ${width} ${height}`}
-      role="img"
-      aria-label="体重趋势图"
+      role="group"
+      aria-label="体重趋势图，点按图表可查看最近数据点的日期和体重"
+      onClick={handleChartClick}
     >
       <defs>
         <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
@@ -79,11 +113,11 @@ export default function WeightChart({ data, id }: WeightChartProps) {
             tabIndex={0}
             role="button"
             aria-label={`${item.date}，体重 ${item.weight} 千克`}
-            onMouseEnter={() => setActiveIndex(index)}
-            onMouseLeave={() => setActiveIndex(null)}
-            onFocus={() => setActiveIndex(index)}
-            onBlur={() => setActiveIndex(null)}
-            onClick={() => setActiveIndex((current) => current === index ? null : index)}
+            onPointerEnter={(event) => handlePointPointerEnter(event, index)}
+            onPointerLeave={handlePointPointerLeave}
+            onFocus={() => setPreviewIndex(index)}
+            onBlur={() => setPreviewIndex(null)}
+            onKeyDown={(event) => handlePointKeyDown(event, index)}
           />
           <circle
             cx={x(index)}
