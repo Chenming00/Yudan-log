@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { categoryEmoji, categoryLabel } from "@/lib/categories";
+import { transactionTitle, matchesTransaction, csvCell } from "@/lib/ledger";
 import type { Transaction } from "../types";
 
 interface DetailListProps {
@@ -44,13 +45,7 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
     }
 
     if (search.trim()) {
-      const keyword = search.trim().toLowerCase();
-      result = result.filter(
-        (t) =>
-          (t.note && t.note.toLowerCase().includes(keyword)) ||
-          (t.category && t.category.toLowerCase().includes(keyword)) ||
-          String(t.amount).includes(keyword)
-      );
+      result = result.filter((t) => matchesTransaction(t, search));
     }
 
     return result;
@@ -66,15 +61,12 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
   }, [filtered]);
 
   const handleExport = useCallback(() => {
-    const header = "日期,类型,金额,分类,备注";
-    const rows = filtered.map((t) => {
-      const date = new Date(t.transaction_time || t.created_at).toLocaleString("zh-CN");
-      const amount = Number(t.amount);
-      const category = (t.category || "未分类").replace(/,/g, "，");
-      const note = (t.note || "").replace(/,/g, "，").replace(/\n/g, " ");
-      return `${date},支出,${amount},${category},${note}`;
-    });
-    const csv = "﻿" + header + "\n" + rows.join("\n");
+    const header = "日期,类型,金额,品牌,商品,分类,备注";
+    const rows = filtered.map((t) => [
+      t.transaction_time ? new Date(t.transaction_time).toLocaleString("zh-CN") : "",
+      "支出", Number(t.amount), t.brand || "", t.product || "", categoryLabel(t.category), t.note || "",
+    ].map(csvCell).join(","));
+    const csv = "\uFEFF" + header + "\r\n" + rows.join("\r\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -113,7 +105,7 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           type="text"
-          placeholder="搜索备注、分类或金额..."
+          placeholder="搜索品牌、商品、备注、分类或金额..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9 pr-10 focus-visible:border-expense/50 focus-visible:ring-expense/30"
@@ -170,6 +162,8 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
         </Button>
       </div>
 
+      {hasMore && <p className="text-xs text-muted-foreground">搜索和导出仅包含已加载账单，可点击下方「加载更多」继续查看。</p>}
+
       {/* 搜索结果为空 */}
       {search.trim() && filtered.length === 0 ? (
         <Card className="border-dashed p-10 text-center">
@@ -213,7 +207,7 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
                     </span>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-foreground truncate">
-                        {t.note || categoryLabel(t.category)}
+                        {transactionTitle(t)}
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {categoryLabel(t.category)} · {formatDate(t.transaction_time || t.created_at)}
@@ -228,18 +222,13 @@ export function DetailList({ transactions, onSelect, hasMore, loadingMore, onLoa
             </div>
           ))}
 
-          {/* 加载更多 */}
-          {hasMore && (
-            <Button
-              variant="secondary"
-              onClick={onLoadMore}
-              disabled={loadingMore}
-              className="w-full text-muted-foreground"
-            >
-              {loadingMore ? "加载中..." : "加载更多"}
-            </Button>
-          )}
+
         </div>
+      )}
+      {hasMore && (
+        <Button variant="secondary" onClick={onLoadMore} disabled={loadingMore} className="w-full text-muted-foreground">
+          {loadingMore ? "加载中..." : "加载更多"}
+        </Button>
       )}
     </div>
   );

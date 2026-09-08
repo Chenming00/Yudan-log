@@ -5,7 +5,7 @@ import { AnimatedCounter } from "@/components/animated-counter";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { categoryLabel } from "@/lib/categories";
+import { transactionTitle } from "@/lib/ledger";
 import type { LastTransaction } from "../types";
 
 interface SummaryCardsProps {
@@ -85,7 +85,7 @@ export function SummaryCards({
         <div className="flex items-center justify-between mt-2">
           <span className="text-xs text-muted-foreground">最近一笔</span>
           <span className="text-xs text-muted-foreground truncate ml-2">
-            ¥{lastTransaction.amount.toLocaleString()} · {categoryLabel(lastTransaction.category)} ·{" "}
+            ¥{lastTransaction.amount.toLocaleString()} · {transactionTitle(lastTransaction)} ·{" "}
             {formatRelativeDate(lastTransaction.transaction_time)}
           </span>
         </div>

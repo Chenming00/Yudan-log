@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSupabaseAdminClient } from '../../../lib/supabase';
 import { getErrorMessage, json, validateWriteAuth } from '../../lib/http';
+import { LedgerInputError, parseLedgerInput } from '../../lib/ledger-input';
 
 export const POST: APIRoute = async ({ request }) => {
   if (!await validateWriteAuth(request)) {
@@ -9,23 +10,11 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const supabase = getSupabaseAdminClient();
-    const { amount, category, note, type, transaction_time } = await request.json();
-
-    if (amount === undefined || amount === null || !type) {
-      return json({ error: '金额和收支类型不能为空' }, { status: 400 });
-    }
-
-    if (!['income', 'expense'].includes(type)) {
-      return json({ error: '收支类型不合法' }, { status: 400 });
-    }
-
-    if (Number.isNaN(Number(amount))) {
-      return json({ error: '金额格式不正确' }, { status: 400 });
-    }
+    const { fields } = parseLedgerInput(await request.json());
 
     const { data, error } = await supabase
       .from('transactions')
-      .insert([{ amount: Number(amount), category, note, type, transaction_time }])
+      .insert([fields])
       .select()
       .single();
 
@@ -33,6 +22,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     return json({ success: true, data });
   } catch (error: unknown) {
+    if (error instanceof LedgerInputError || error instanceof SyntaxError) return json({ error: error.message }, { status: 400 });
     return json({ error: getErrorMessage(error, '新增记录失败') }, { status: 500 });
   }
 };

@@ -1,5 +1,9 @@
 # 鱼蛋看板 API 使用指南
 
+账本的品牌、商品、备注与录入规则见 [账单 skill](content/blog/bill-skill.md)。
+新版账本写接口支持 `brand`、`product`，`POST /api/add` 每次接收一条交易对象，
+`PATCH /api/edit` 使用 `id` 和变更字段；省略字段保留原值，可选字段传 `null` 可清空。
+
 正式地址：`https://cost.ykn.cm`
 
 看板 API 使用 HTTP JSON 传输，但数据库内部已标准化：每条体重记录保存于

@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { transactionTitle } from "@/lib/ledger";
 import type { Transaction } from "../types";
 
 interface CalendarHeatmapProps {
@@ -159,7 +160,7 @@ export function CalendarHeatmap({ calendarData, year, month }: CalendarHeatmapPr
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-foreground truncate">
-                      {t.note || t.category || "未分类"}
+                      {transactionTitle(t)}
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {t.category || "未分类"} · {formatTime(t.transaction_time || t.created_at)}

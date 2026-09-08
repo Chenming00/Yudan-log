@@ -21,6 +21,7 @@
     "types": ["astro/client", "node"]
   },
   "include": [
+    ".astro/types.d.ts",
     "src/**/*",
     "components/**/*",
     "lib/**/*"

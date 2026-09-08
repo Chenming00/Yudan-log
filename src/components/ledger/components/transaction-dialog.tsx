@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState, type FormEvent } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { TransactionFields } from "./transaction-fields";
+import { validateLedgerForm } from "@/lib/ledger";
 import { Badge } from "@/components/ui/badge";
-import { CATEGORIES } from "@/lib/categories";
+import { categoryLabel } from "@/lib/categories";
 import { toLocalDatetimeInput } from "@/lib/utils";
 import type { Transaction } from "../types";
 
@@ -21,14 +22,16 @@ interface TransactionDetailProps {
 
 function createEditForm(transaction: Transaction | null) {
   if (!transaction) {
-    return { amount: "", note: "", category: "", transaction_time: "" };
+    return { amount: "", brand: "", product: "", note: "", category: "", transaction_time: "" };
   }
-  const dt = transaction.transaction_time || transaction.created_at;
+  const dt = transaction.transaction_time;
   return {
     amount: String(transaction.amount),
+    brand: transaction.brand || "",
+    product: transaction.product || "",
     note: transaction.note || "",
-    category: transaction.category || "",
-    transaction_time: toLocalDatetimeInput(new Date(dt)),
+    category: transaction.category ? categoryLabel(transaction.category) : "",
+    transaction_time: dt ? toLocalDatetimeInput(new Date(dt)) : "",
   };
 }
 
@@ -59,18 +62,21 @@ export function TransactionDialog({
 
   if (!transaction) return null;
 
-  const dateStr = new Date(transaction.transaction_time || transaction.created_at).toLocaleString("zh-CN", {
+  const dateStr = transaction.transaction_time ? new Date(transaction.transaction_time).toLocaleString("zh-CN", {
     year: "numeric",
     month: "long",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  });
+  }) : "未知（未填写购买时间）";
 
   const canEdit = Boolean(authToken);
 
-  const handleSave = async () => {
-    if (!authToken) return;
+  const handleSave = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!authToken || saving) return;
+    const validation = validateLedgerForm(editForm, Boolean(transaction.product));
+    if (validation) { setActionError(validation); return; }
     setSaving(true);
     setActionError(null);
     try {
@@ -79,11 +85,13 @@ export function TransactionDialog({
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({
           id: transaction.id,
-          amount: parseFloat(editForm.amount),
+          amount: Number(editForm.amount),
+          brand: editForm.brand,
+          product: editForm.product,
           note: editForm.note,
           category: editForm.category,
           type: 'expense',
-          transaction_time: editForm.transaction_time ? new Date(editForm.transaction_time).toISOString() : undefined,
+          transaction_time: editForm.transaction_time ? new Date(editForm.transaction_time).toISOString() : null,
         }),
       });
       const data = await res.json();
@@ -127,7 +135,7 @@ export function TransactionDialog({
 
   return (
     <>
-      {actionError && (
+      {actionError && !editing && (
         <div className="fixed top-4 left-4 right-4 z-50 bg-destructive/10 border border-destructive text-destructive text-sm px-4 py-2 rounded-xl shadow-sm text-center">
           {actionError}
         </div>
@@ -135,9 +143,10 @@ export function TransactionDialog({
 
       {/* 确认删除对话框 */}
       <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-[calc(100%-2rem)] max-w-md max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-center">确认删除</DialogTitle>
+            <DialogDescription>删除后无法在账本中恢复这条记录。</DialogDescription>
           </DialogHeader>
           <p className="text-sm text-muted-foreground text-center py-2">
             确定要删除这条记录吗？此操作不可撤销。
@@ -154,105 +163,51 @@ export function TransactionDialog({
       </Dialog>
 
       {/* 交易详情对话框 */}
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[425px]">
+      <Dialog open={open} onOpenChange={(next) => { if (!saving && !deleting) onOpenChange(next); }}>
+        <DialogContent className="w-[calc(100%-2rem)] max-w-md max-h-[90dvh] overflow-y-auto">
           <DialogHeader className="pt-4 pb-4">
             <DialogTitle className="text-center">
-              {editing ? (
-                <Input
-                  type="number"
-                  step="0.01"
-                  value={editForm.amount}
-                  onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))}
-                  className="text-2xl font-bold tracking-tight text-center w-full bg-transparent border-b border-border pb-1 text-foreground rounded-none"
-                />
-              ) : (
+              {editing ? "编辑账单" : (
                 <span className="text-2xl font-bold text-expense">
-                  -¥{Number(transaction.amount).toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
+                  -¥{Number(transaction.amount).toFixed(2)}
                 </span>
               )}
             </DialogTitle>
+            <DialogDescription className="text-center">品牌、商品与订单信息</DialogDescription>
             <Badge variant="secondary" className="mx-auto mt-3 w-fit bg-expense/10 text-expense">
               支出
             </Badge>
           </DialogHeader>
 
           {editing ? (
-            <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">备注</Label>
-                <Textarea
-                  value={editForm.note}
-                  onChange={(e) => setEditForm((f) => ({ ...f, note: e.target.value }))}
-                  rows={2}
-                  className="min-h-[60px] resize-none bg-muted"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">分类</Label>
-                <div className="flex flex-wrap gap-2">
-                  {CATEGORIES.map((cat) => (
-                    <Button
-                      key={cat.value}
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() =>
-                        setEditForm((f) => ({
-                          ...f,
-                          category: f.category === cat.label ? "" : cat.label,
-                        }))
-                      }
-                      className={`rounded-full ${
-                        editForm.category === cat.label
-                          ? "bg-expense/10 text-expense border border-expense/30"
-                          : "bg-muted text-muted-foreground border-transparent hover:bg-muted/80"
-                      }`}
-                    >
-                      {cat.emoji} {cat.label}
-                    </Button>
-                  ))}
+            <form onSubmit={handleSave} className="space-y-4 pt-2">
+              <fieldset disabled={saving} className="min-w-0 space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-amount">实付金额（元） *</Label>
+                  <Input id="edit-amount" type="number" min="0.01" step="0.01" inputMode="decimal" required
+                    value={editForm.amount} onChange={(e) => setEditForm((f) => ({ ...f, amount: e.target.value }))} />
                 </div>
-                <Input
-                  type="text"
-                  value={editForm.category}
-                  onChange={(e) => setEditForm((f) => ({ ...f, category: e.target.value }))}
-                  placeholder="自定义分类"
-                  className="rounded-xl px-4 py-3"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">时间</Label>
-                <Input
-                  type="datetime-local"
-                  value={editForm.transaction_time}
-                  onChange={(e) => setEditForm((f) => ({ ...f, transaction_time: e.target.value }))}
-                  className="rounded-xl px-4 py-3"
-                />
-              </div>
+                <TransactionFields form={editForm} onChange={setEditForm} requireProduct={Boolean(transaction.product)} />
+              </fieldset>
+              {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
               <div className="flex gap-2 pt-2">
-                <Button variant="ghost" onClick={() => setEditing(false)} className="flex-1">
-                  取消
-                </Button>
-                <Button onClick={handleSave} disabled={saving} className="flex-1">
-                  {saving ? "保存中..." : "保存"}
-                </Button>
+                <Button type="button" variant="ghost" disabled={saving} onClick={() => { setEditForm(createEditForm(transaction)); setEditing(false); setActionError(null); }} className="flex-1">取消</Button>
+                <Button type="submit" disabled={saving} className="flex-1">{saving ? "保存中..." : "保存账单"}</Button>
               </div>
-            </div>
+            </form>
           ) : (
             <div className="space-y-4 pt-2">
-              <DetailRow label="备注" value={transaction.note || "无"} multiline />
-              <DetailRow label="分类" value={transaction.category || "未分类"} />
+              <DetailRow label="品牌" value={transaction.brand || "未填写"} />
+              <DetailRow label="商品" value={transaction.product || "未填写"} multiline />
+              <DetailRow label="分类" value={categoryLabel(transaction.category)} />
               <DetailRow label="时间" value={dateStr} />
+              <DetailRow label="备注" value={transaction.note || "无"} multiline />
               {canEdit && (
                 <div className="flex gap-2 pt-3">
                   <Button variant="ghost" onClick={() => setConfirmDeleteOpen(true)} disabled={deleting} className="flex-1 text-destructive hover:text-destructive hover:bg-destructive/10">
                     {deleting ? "删除中..." : "删除"}
                   </Button>
-                  <Button onClick={() => setEditing(true)} className="flex-1">
+                  <Button onClick={() => { setEditForm(createEditForm(transaction)); setActionError(null); setEditing(true); }} className="flex-1">
                     编辑
                   </Button>
                 </div>

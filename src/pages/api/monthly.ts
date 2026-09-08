@@ -91,6 +91,8 @@ export const GET: APIRoute = async ({ url }) => {
       amount: Number(lastExpenseTx.amount),
       category: lastExpenseTx.category || '未分类',
       note: lastExpenseTx.note || '',
+      brand: lastExpenseTx.brand || null,
+      product: lastExpenseTx.product || null,
       transaction_time: lastExpenseTx.transaction_time || lastExpenseTx.created_at,
     } : null;
 

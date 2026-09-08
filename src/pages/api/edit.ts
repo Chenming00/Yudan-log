@@ -1,6 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSupabaseAdminClient } from '../../../lib/supabase';
 import { getErrorMessage, json, validateWriteAuth } from '../../lib/http';
+import { LedgerInputError, parseLedgerInput } from '../../lib/ledger-input';
 
 export const PATCH: APIRoute = async ({ request }) => {
   if (!await validateWriteAuth(request)) {
@@ -9,31 +10,21 @@ export const PATCH: APIRoute = async ({ request }) => {
 
   try {
     const supabase = getSupabaseAdminClient();
-    const { id, amount, category, note, type, transaction_time } = await request.json();
-
-    if (!id) {
-      return json({ error: '缺少交易记录 ID' }, { status: 400 });
-    }
-
-    if (type && !['income', 'expense'].includes(type)) {
-      return json({ error: '收支类型不合法' }, { status: 400 });
-    }
-
-    if (amount !== undefined && Number.isNaN(Number(amount))) {
-      return json({ error: '金额格式不正确' }, { status: 400 });
-    }
+    const { id, fields } = parseLedgerInput(await request.json(), true);
 
     const { data, error } = await supabase
       .from('transactions')
-      .update({ amount: amount === undefined ? amount : Number(amount), category, note, type, transaction_time })
+      .update(fields)
       .eq('id', id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data) return json({ error: '账单不存在' }, { status: 404 });
 
     return json({ success: true, data });
   } catch (error: unknown) {
+    if (error instanceof LedgerInputError || error instanceof SyntaxError) return json({ error: error.message }, { status: 400 });
     return json({ error: getErrorMessage(error, '更新记录失败') }, { status: 500 });
   }
 };

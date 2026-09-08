@@ -174,6 +174,15 @@ HTTP 传输格式，但数据库内部记录已改为标准关系表，不再保
 | `POST` | `/api/telegram` | Telegram Webhook | 现有 Webhook 流程 |
 | `POST` | `/api/blog/chat` | 文章 AI 问答，迁移中暂停 | 无 |
 
+### 账本字段与代理技能
+
+账本使用独立的 `brand`（品牌）、`product`（商品）字段，`note` 保存店铺、订单号和优惠。
+完整规范见 [账单 skill](content/blog/bill-skill.md)，可安装版本在 [skills/yudan-bills/SKILL.md](skills/yudan-bills/SKILL.md)。
+已有数据库使用 `supabase/migrations/20260908031942_ledger_brand_product.sql` 升级；
+迁移保留原始记录备份并校验金额、时间和分类不变。新项目使用 `schema.sql`。
+
+验证账本规则：`node --test tests/ledger.test.cjs`。
+
 ### 看板 API 示例
 
 所有看板 API 请求都需要：

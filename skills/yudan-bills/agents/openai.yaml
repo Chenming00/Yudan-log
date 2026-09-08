@@ -1,0 +1,4 @@
+interface:
+  display_name: "鱼蛋账单"
+  short_description: "按数据库表单整理购物账单，独立输出品牌、商品，备注保留店铺、订单号和优惠"
+  default_prompt: "使用 $yudan-bills 按鱼蛋账本数据库表单整理这些购物订单，输出 amount、brand、product、category、transaction_time、note、type 七个字段；品牌和商品独立保存，备注按店铺、订单号、优惠排列，并核对实付金额与重复记录。"

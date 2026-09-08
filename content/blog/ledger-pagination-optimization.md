@@ -202,6 +202,8 @@ await callYudanApi('/api/yudan/vaccine', {
 
 ## 账本 API
 
+品牌、商品、备注、去重和代理录入的完整规范见 [账单 skill](/blog/bill-skill)。
+
 账本查询接口无需认证；写入接口支持两种认证方式：`Authorization: Bearer <API_KEY>`，或授权所有者的 Supabase GitHub access token。服务端会校验授权身份，Supabase Secret Key 不会返回给调用方。
 
 账本记录的通用字段如下：
@@ -210,6 +212,8 @@ await callYudanApi('/api/yudan/vaccine', {
 interface Transaction {
   id: string;
   amount: number;
+  brand: string | null;
+  product: string | null;
   category: string | null;
   note: string | null;
   type: 'expense' | 'income';
@@ -321,7 +325,9 @@ Content-Type: application/json
 
 | 字段 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `amount` | number | 是 | 金额 |
+| `amount` | number | 是 | 大于 0 的实付金额，最多两位小数 |
+| `brand` | string / null | 否 | 品牌，不确定时为空 |
+| `product` | string / null | 新购物账单应填写 | 商品名称、规格、数量；兼容旧调用省略 |
 | `type` | string | 是 | `expense` 或 `income` |
 | `category` | string | 否 | 分类 |
 | `note` | string | 否 | 备注 |
@@ -347,7 +353,7 @@ curl -X PATCH 'https://cost.ykn.cm/api/edit' \
   -d '{"id":"<UUID>","amount":150,"note":"更新备注"}'
 ```
 
-可修改字段为 `amount`、`type`、`category`、`note` 和 `transaction_time`。成功返回更新后的交易记录；缺少 `id`、类型或金额格式不正确返回 `400`。
+可修改字段为 `amount`、`type`、`brand`、`product`、`category`、`note` 和 `transaction_time`。省略字段保持原值，可选文本和时间传 `null` 可清空。成功返回更新后的交易记录；无效参数返回 `400`，账单不存在返回 `404`。
 
 ### 删除交易：`DELETE /api/delete`
 

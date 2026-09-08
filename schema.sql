@@ -2,6 +2,8 @@
 CREATE TABLE transactions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   amount DECIMAL NOT NULL,
+  brand TEXT,
+  product TEXT,
   category TEXT,
   note TEXT,
   type TEXT CHECK (type IN ('expense', 'income')) NOT NULL,

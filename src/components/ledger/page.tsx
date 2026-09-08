@@ -78,10 +78,10 @@ export default function LedgerPage({
   supabasePublishableKey = "",
 }: LedgerPageProps) {
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
-  const [apiKey, setApiKey] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return localStorage.getItem("api_key");
-  });
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  useEffect(() => {
+    setApiKey(localStorage.getItem("api_key"));
+  }, []);
   const [session, setSession] = useState<Session | null>(null);
   const githubAuthorized =
     isOwnerEmail(session?.user.email) && isGitHubProvider(session?.user.app_metadata);

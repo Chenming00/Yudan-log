@@ -19,7 +19,8 @@ export const CATEGORIES: Category[] = [
 /** 按 value 或 label 找分类 */
 export function findCategory(key: string | undefined | null): Category | undefined {
   if (!key) return undefined;
-  return CATEGORIES.find((c) => c.value === key || c.label === key);
+  const normalized = key.trim().replace(/^[^\p{L}\p{N}]+/u, '');
+  return CATEGORIES.find((c) => c.value === normalized || c.label === normalized);
 }
 
 /** 取分类 emoji，未知分类回退 🏷️ */
