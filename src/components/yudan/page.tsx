@@ -542,11 +542,13 @@ async function saveCloudDashboard(
 
   const savedDates = new Set(weightRows.map((item) => item.measured_on));
   const savedPlans = new Set(vaccineRows.map((item) => item.plan_id));
+  // Inactive catalog entries are absent from this screen, not deleted by the user.
+  const visiblePlans = new Set(data.vaccines.map((item) => item.planId).filter(Boolean));
   const staleWeightIds = (currentWeights.data || [])
     .filter((item) => !savedDates.has(item.measured_on))
     .map((item) => item.id);
   const staleVaccineIds = (currentVaccines.data || [])
-    .filter((item) => !savedPlans.has(item.plan_id))
+    .filter((item) => visiblePlans.has(item.plan_id) && !savedPlans.has(item.plan_id))
     .map((item) => item.id);
 
   const results = await Promise.all([
