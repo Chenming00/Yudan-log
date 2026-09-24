@@ -86,7 +86,10 @@ test('successful streamed answer charges exactly once and caps provider tokens',
   assert.equal(result.status, 200); assert.match(await result.text(), /你好，鱼蛋🐟/);
   assert.deepEqual(calls.finishes, [{ ticket: 'ticket', produced: true }]);
   assert.equal(calls.upstream[0].url, 'https://example.test/v1/chat/completions');
-  assert.equal(JSON.parse(calls.upstream[0].options.body).max_tokens, 800);
+  const upstreamBody = JSON.parse(calls.upstream[0].options.body);
+  assert.equal(upstreamBody.max_completion_tokens, 800);
+  assert.deepEqual(upstreamBody.thinking, { type: 'disabled' });
+  assert.ok(!Object.hasOwn(upstreamBody, 'max_tokens'));
 });
 
 test('upstream rejection, empty response and malformed stream release reservations', async () => {
@@ -122,7 +125,7 @@ test('client cancellation and timeout abort provider requests without charging e
   }
 });
 
-test('output is cut at a Unicode character boundary even if provider ignores max_tokens', async () => {
+test('output is cut at a Unicode character boundary even if provider ignores max_completion_tokens', async () => {
   const { handlers, calls } = setup({ fetch: async () => new Response(event('🐟'.repeat(7000)) + 'data: [DONE]\n\n') });
   const result = await handlers.POST(makeRequest());
   let text = '';
