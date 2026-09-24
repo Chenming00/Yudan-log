@@ -178,7 +178,7 @@ const roadmap = [
         <div class="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-stretch">
           <div class="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
             <div class="inline-flex items-center gap-2 rounded-full border border-border bg-muted/60 px-3 py-1.5 text-xs font-medium text-muted-foreground">
-              <GitPullRequest class="h-3.5 w-3.5 text-primary" />
+              <GitPullRequest className="h-3.5 w-3.5 text-primary" />
               about / development-log
             </div>
 
@@ -202,7 +202,7 @@ const roadmap = [
                 <p class="text-xs font-medium text-muted-foreground">Repository</p>
                 <h2 class="mt-1 text-lg font-semibold text-foreground">Yudan-log</h2>
               </div>
-              <Code2 class="h-5 w-5 text-primary" />
+              <Code2 className="h-5 w-5 text-primary" />
             </div>
 
             <dl class="mt-4 space-y-3">
@@ -227,7 +227,7 @@ const roadmap = [
                   /{mod.name}
                 </span>
                 <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Icon class="h-4.5 w-4.5" />
+                  <Icon className="h-4.5 w-4.5" />
                 </span>
               </div>
               <h2 class="mt-4 text-base font-semibold text-foreground">{mod.title}</h2>
@@ -254,7 +254,7 @@ const roadmap = [
               return (
                 <article class="relative pl-12">
                   <span class="absolute left-0 top-5 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-border bg-background text-primary shadow-sm">
-                    <Icon class="h-4.5 w-4.5" />
+                    <Icon className="h-4.5 w-4.5" />
                   </span>
 
                   <div class="rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
@@ -263,7 +263,7 @@ const roadmap = [
                         {commit.type}
                       </span>
                       <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <GitCommitHorizontal class="h-3.5 w-3.5" />
+                        <GitCommitHorizontal className="h-3.5 w-3.5" />
                         <span>{commit.date}</span>
                       </div>
                     </div>
@@ -283,7 +283,7 @@ const roadmap = [
         <div class="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-7">
           <div class="flex items-center gap-3">
             <span class="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <NotebookPen class="h-5 w-5" />
+              <NotebookPen className="h-5 w-5" />
             </span>
             <div>
               <p class="text-sm font-medium text-primary">Note</p>
@@ -297,7 +297,7 @@ const roadmap = [
 
         <div class="rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-7">
           <div class="flex items-center gap-2">
-            <CheckCircle2 class="h-5 w-5 text-primary" />
+            <CheckCircle2 className="h-5 w-5 text-primary" />
             <h2 class="text-xl font-semibold text-foreground">Roadmap</h2>
           </div>
           <ul class="mt-4 space-y-2">

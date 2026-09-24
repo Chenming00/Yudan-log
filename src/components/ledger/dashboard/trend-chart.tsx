@@ -4,6 +4,7 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "rec
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
 import type { DailyExpense } from "../types";
+import { visibleLedgerDays } from "@/lib/ledger-query-client";
 
 interface TrendChartProps {
   dailyExpenses: DailyExpense[];
@@ -36,15 +37,15 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
 };
 
 export function TrendChart({ dailyExpenses, title = "每日支出趋势" }: TrendChartProps) {
-  const [timeRange, setTimeRange] = useState<7 | 30>(7);
+  const [timeRange, setTimeRange] = useState<7 | 'month'>(7);
 
   const chartData = useMemo(() => {
-    // 取最后 timeRange 天的数据
-    const sliced = dailyExpenses.slice(-timeRange);
+    // 按北京时间取本月最近的自然日；月视图保留完整日历。
+    const sliced = visibleLedgerDays(dailyExpenses, timeRange);
     return sliced.map((d) => {
-      const date = new Date(d.date);
+      const [, month, day] = d.date.split('-').map(Number);
       return {
-        date: `${date.getMonth() + 1}/${date.getDate()}`,
+        date: `${month}/${day}`,
         value: d.amount,
         fullDate: d.date,
       };
@@ -52,7 +53,7 @@ export function TrendChart({ dailyExpenses, title = "每日支出趋势" }: Tren
   }, [dailyExpenses, timeRange]);
 
   const totalExpense = chartData.reduce((sum, d) => sum + d.value, 0);
-  const avgDaily = totalExpense / timeRange;
+  const avgDaily = chartData.length ? totalExpense / chartData.length : 0;
 
   return (
     <div className="rounded-2xl bg-card border border-border p-5">
@@ -73,6 +74,7 @@ export function TrendChart({ dailyExpenses, title = "每日支出趋势" }: Tren
                 : "text-muted-foreground hover:text-foreground"
             }`}
             onClick={() => setTimeRange(7)}
+            aria-pressed={timeRange === 7}
           >
             7 天
           </Button>
@@ -80,13 +82,14 @@ export function TrendChart({ dailyExpenses, title = "每日支出趋势" }: Tren
             variant="ghost"
             size="sm"
             className={`h-7 px-3 text-xs ${
-              timeRange === 30
+              timeRange === 'month'
                 ? "bg-card shadow-sm text-foreground"
                 : "text-muted-foreground hover:text-foreground"
             }`}
-            onClick={() => setTimeRange(30)}
+            onClick={() => setTimeRange('month')}
+            aria-pressed={timeRange === 'month'}
           >
-            30 天
+            整月
           </Button>
         </div>
       </div>

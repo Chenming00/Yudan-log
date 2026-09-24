@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
+import { healthDatePositions } from '@/src/lib/health-records';
 
 type WeightChartProps = {
   data: Array<{ date: string; weight: number; height: number; head: number }>;
@@ -20,10 +21,8 @@ export default function WeightChart({ data, id }: WeightChartProps) {
   const domainMinimum = Math.max(0, Math.floor((minimum - weightPadding) * 10) / 10);
   const domainMaximum = Math.ceil((maximum + weightPadding) * 10) / 10;
   const domainRange = Math.max(0.1, domainMaximum - domainMinimum);
-  const x = (index: number) =>
-    data.length === 1
-      ? padding.left + plotWidth / 2
-      : padding.left + (index / (data.length - 1)) * plotWidth;
+  const datePositions = healthDatePositions(data.map((item) => item.date));
+  const x = (index: number) => padding.left + datePositions[index] * plotWidth;
   const y = (weight: number) =>
     padding.top + ((domainMaximum - weight) / domainRange) * plotHeight;
   const points = data.map((item, index) => `${x(index)},${y(item.weight)}`).join(" ");

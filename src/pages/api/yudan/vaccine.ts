@@ -1,6 +1,8 @@
 import type { APIRoute } from 'astro';
+import { readExpectedVersion } from '../../../lib/health-records';
 import { getErrorMessage, json, validateApiKey } from '../../../lib/http';
 import {
+  HealthConflictError,
   getOwnerDashboard,
   readDate,
   resolveVaccinePlan,
@@ -33,10 +35,11 @@ export const POST: APIRoute = async ({ request }) => {
         : undefined;
     const { supabase, row } = await getOwnerDashboard();
     const plan = await resolveVaccinePlan({ birthday: row.birthday, planId, vaccine, dose });
-    const saved = await upsertVaccineRecord(supabase, row.user_id, plan, doneDate);
+    const saved = await upsertVaccineRecord(supabase, row.user_id, plan, doneDate, readExpectedVersion(body));
 
     return json({ success: true, data: saved });
   } catch (error: unknown) {
+    if (error instanceof HealthConflictError) return json({ error: error.message, current: error.current }, { status: 409 });
     if (error instanceof VaccineCatalogMatchError) {
       return json(
         { error: error.message, candidates: error.candidates },
@@ -44,7 +47,7 @@ export const POST: APIRoute = async ({ request }) => {
       );
     }
     const message = getErrorMessage(error, '记录疫苗失败');
-    const status = /plan_id|vaccine|dose|actual_date|日期|字符|为空/.test(message)
+    const status = /expected_updated_at|plan_id|vaccine|dose|actual_date|日期|字符|为空/.test(message)
       ? 400
       : 500;
     return json({ error: message }, { status });

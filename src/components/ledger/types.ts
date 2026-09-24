@@ -1,11 +1,13 @@
 export interface Transaction {
   id: string;
+  // Older databases may omit this field; edits/deletes stay disabled until refreshed.
+  version?: number;
   amount: number;
   brand?: string | null;
   product?: string | null;
   note: string | null;
   category: string | null;
-  type: 'expense';
+  type: 'expense' | 'income';
   transaction_time?: string | null;
   created_at: string;
 }

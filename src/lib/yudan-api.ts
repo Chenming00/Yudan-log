@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { isGitHubProvider, isOwnerEmail } from '../../lib/auth';
 import { getSupabaseAdminClient } from '../../lib/supabase';
+import { validateHealthDate, type HealthMutation } from './health-records';
 import { YUDAN_BIRTHDAY } from './yudan-profile';
 
 export type YudanVaccineRecord = {
@@ -10,6 +11,7 @@ export type YudanVaccineRecord = {
   dose: string;
   ageLabel: string;
   doneDate: string;
+  updated_at: string;
 };
 
 export type YudanVaccinePlan = {
@@ -51,6 +53,7 @@ export type YudanWeightRecord = {
   id: string;
   date: string;
   weight: number;
+  updated_at: string;
 };
 
 export type YudanDashboardRow = {
@@ -63,23 +66,26 @@ type YudanWeightDatabaseRow = {
   id: string;
   measured_on: string;
   weight_kg: number | string;
+  updated_at: string;
 };
 
 type YudanVaccineDatabaseRow = {
   id: string;
   plan_id: string;
   administered_on: string;
+  updated_at: string;
 };
 
 let ownerUserIdPromise: Promise<string> | null = null;
 
-export async function getVaccineCatalog(supabase?: SupabaseClient) {
+export async function getVaccineCatalog(supabase?: SupabaseClient, includeRetired = false) {
   const client = supabase || getSupabaseAdminClient();
-  const { data, error } = await client
+  let query = client
     .from('yudan_vaccine_catalog')
     .select('id, sort_order, age_months, age_label, vaccine, dose, funding, date_rule, date_offset_days, region, schedule_version, prevents, aliases, audience, schedule_note, source')
-    .eq('active', true)
     .order('sort_order');
+  if (!includeRetired) query = query.eq('active', true);
+  const { data, error } = await query;
 
   if (error) throw error;
   return (data || []) as YudanVaccinePlan[];
@@ -132,7 +138,7 @@ export async function resolveVaccinePlan({
   vaccine?: string;
   dose?: string;
 }) {
-  const catalog = await getVaccineCatalog();
+  const catalog = await getVaccineCatalog(undefined, Boolean(planId));
   const withDates = (items: YudanVaccinePlan[]): VaccinePlanCandidate[] =>
     items.map((item) => ({ ...item, suggested_date: suggestedDateForPlan(birthday, item) }));
 
@@ -223,161 +229,73 @@ export async function getOwnerDashboard() {
     .maybeSingle<YudanDashboardRow>();
 
   if (error) throw error;
-  if (!data) throw new Error('看板尚未初始化，请先在网页使用 GitHub 登录。');
+  if (!data) return { supabase, row: { user_id: userId, birthday: YUDAN_BIRTHDAY, updated_at: '' } };
 
   return { supabase, row: { ...data, birthday: YUDAN_BIRTHDAY } };
 }
 
-export async function getWeightRecords(supabase: SupabaseClient, userId: string) {
-  const { data, error } = await supabase
-    .from('yudan_weight_records')
-    .select('id, measured_on, weight_kg')
-    .eq('user_id', userId)
-    .order('measured_on');
+async function readAllHealthRows(supabase: SupabaseClient, table: string, columns: string, userId: string, order: string) {
+  const rows: unknown[] = [];
+  for (let from = 0; ; from += 500) {
+    const { data, error } = await supabase.from(table).select(columns).eq('user_id', userId).order(order).range(from, from + 499);
+    if (error) throw error;
+    rows.push(...(data || []));
+    if (!data || data.length < 500) return rows;
+  }
+}
 
-  if (error) throw error;
-  return ((data || []) as YudanWeightDatabaseRow[]).map((record) => ({
-    id: record.id,
-    date: record.measured_on,
-    weight: Number(record.weight_kg),
-  } satisfies YudanWeightRecord));
+export async function getWeightRecords(supabase: SupabaseClient, userId: string) {
+  const rows = await readAllHealthRows(supabase, 'yudan_weight_records', 'id, measured_on, weight_kg, updated_at', userId, 'measured_on');
+  return (rows as YudanWeightDatabaseRow[]).map((record) => ({ id: record.id, date: record.measured_on, weight: Number(record.weight_kg), updated_at: record.updated_at } satisfies YudanWeightRecord));
 }
 
 export async function getVaccineRecords(supabase: SupabaseClient, userId: string) {
-  const [recordsResult, catalog] = await Promise.all([
-    supabase
-      .from('yudan_vaccine_records')
-      .select('id, plan_id, administered_on')
-      .eq('user_id', userId)
-      .order('administered_on'),
-    getVaccineCatalog(supabase),
+  const [rows, catalog] = await Promise.all([
+    readAllHealthRows(supabase, 'yudan_vaccine_records', 'id, plan_id, administered_on, updated_at', userId, 'plan_id'),
+    getVaccineCatalog(supabase, true),
   ]);
-
-  if (recordsResult.error) throw recordsResult.error;
-  return ((recordsResult.data || []) as YudanVaccineDatabaseRow[])
-    .map((record) => {
-      const plan = catalog.find((item) => item.id === record.plan_id);
-      if (!plan) return null;
-      return {
-        id: record.id,
-        planId: record.plan_id,
-        vaccine: plan.vaccine,
-        dose: plan.dose,
-        ageLabel: plan.age_label,
-        doneDate: record.administered_on,
-      } satisfies YudanVaccineRecord;
-    })
-    .filter((record): record is YudanVaccineRecord => Boolean(record));
+  return (rows as YudanVaccineDatabaseRow[]).map((record) => {
+    const plan = catalog.find((item) => item.id === record.plan_id);
+    return { id: record.id, planId: record.plan_id, vaccine: plan?.vaccine || record.plan_id, dose: plan?.dose || '', ageLabel: plan?.age_label || '', doneDate: record.administered_on, updated_at: record.updated_at } satisfies YudanVaccineRecord;
+  });
 }
 
-export async function upsertWeightRecord(
-  supabase: SupabaseClient,
-  userId: string,
-  date: string,
-  weight: number
-) {
-  const updatedAt = new Date().toISOString();
-  const { data: existing, error: lookupError } = await supabase
-    .from('yudan_weight_records')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('measured_on', date)
-    .maybeSingle<{ id: string }>();
-  if (lookupError) throw lookupError;
-
-  const { data, error } = await supabase
-    .from('yudan_weight_records')
-    .upsert(
-      { user_id: userId, measured_on: date, weight_kg: weight, updated_at: updatedAt },
-      { onConflict: 'user_id,measured_on' }
-    )
-    .select('id, measured_on, weight_kg')
-    .single<YudanWeightDatabaseRow>();
-
-  if (error) throw error;
-  const { error: dashboardError } = await supabase
-    .from('yudan_dashboards')
-    .update({ updated_at: updatedAt })
-    .eq('user_id', userId);
-  if (dashboardError) throw dashboardError;
-  return {
-    record: { id: data.id, date: data.measured_on, weight: Number(data.weight_kg) },
-    created: !existing,
-  };
+export class HealthConflictError extends Error {
+  status = 409;
+  constructor(public current: unknown) { super('记录已被其他设备修改。输入已保留，请重新读取后确认。'); }
 }
 
-export async function upsertVaccineRecord(
-  supabase: SupabaseClient,
-  userId: string,
-  plan: YudanVaccinePlan,
-  doneDate: string
-) {
-  const updatedAt = new Date().toISOString();
-  const { data: existing, error: lookupError } = await supabase
-    .from('yudan_vaccine_records')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('plan_id', plan.id)
-    .maybeSingle<{ id: string }>();
-  if (lookupError) throw lookupError;
+export async function mutateHealthRecord(supabase: SupabaseClient, userId: string, mutation: HealthMutation) {
+  const { data, error } = await supabase.rpc('mutate_yudan_health_record', {
+    p_user_id: userId, p_kind: mutation.kind, p_key: mutation.key, p_action: mutation.action,
+    p_changes: mutation.changes, p_check_version: mutation.expected_updated_at !== undefined,
+    p_expected_updated_at: mutation.expected_updated_at ?? null, p_request_id: mutation.request_id,
+  });
+  if (error) throw new Error(error.message);
+  if (data.conflict) throw new HealthConflictError(data.current);
+  return data as { created: boolean; record: Record<string, unknown> | null };
+}
 
-  const { data, error } = await supabase
-    .from('yudan_vaccine_records')
-    .upsert(
-      { user_id: userId, plan_id: plan.id, administered_on: doneDate, updated_at: updatedAt },
-      { onConflict: 'user_id,plan_id' }
-    )
-    .select('id, plan_id, administered_on')
-    .single<YudanVaccineDatabaseRow>();
+export async function upsertWeightRecord(supabase: SupabaseClient, userId: string, date: string, weight: number, expectedUpdatedAt?: string | null) {
+  const saved = await mutateHealthRecord(supabase, userId, {
+    request_id: crypto.randomUUID(), kind: 'weight', key: date, action: 'save',
+    expected_updated_at: expectedUpdatedAt, changes: { weight_kg: weight },
+  });
+  const row = saved.record as unknown as YudanWeightDatabaseRow;
+  return { created: saved.created, record: { id: row.id, date: row.measured_on, weight: Number(row.weight_kg), updated_at: row.updated_at } };
+}
 
-  if (error) throw error;
-  const { error: dashboardError } = await supabase
-    .from('yudan_dashboards')
-    .update({ updated_at: updatedAt })
-    .eq('user_id', userId);
-  if (dashboardError) throw dashboardError;
-  return {
-    record: {
-      id: data.id,
-      planId: data.plan_id,
-      vaccine: plan.vaccine,
-      dose: plan.dose,
-      ageLabel: plan.age_label,
-      doneDate: data.administered_on,
-    } satisfies YudanVaccineRecord,
-    plan,
-    created: !existing,
-  };
+export async function upsertVaccineRecord(supabase: SupabaseClient, userId: string, plan: YudanVaccinePlan, doneDate: string, expectedUpdatedAt?: string | null) {
+  const saved = await mutateHealthRecord(supabase, userId, {
+    request_id: crypto.randomUUID(), kind: 'vaccine', key: plan.id, action: 'save',
+    expected_updated_at: expectedUpdatedAt, changes: { administered_on: doneDate },
+  });
+  const row = saved.record as unknown as YudanVaccineDatabaseRow;
+  return { created: saved.created, plan, record: { id: row.id, planId: row.plan_id, vaccine: plan.vaccine, dose: plan.dose, ageLabel: plan.age_label, doneDate: row.administered_on, updated_at: row.updated_at } };
 }
 
 export function readDate(value: unknown, fieldName: string) {
-  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-    throw new Error(`${fieldName} 必须是 YYYY-MM-DD 格式。`);
-  }
-
-  const [year, month, day] = value.split('-').map(Number);
-  const parsed = new Date(Date.UTC(year, month - 1, day));
-  if (
-    parsed.getUTCFullYear() !== year ||
-    parsed.getUTCMonth() !== month - 1 ||
-    parsed.getUTCDate() !== day
-  ) {
-    throw new Error(`${fieldName} 不是有效日期。`);
-  }
-
-  const todayParts = new Intl.DateTimeFormat('en', {
-    timeZone: 'Asia/Shanghai',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-  const todayValues = Object.fromEntries(todayParts.map((part) => [part.type, part.value]));
-  const todayInShanghai = `${todayValues.year}-${todayValues.month}-${todayValues.day}`;
-  if (value > todayInShanghai) {
-    throw new Error(`${fieldName} 不能晚于今天。`);
-  }
-
-  return value;
+  return validateHealthDate(value, fieldName);
 }
 
 export function readText(value: unknown, fieldName: string, maxLength: number) {

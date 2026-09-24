@@ -85,7 +85,7 @@ async function main() {
   assert.ok(await page.getByLabel('商品 *', { exact: true }).isVisible());
   await page.getByRole('button', { name: '取消', exact: true }).click();
   assert.deepEqual(errors, []);
-  console.log('PASS: mobile/desktop forms, create/read/edit, clear fields, legacy unknown time, search, CSV, API validation/auth/404, article; no page errors.');
+  process.stdout.write('PASS: mobile/desktop forms, create/read/edit, clear fields, legacy unknown time, search, CSV, API validation/auth/404, article; no page errors.\n');
   await browser.close();
 }
 main().catch((error) => { console.error(error); process.exit(1); });

@@ -1,6 +1,8 @@
 import type { APIRoute } from 'astro';
+import { readExpectedVersion } from '../../../lib/health-records';
 import { getErrorMessage, json, validateApiKey } from '../../../lib/http';
 import {
+  HealthConflictError,
   getOwnerDashboard,
   readDate,
   upsertWeightRecord,
@@ -28,12 +30,13 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     const { supabase, row } = await getOwnerDashboard();
-    const saved = await upsertWeightRecord(supabase, row.user_id, date, weight);
+    const saved = await upsertWeightRecord(supabase, row.user_id, date, weight, readExpectedVersion(body));
 
     return json({ success: true, data: saved });
   } catch (error: unknown) {
+    if (error instanceof HealthConflictError) return json({ error: error.message, current: error.current }, { status: 409 });
     const message = getErrorMessage(error, '记录体重失败');
-    const status = /date|weight|日期/.test(message) ? 400 : 500;
+    const status = /expected_updated_at|date|weight|日期/.test(message) ? 400 : 500;
     return json({ error: message }, { status });
   }
 };

@@ -5,6 +5,10 @@ import { Settings, Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { isGitHubProvider, isOwnerEmail } from "@/lib/auth";
 import { getBrowserSupabaseClient } from "@/lib/supabase-browser";
+import { buildLedgerListUrl, shanghaiMonthKey, type LedgerListQuery } from "@/lib/ledger-query-client";
+import { fetchLedgerPage, fetchLedgerPayload, mergeLedgerPages, type LedgerPageResult } from "@/lib/ledger-request-client";
+import { readLedgerStorage, writeLedgerStorage } from "@/lib/ledger-mutation-client";
+import { useLedgerDebouncedValue, useLedgerResource } from "./use-ledger-resource";
 import { SummaryCards } from "./dashboard/summary-cards";
 import { DetailList } from "./dashboard/detail-list";
 import { TransactionDialog } from "./components/transaction-dialog";
@@ -25,15 +29,6 @@ const CategoryBreakdown = lazy(() =>
 const CalendarHeatmap = lazy(() =>
   import("./dashboard/calendar-heatmap").then((module) => ({ default: module.CalendarHeatmap }))
 );
-
-function getMonthKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
-interface MonthParams {
-  year: number;
-  month: number;
-}
 
 interface LedgerPageProps {
   supabaseUrl?: string;
@@ -79,33 +74,33 @@ export default function LedgerPage({
 }: LedgerPageProps) {
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
+  const [storageNotice, setStorageNotice] = useState<string | null>(null);
   useEffect(() => {
-    setApiKey(localStorage.getItem("api_key"));
+    setApiKey(readLedgerStorage("api_key"));
   }, []);
   const [session, setSession] = useState<Session | null>(null);
   const githubAuthorized =
     isOwnerEmail(session?.user.email) && isGitHubProvider(session?.user.app_metadata);
   const writeToken = githubAuthorized ? session?.access_token || null : apiKey;
   const canManageTransactions = Boolean(writeToken);
-  const [monthlyData, setMonthlyData] = useState<MonthlyData | null>(null);
-  const [detailTransactions, setDetailTransactions] = useState<Transaction[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
-  const [hasMore, setHasMore] = useState(false);
-  const [loadingMonthly, setLoadingMonthly] = useState(false);
-  const [loadingDetail, setLoadingDetail] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [activeView, setActiveView] = useState<"home" | "history">("home");
-  const [selectedMonth, setSelectedMonth] = useState(() => getMonthKey(new Date()));
+  const [selectedMonth, setSelectedMonth] = useState(() => shanghaiMonthKey());
   const [viewAll, setViewAll] = useState(false);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
+  const [type, setType] = useState<LedgerListQuery['type']>("");
+  const debouncedSearch = useLedgerDebouncedValue(search.trim());
 
   useEffect(() => {
     let active = true;
     void getBrowserSupabaseClient(supabaseUrl, supabasePublishableKey).then((client) => {
       if (active) setSupabase(client);
+    }).catch(() => {
+      if (active) setSupabase(null);
     });
     return () => {
       active = false;
@@ -118,6 +113,8 @@ export default function LedgerPage({
     let active = true;
     void supabase.auth.getSession().then(({ data }) => {
       if (active) setSession(data.session);
+    }).catch(() => {
+      if (active) setSession(null);
     });
 
     const {
@@ -147,98 +144,37 @@ export default function LedgerPage({
   const navigateMonth = (delta: number) => {
     setSelectedMonth((prev) => {
       const [y, m] = prev.split("-").map(Number);
-      const d = new Date(y, m - 1 + delta, 1);
-      return getMonthKey(d);
+      const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+      return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
     });
   };
 
   const [year, month] = selectedMonth.split("-").map(Number);
   const monthLabel = `${year}年${month}月`;
-  const isCurrentMonth = selectedMonth === getMonthKey(new Date());
-
-  // 历史「按月」时传月份参数；「全部」时为 null
-  const historyParams = useMemo<MonthParams | null>(
-    () => (viewAll ? null : { year, month }),
-    [viewAll, year, month]
-  );
-
-  const fetchMonthlyData = useCallback(async (monthKey: string) => {
-    setLoadingMonthly(true);
-    try {
-      const [y, m] = monthKey.split("-").map(Number);
-      const res = await fetch(`/api/monthly?year=${y}&month=${m}`);
-      const data = await res.json();
-      if (data.success) {
-        setMonthlyData(data.data);
-      }
-    } catch {
-      // ignore
-    } finally {
-      setLoadingMonthly(false);
-    }
-  }, []);
-
-  // 历史列表取数：cursor 为空=重置首屏；params=null 表示「全部」，否则按月
-  const fetchDetail = useCallback(
-    async (opts: { cursor?: string | null; params: MonthParams | null }) => {
-      const { cursor, params } = opts;
-      if (cursor) {
-        setLoadingMore(true);
-      } else {
-        // 首屏/重置：清空旧数据以展示骨架屏
-        setLoadingDetail(true);
-        setDetailTransactions([]);
-        setNextCursor(null);
-        setHasMore(false);
-      }
-      try {
-        const sp = new URLSearchParams({ limit: "30" });
-        if (cursor) sp.set("cursor", cursor);
-        if (params) {
-          sp.set("year", String(params.year));
-          sp.set("month", String(params.month));
-        }
-        const res = await fetch(`/api/list?${sp}`);
-        const data = await res.json();
-        if (data.success) {
-          setDetailTransactions((prev) => (cursor ? [...prev, ...data.data] : data.data));
-          setNextCursor(data.nextCursor);
-          setHasMore(data.hasMore);
-        }
-      } catch {
-        // ignore
-      } finally {
-        setLoadingDetail(false);
-        setLoadingMore(false);
-      }
-    },
-    []
-  );
-
-  // 首页月度数据：随所选月变化重新拉取
-  useEffect(() => {
-    void fetchMonthlyData(selectedMonth);
-  }, [selectedMonth, fetchMonthlyData]);
-
-  // 历史列表：进入历史 / 切月 / 切「按月·全部」时，按当前范围重新取数（fetchDetail 内部会重置）
-  useEffect(() => {
-    if (activeView !== "history") return;
-    void fetchDetail({ params: viewAll ? null : { year, month } });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeView, viewAll, viewAll ? "all" : selectedMonth, fetchDetail]);
-
+  const isCurrentMonth = selectedMonth === shanghaiMonthKey();
+  const query = useMemo<LedgerListQuery>(() => ({
+    ...(viewAll ? {} : { year, month }), search: debouncedSearch, category, type,
+  }), [viewAll, year, month, debouncedSearch, category, type]);
+  const queryUrl = buildLedgerListUrl(query);
+  const monthlyUrl = `/api/monthly?year=${year}&month=${month}`;
+  const monthlyLoader = useCallback(async (signal: AbortSignal) => {
+    const payload = await fetchLedgerPayload<{ data: MonthlyData }>(monthlyUrl, signal);
+    return payload.data;
+  }, [monthlyUrl]);
+  const detailLoader = useCallback((signal: AbortSignal) => fetchLedgerPage<Transaction>(queryUrl, signal), [queryUrl]);
+  const monthly = useLedgerResource<MonthlyData>(monthlyUrl, monthlyLoader);
+  const detail = useLedgerResource<LedgerPageResult<Transaction>>(activeView === "history" ? queryUrl : null, detailLoader);
+  const monthlyData = monthly.data;
+  const { reload: reloadMonthly } = monthly;
+  const { reload: reloadDetail, loadPage } = detail;
+  const nextCursor = detail.data?.nextCursor;
   const handleLoadMore = useCallback(() => {
-    if (nextCursor) {
-      void fetchDetail({ cursor: nextCursor, params: historyParams });
-    }
-  }, [nextCursor, fetchDetail, historyParams]);
-
+    if (nextCursor) loadPage(nextCursor, (signal) => fetchLedgerPage<Transaction>(buildLedgerListUrl(query, 30, nextCursor), signal, nextCursor), mergeLedgerPages);
+  }, [nextCursor, query, loadPage]);
   const handleRefresh = useCallback(() => {
-    void fetchMonthlyData(selectedMonth);
-    if (activeView === "history") {
-      void fetchDetail({ params: historyParams });
-    }
-  }, [selectedMonth, activeView, historyParams, fetchMonthlyData, fetchDetail]);
+    reloadMonthly();
+    reloadDetail();
+  }, [reloadMonthly, reloadDetail]);
 
   return (
     <main className="min-h-screen bg-background px-5 py-6" style={{ paddingBottom: "var(--nav-height)" }}>
@@ -266,6 +202,8 @@ export default function LedgerPage({
             </div>
           </div>
         </div>
+
+        {storageNotice && <p role="status" className="mb-4 rounded-lg bg-muted p-3 text-sm text-muted-foreground">{storageNotice}</p>}
 
         {/* 视图切换 + 月份导航 */}
         <div className="flex items-center justify-between mb-5">
@@ -324,8 +262,15 @@ export default function LedgerPage({
         <div className="space-y-4">
           {activeView === "home" ? (
               <div key={`home-${selectedMonth}`} className="space-y-4 animate-in fade-in-0 slide-in-from-right-2 duration-200">
-                {loadingMonthly || !monthlyData ? (
-                  <LoadingSkeleton />
+                {monthly.error && (
+                  <Card className="p-4" role="alert">
+                    <p className="text-sm text-destructive">{monthlyData ? "刷新失败：" : "月度汇总加载失败："}{monthly.error}</p>
+                    <Button variant="outline" size="sm" className="mt-3" onClick={reloadMonthly}>重试月度汇总</Button>
+                  </Card>
+                )}
+                {monthly.status === "loading" && monthlyData && <p role="status" className="text-xs text-muted-foreground">正在刷新月度汇总…</p>}
+                {!monthlyData ? (
+                  monthly.status !== "error" ? <LoadingSkeleton /> : null
                 ) : (
                   <>
                     <SummaryCards
@@ -372,20 +317,27 @@ export default function LedgerPage({
               </div>
             ) : (
               <div key="history" className="animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
-                {loadingDetail && detailTransactions.length === 0 ? (
-                  <LoadingSkeleton />
-                ) : (
                   <DetailList
-                    transactions={detailTransactions}
+                    transactions={detail.data?.data ?? []}
+                    categories={detail.data?.categories ?? []}
+                    query={query}
+                    search={search}
+                    onSearchChange={setSearch}
+                    onCategoryChange={setCategory}
+                    onTypeChange={setType}
+                    pendingSearch={search.trim() !== debouncedSearch}
+                    loading={detail.status === "loading"}
+                    error={detail.error}
+                    pageError={detail.pageError}
+                    onRetry={reloadDetail}
                     onSelect={(t) => {
                       setSelectedTransaction(t);
                       setDialogOpen(true);
                     }}
-                    hasMore={hasMore}
-                    loadingMore={loadingMore}
+                    hasMore={detail.data?.hasMore ?? false}
+                    loadingMore={detail.loadingMore}
                     onLoadMore={handleLoadMore}
                   />
-                )}
               </div>
             )}
         </div>
@@ -422,6 +374,7 @@ export default function LedgerPage({
         onOpenChange={setDialogOpen}
         authToken={writeToken}
         onUpdated={handleRefresh}
+        onAuthorize={() => setSettingsOpen(true)}
       />
 
       {/* 新增对话框 */}
@@ -431,6 +384,7 @@ export default function LedgerPage({
         onOpenChange={setAddOpen}
         authToken={writeToken}
         onAdded={handleRefresh}
+        onAuthorize={() => setSettingsOpen(true)}
       />
 
       {/* 设置对话框 */}
@@ -445,13 +399,12 @@ export default function LedgerPage({
         onGitHubSignIn={signInWithGitHub}
         onGitHubSignOut={signOutGitHub}
         onSave={(key) => {
-          if (key) {
-            localStorage.setItem("api_key", key);
-            setApiKey(key);
-          } else {
-            localStorage.removeItem("api_key");
-            setApiKey(null);
-          }
+          // Session authorization must succeed even when browser storage is blocked/full.
+          setApiKey(key);
+          const persisted = writeLedgerStorage("api_key", key);
+          setStorageNotice(persisted ? null : key
+            ? "当前浏览器无法保存 API Key，本次会话仍可正常记账；关闭页面后需要重新填写。"
+            : "本次会话已清除 API Key；浏览器存储不可用，历史保存的 Key 可能需要在浏览器设置中清除。");
         }}
       />
     </main>

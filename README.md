@@ -30,7 +30,7 @@
 - 按月份、类型、分类和关键词查询
 - 游标分页，避免一次加载全部明细
 - 网页可使用授权 GitHub 账号或 API Key 写入
-- Telegram 等外部工具可继续通过 API Key 记账
+- Telegram 记账入口已停用；网页和直接 API 记账仍可用
 
 ### 成长日志 `/blog`
 
@@ -53,7 +53,7 @@
 - `transactions` 开启 RLS，`anon` 和 `authenticated` 只授予 `SELECT`
 - 所有账本写入先在服务端验证 GitHub 身份或 API Key
 - 通过验证后，服务端使用 Supabase Secret Key 执行写入
-- `yudan_dashboards`、`yudan_weight_records` 和 `yudan_vaccine_records` 的 RLS 同时检查用户 ID、GitHub Provider 和指定邮箱
+- `yudan_dashboards`、`yudan_weight_records` 和 `yudan_vaccine_records` 只授予浏览器 `SELECT`；读取 RLS 同时检查用户 ID、GitHub Provider 和指定邮箱，写入由服务端认证后调用专用 RPC
 - Supabase Secret Key 只存在服务端环境变量中，不会发送到浏览器
 
 ## 技术栈
@@ -87,29 +87,71 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 SUPABASE_SECRET_KEY=your_supabase_secret_key
 BASE_URL=http://localhost:4321
 
-# 可选，当前为 AI 功能预留
+# 文章 AI 问答（公开访客功能；启用时必填）
 MIMO_BASE_URL=your_mimo_api_base_url
 MIMO_API_KEY=your_mimo_api_key
+BLOG_CHAT_COOKIE_SECRET=at-least-32-random-characters
+
+# 可选限额（默认：单访客单文章每天 5 次、全站每天 100 次）
+BLOG_CHAT_DAILY_LIMIT=5
+BLOG_CHAT_GLOBAL_DAILY_LIMIT=100
+BLOG_CHAT_RATE_LIMIT=3
+BLOG_CHAT_GLOBAL_RATE_LIMIT=20
+BLOG_CHAT_MAX_OUTPUT_TOKENS=800
 ```
 
 `SUPABASE_SECRET_KEY` 必须仅用于服务端，不要添加 `NEXT_PUBLIC_` 前缀，也不要提交到 Git。
 
-### 3. 初始化数据库
+### 3. 初始化和升级数据库
 
-新建数据库时，在 Supabase SQL Editor 中依次执行：
+空库或结构尚未核实的已有数据库使用下方完整顺序；已核实完成独立行规范化的旧库可使用后面的最小发布流程。SQL 需要数据库所有者权限；先在隔离数据库验证，再在维护窗口执行。**当前应用必须有健康写入 RPC、账本查询/写入 RPC 和问答配额 RPC；仅执行建表文件不够。**
 
-1. `schema.sql`：创建账本表、索引和聚合函数。
-2. `health-schema.sql`：创建疫苗目录及旧版 46 个项目，保留历史计划 ID。
-3. `yudan-schema.sql`：创建宝宝资料、逐条体重记录、逐条接种记录和所有者 RLS。
-4. `vaccine-catalog-update.sql`：更新为用户三张图片中的 30 条剂次（`2026-09-22-user-images`），包含甲肝减毒一剂与灭活两剂的二选一方案。价格及间隔备注保存在 `schedule_note`。
+| 顺序 | SQL 文件 | 用途 |
+| --- | --- | --- |
+| 1 | `schema.sql` | 创建账本基础表和公开只读策略；已有表不重建 |
+| 2 | `health-schema.sql` | 创建疫苗目录；仅空目录播种旧计划 ID，重跑保留已有目录 |
+| 3 | `yudan-schema.sql` | 创建健康记录表；旧 JSON 记录在事务中转为独立行，校验条数后移除旧列 |
+| 4 | `access-control.sql` | 统一读取权限；浏览器不能直接写健康表或账本表 |
+| 5 | `supabase/migrations/20260908031942_ledger_brand_product.sql` | 升级旧账本品牌/商品字段，并保留原始记录备份 |
+| 6 | `supabase/migrations/202609240001_health_record_mutations.sql` | 必需：健康记录事务写入、版本检查和幂等回执 |
+| 7 | `supabase/migrations/202609240002_ledger_queries.sql` | 必需：账本筛选分页、分类来源和月度汇总 |
+| 8 | `supabase/migrations/202609240003_blog_chat_limits.sql` | 必需：文章问答原子配额和仅服务端可调用的函数 |
+| 9 | `supabase/migrations/20260924073648_ledger_mutations.sql` | 必需：账本版本、原子写入与持久幂等回执；在账本查询迁移之后执行 |
+| 10 | `supabase/migrations/20260924081517_ledger_baseline_objects.sql` | 补账本交易时间索引与只读总支出函数；无需重建已有表或权限策略 |
+| 11 | `scripts/check-database.sql` | 只读检查必需函数、索引、RLS、浏览器/服务端权限及预期版本/名称清单 |
 
-已有数据库只更新疫苗清单时，先部署本次网页保存修复（避免删除已停用计划的历史记录），再执行 `vaccine-catalog-update.sql`；无需重跑建表脚本。该脚本在事务内更新，重复执行不增加条目，不删除旧目录或接种记录，并核对接种记录完全未变。五联、AC 结合、ACYW135 和灭活甲肝使用新 ID，已有单苗接种记录不会被改记为联合疫苗。旧版项目会停用并保留在数据库中。图片来源没有标注地区，不作为官方免疫程序；其中不清晰或需核对的间隔及制剂保留在备注中。
+SQL Editor 每次完整执行一个文件，有错误立即停止。已升级的数据库可重跑上述顺序；重复执行保留业务记录、健康元数据、幂等回执与问答额度，不会重新开放浏览器写权限。旧 JSON 有重复日期、无法匹配的计划等问题时，规范化会中止并保留原始数据，应先核对原记录再重试。
 
-已有数据库升级权限时执行：
+第 11 步的所有 `ok` 必须为 `true`，然后部署对应应用版本。在已包含“显示停用疫苗历史”功能的应用上线后，执行 `vaccine-catalog-update.sql` 更新为用户三张图片中的 30 条剂次（`2026-09-22-user-images`）；再核对旧接种记录和元数据。该目录脚本可重复执行，不删除停用计划或接种历史，图片参考价与待核对的间隔保留在备注中，不作为官方免疫程序。首次新建数据库也按相同顺序执行。
 
-1. 先备份 `yudan_dashboards`，再依次执行 `health-schema.sql` 和 `yudan-schema.sql`。
-2. `yudan-schema.sql` 会把旧 JSON 数组复制到标准化记录表，核对每位用户的记录条数，并在一致时自动删除旧字段；条数不一致会直接中止。
-3. 执行 `access-control.sql`，然后部署新版网站并确认登录后能读取原有体重和接种记录。
+**已完成健康独立行转换的旧库：最小发布流程**
+
+2026-09-24 对 YUDAN 项目的只读结构预检确认：健康表已独立存储、旧 JSON 列已移除，外键与业务唯一键齐全，账本品牌/商品迁移已登记；现有 owner 读取策略和服务端授权有效。旧健康唯一约束名称与新建库不同，预检按表和唯一列语义检查，不要求改名或建立重复索引。
+
+对于满足这些条件、尚未安装下列 RPC 的数据库，依次执行：
+
+1. `20260924081517_ledger_baseline_objects.sql`：只补交易时间索引和 `total_expense()`。
+2. `202609240002_ledger_queries.sql`。
+3. `202609240003_blog_chat_limits.sql`。
+4. `20260924073648_ledger_mutations.sql`。
+5. 紧邻应用切换时执行 `202609240001_health_record_mutations.sql`：该文件已在同一事务内建立健康写入 RPC 并收回三个健康表的浏览器增删改权限；上述读取策略与授权已满足要求时，无需再执行整个 `access-control.sql`。
+6. 运行 `scripts/check-database.sql`，全部通过后切换对应新应用，并验证网页流程。
+
+此流程不重跑基础建表、旧品牌内容转换、健康 JSON 转换或疫苗目录更新。第 5 步之后，尚未刷新的旧健康网页可能无法保存，应刷新到新版本；新应用依赖 RPC，应先完成迁移再切换。账本新增的 `version` 与更新触发器兼容旧服务端直接写入，并为更新自动递增版本。
+
+**发布记录与验证**
+
+- 每次发布记录应用 Git commit、SQL 文件名、SHA-256、执行时间、执行人、备份位置和检查结果；版本顺序以本表为准，不按零散旧说明补脚本。
+- SQL Editor 不会自动写入 Supabase CLI 迁移历史。只读检查会报告 `cli_history_available`、`expected_versions` 和 `expected_names`；若项目由 CLI 管理，再核对 `supabase_migrations.schema_migrations`。Supabase MCP 应用迁移时可能分配不同于本地文件时间戳的服务端版本，应结合迁移名称、发布 SHA-256 与对象检查核对，不能只比较版本数字。对象检查通过不等于证明执行过某个版本的原始文件，仍需保存发布记录。
+- 本地运行 `node --test tests/database-upgrade.test.cjs tests/health-database.test.cjs tests/ledger-mutations-database.test.cjs tests/blog-chat-database.test.cjs`。测试使用隔离的内存 PostgreSQL，不读取 `.env` 或连接线上数据库；缺少测试依赖会失败，不静默跳过。
+- 在预览环境验证授权账号读取历史、保存单条健康记录、账本跨年查询、匿名只读和问答额度；检查数据库 Advisors。迁移检查通过不替代应用端验证。
+
+**备份和失败回退**
+
+1. 暂停写入，确认 Supabase 可用备份及恢复时间点，另保存完整数据库结构与数据备份（含 Auth 用户关联、旧 JSON、健康元数据、账本备份表和问答配额表），在隔离环境试恢复。仅导出 CSV 不足以恢复权限和函数。
+2. 保存升级前记录数、账本金额合计、健康记录及其元数据快照，执行上述文件后逐项比较；只读检查仅读数据库目录，不读取个人记录或消耗问答额度。
+3. 每个升级文件均包含事务。单个文件失败时执行 `ROLLBACK`，修复原因后重跑该文件；SQL Editor 显示成功前不要继续。
+4. 迁移成功但应用验证失败时先暂停写入，保留现场和检查输出，优先修复兼容问题。新健康写入依赖 RPC，不能通过重授浏览器写表权限回退；需要回退数据库时，恢复已验证备份并同时回退匹配的应用版本，核对备份之后的新增记录再恢复写入。不要用删除表、列或 RPC 充当逆向迁移。
 
 标准化后的数据表：
 
@@ -117,8 +159,10 @@ MIMO_API_KEY=your_mimo_api_key
 | --- | --- | --- |
 | `yudan_dashboards` | 宝宝资料与出生日期 | `user_id` |
 | `yudan_weight_records` | 每次体重、身高和头围测量 | `user_id + measured_on` |
-| `yudan_vaccine_records` | 每次实际接种记录 | `user_id + plan_id` |
-| `yudan_vaccine_catalog` | 标准疫苗计划目录 | `id` |
+| `yudan_vaccine_records` | 每次实际接种记录及批号等元数据 | `user_id + plan_id` |
+| `yudan_vaccine_catalog` | 疫苗计划目录，含停用历史计划 | `id` |
+| `yudan_health_mutation_receipts` | 健康写入幂等回执，仅服务端访问 | `user_id + request_id` |
+| `ledger_mutation_receipts` | 账本写入幂等回执，仅服务端访问；回执在原记录删除后仍保留 | `request_id` |
 
 ### 4. 配置 GitHub OAuth
 
@@ -136,6 +180,17 @@ npm run dev
 npm run build
 npm run start
 ```
+
+提交前执行 `npm run check`，包含业务代码 ESLint、Astro/TypeScript 类型检查和隔离 PostgreSQL 测试。使用锁文件安装依赖：`npm ci`。测试缺少必需依赖时会失败，不会跳过数据库验证。
+
+浏览器回归使用本地测试服务和模拟 API，不访问线上数据：
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+测试覆盖手机端搜索未加载记录、按月导出、空结果恢复、月份响应乱序、失败重试，以及禁用存储仍可保存、丢失响应的安全重试、重新授权、编辑/删除冲突处理，并使用纽约时区验证北京时间账本。若本机已安装 Chrome，可设置 `PLAYWRIGHT_CHANNEL=chrome` 复用浏览器；PowerShell 示例：`$env:PLAYWRIGHT_CHANNEL='chrome'; npm run test:e2e`。Linux CI 会自动安装测试浏览器并运行检查、构建和浏览器回归。
 
 默认本地地址：
 
@@ -174,17 +229,23 @@ HTTP 传输格式，但数据库内部记录已改为标准关系表，不再保
 | `GET` | `/api/yudan/vaccines` | 读取标准疫苗目录、建议日期和实际日期 | API Key |
 | `POST` | `/api/yudan/weight` | 按日期新增或更新体重 | API Key |
 | `POST` | `/api/yudan/vaccine` | 按计划 ID 或疫苗信息登记实际日期 | API Key |
-| `POST` | `/api/telegram` | Telegram Webhook | 现有 Webhook 流程 |
-| `POST` | `/api/blog/chat` | 文章 AI 问答，迁移中暂停 | 无 |
+| `POST` | `/api/telegram` | 已停用（返回 `410`） | 无 |
+| `GET` | `/api/blog/chat?slug=<slug>` | 查询文章问答可用状态和剩余次数 | 签名访客 Cookie |
+| `POST` | `/api/blog/chat` | 文章 AI 问答（流式） | 签名访客 Cookie |
+
+### 健康记录并发保存
+
+网页保存使用 `POST /api/yudan/records`，请求体包含 `request_id`、`kind`、`key`、`action`、`changes` 和读取时的 `expected_updated_at`。省略版本字段时，旧版 API Key 接口继续执行兼容的 upsert；网页请求带版本时，记录被其他设备更新会返回 `409`，响应中的 `current` 提供云端值。重复使用同一个 `request_id` 会返回第一次结果，适合网络超时后的安全重试。
 
 ### 账本字段与代理技能
 
 账本使用独立的 `brand`（品牌）、`product`（商品）字段，`note` 保存店铺、订单号和优惠。
 完整规范见 [账单 skill](content/blog/bill-skill.md)，可安装版本在 [skills/yudan-bills/SKILL.md](skills/yudan-bills/SKILL.md)。
-已有数据库使用 `supabase/migrations/20260908031942_ledger_brand_product.sql` 升级；
-迁移保留原始记录备份并校验金额、时间和分类不变。新项目使用 `schema.sql`。
+数据库按上方“初始化和升级数据库”顺序执行。品牌/商品迁移保留原始记录备份，并校验金额、时间和分类不变；新项目也需补齐全部必需 RPC。
 
-验证账本规则：`node --test tests/ledger.test.cjs`。
+新增、编辑、删除均可使用客户端生成的 UUID `request_id` 安全重试；重试必须保持 ID 和内容不变。编辑与删除必须携带所读账单的 `expected_version`，版本冲突返回 `409` 并保留网页输入。原有无版本的编辑/删除脚本需同步更新，不能依靠旧版无条件写入。完整示例与错误码见 [API 说明](API.md#账本保存重试与冲突)。本地存储不可用时，API Key 可在当前会话使用，记住分类失败不影响账单保存。
+
+验证账本规则：`npm test`；验证完整页面流程：`npm run test:e2e`。
 
 ### 看板 API 示例
 

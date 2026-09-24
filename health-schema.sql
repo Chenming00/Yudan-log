@@ -1,5 +1,6 @@
 -- Canonical vaccine schedule used by the health module and API matching.
--- Run in Supabase SQL Editor for an existing YUDAN project.
+-- Baseline only: seed an empty catalog, never reset an existing catalog.
+begin;
 
 create table if not exists public.yudan_vaccine_catalog (
   id text primary key,
@@ -35,7 +36,7 @@ alter table public.yudan_vaccine_catalog
 
 alter table public.yudan_vaccine_catalog enable row level security;
 
-revoke all on table public.yudan_vaccine_catalog from anon;
+revoke all on table public.yudan_vaccine_catalog from public, anon;
 revoke all on table public.yudan_vaccine_catalog from authenticated;
 grant select on table public.yudan_vaccine_catalog to authenticated;
 grant select, insert, update, delete on table public.yudan_vaccine_catalog to service_role;
@@ -53,6 +54,9 @@ using (
   )
 );
 
+do $seed$
+begin
+if not exists (select 1 from public.yudan_vaccine_catalog) then
 insert into public.yudan_vaccine_catalog
   (id, sort_order, age_months, age_label, vaccine, dose, funding, date_rule, date_offset_days, active)
 values
@@ -171,5 +175,11 @@ set
   end,
   updated_at = now();
 
+end if;
+end;
+$seed$;
+
 comment on table public.yudan_vaccine_catalog is
   'Canonical vaccine schedule. API callers reference plan IDs instead of manually supplying labels.';
+
+commit;

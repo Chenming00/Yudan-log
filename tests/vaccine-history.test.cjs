@@ -2,43 +2,23 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const ts = require('typescript');
-const vm = require('node:vm');
+require.extensions['.ts'] = (module, filename) => module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS } }).outputText, filename);
+const { dashboardFromCloud, defaultData, applyHealthMutation } = require('../src/lib/health-model.ts');
+const catalog = (id, active = true) => ({ id, active, sort_order: 1, age_months: 0, age_label: '出生', vaccine: id, dose: '第1剂', funding: 'free', date_rule: null, date_offset_days: 0 });
+const record = (plan_id) => ({ id: plan_id, plan_id, administered_on: '2026-08-12', updated_at: '2026-08-12T00:00:00.001Z', place: '医院', batch_no: '000123', manufacturer: '厂家', note: '接种反应' });
 
-// Exercise the actual save function without loading React or a real database.
-const source = fs.readFileSync(require.resolve('../src/components/yudan/page.tsx'), 'utf8');
-const ast = ts.createSourceFile('page.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-const saveFunction = ast.statements.find((node) => ts.isFunctionDeclaration(node) && node.name?.text === 'saveCloudDashboard');
-assert.ok(saveFunction);
-const compiled = ts.transpileModule(saveFunction.getText(ast), {
-  compilerOptions: { target: ts.ScriptTarget.ES2020, module: ts.ModuleKind.CommonJS },
-}).outputText;
-const saveCloudDashboard = vm.runInNewContext(`${compiled}\nsaveCloudDashboard`, { defaultBirthday: '2026-08-12' });
+test('retired vaccine history stays visible with all metadata; inactive unrecorded plans remain hidden', () => {
+  const data = dashboardFromCloud({ birthday: '2026-08-12' }, [], [record('retired')], defaultData, [catalog('retired', false), catalog('unused', false), catalog('active')]);
+  assert.deepEqual(data.vaccines.map((item) => item.planId), ['retired', 'active']);
+  const saved = data.vaccines[0];
+  assert.equal(saved.batchNo, '000123'); assert.equal(saved.place, '医院'); assert.equal(saved.manufacturer, '厂家'); assert.equal(saved.note, '接种反应'); assert.ok(saved.updatedAt);
+  const next = applyHealthMutation(data, { kind: 'vaccine', key: 'active', action: 'save', changes: { administered_on: '2026-08-15' } });
+  assert.deepEqual(next.vaccines[0], saved);
+});
 
-test('saving a new catalog keeps retired vaccine history and deletes only cleared visible records', async () => {
-  const removed = [];
-  const upserted = [];
-  const supabase = {
-    from(table) {
-      return {
-        select() {
-          return { eq: async () => ({ error: null, data: table === 'yudan_vaccine_records' ? [
-            { id: 'retired-history', plan_id: 'schedule-004' },
-            { id: 'kept-history', plan_id: 'schedule-001' },
-            { id: 'cleared-history', plan_id: 'penta-001' },
-          ] : [] }) };
-        },
-        async upsert(rows) { upserted.push({ table, rows }); return { error: null }; },
-        delete() { return { in: async (_, ids) => { removed.push(...ids); return { error: null }; } }; },
-      };
-    },
-  };
-  await saveCloudDashboard(supabase, 'owner', { growth: [], vaccines: [
-    { planId: 'schedule-001', doneDate: '2026-08-12' },
-    { planId: 'penta-001', doneDate: '' },
-  ] });
-  assert.deepEqual(removed, ['cleared-history']);
-  const saved = upserted.find((call) => call.table === 'yudan_vaccine_records').rows;
-  assert.equal(saved.length, 1);
-  assert.equal(saved[0].plan_id, 'schedule-001');
-  assert.equal(saved[0].administered_on, '2026-08-12');
+test('changing one vaccine date preserves its batch metadata and all other histories', () => {
+  const data = dashboardFromCloud({ birthday: '2026-08-12' }, [], [record('a'), record('b')], defaultData, [catalog('a'), catalog('b')]);
+  const next = applyHealthMutation(data, { kind: 'vaccine', key: 'a', action: 'save', changes: { administered_on: '2026-08-14' } });
+  assert.equal(next.vaccines[0].doneDate, '2026-08-14'); assert.equal(next.vaccines[0].batchNo, '000123');
+  assert.deepEqual(next.vaccines[1], data.vaccines[1]);
 });

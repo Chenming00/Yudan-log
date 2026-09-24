@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import {
   ArrowRight,
@@ -26,564 +26,24 @@ import {
 } from "lucide-react";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { isGitHubProvider, isOwnerEmail, OWNER_EMAIL } from "@/lib/auth";
 import { getMaleWeightAssessments } from "@/src/lib/growth-standards";
 import type { WeightAssessment } from "@/src/lib/growth-standards";
-import { YUDAN_BIRTHDAY, ZHENGZHENG_CARE_MILESTONES } from "@/src/lib/yudan-profile";
+import { ZHENGZHENG_CARE_MILESTONES } from "@/src/lib/yudan-profile";
 import { getBrowserSupabaseClient } from "@/lib/supabase-browser";
 import { cn } from "@/lib/utils";
-import WeightChart from "./weight-chart";
-
-type GrowthEntry = {
-  id: string;
-  date: string;
-  weight: number;
-  height: number;
-  head: number;
-  note: string;
-};
-
-type VaccineType = "free" | "paid";
-type VaccineStatus = "planned" | "booked" | "done" | "delayed" | "skipped";
-
-type VaccineEntry = {
-  id: string;
-  planId?: string;
-  ageLabel: string;
-  ageMonths: number;
-  vaccine: string;
-  dose: string;
-  type: VaccineType;
-  route: string;
-  disease: string;
-  note: string;
-  alternative?: string;
-  status: VaccineStatus;
-  plannedDate: string;
-  bookedDate: string;
-  doneDate: string;
-  place: string;
-  batchNo: string;
-  manufacturer: string;
-  reminder: string;
-  dateRule?: "flu-season";
-  dateOffsetDays?: number;
-};
-
-type CareEntry = {
-  id: string;
-  time: string;
-  type: "feed" | "sleep" | "diaper" | "medicine" | "note";
-  title: string;
-  detail: string;
-};
-
-type DashboardData = {
-  birthday: string;
-  growth: GrowthEntry[];
-  vaccines: VaccineEntry[];
-  care: CareEntry[];
-};
-
-type YudanDashboardProps = {
-  supabaseUrl?: string;
-  supabasePublishableKey?: string;
-  view?: "dashboard" | "health";
-};
-
-type CloudVaccineRecord = {
-  id: string;
-  plan_id: string;
-  administered_on: string;
-};
-
-type CloudWeightRecord = {
-  id: string;
-  measured_on: string;
-  weight_kg: number | string;
-  height_cm: number | string | null;
-  head_circumference_cm: number | string | null;
-  note: string;
-};
-
-type CloudDashboardRow = {
-  birthday: string;
-};
-
-type CloudVaccinePlan = {
-  id: string;
-  sort_order: number;
-  age_months: number;
-  age_label: string;
-  vaccine: string;
-  dose: string;
-  funding: VaccineType;
-  date_rule: "flu-season" | null;
-  date_offset_days: number;
-  region: string;
-  schedule_version: string;
-  prevents: string;
-  aliases: string[];
-  audience: string | null;
-  schedule_note: string | null;
-  source: string;
-};
-
-type SyncStatus = "local" | "loading" | "saving" | "saved" | "error";
-
-type VaccineFilter = "all" | "free" | "paid";
-
-function toDateValue(date: Date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-const today = toDateValue(new Date());
-const nowLocal = new Date(Date.now() - new Date().getTimezoneOffset() * 60000)
-  .toISOString()
-  .slice(0, 16);
-
-type VaccineTemplate = Omit<
-  VaccineEntry,
-  "id" | "plannedDate" | "bookedDate" | "doneDate" | "place" | "batchNo" | "manufacturer" | "reminder"
->;
-
-function vaccineAt(
-  ageMonths: number,
-  ageLabel: string,
-  vaccine: string,
-  dose: string,
-  type: VaccineType,
-  options: Partial<VaccineTemplate> = {}
-): VaccineTemplate {
-  return {
-    ageMonths,
-    ageLabel,
-    vaccine,
-    dose,
-    type,
-    route: "",
-    disease: "",
-    note: "",
-    status: "planned",
-    ...options,
-  };
-}
-
-const vaccineTemplates: VaccineTemplate[] = [
-  vaccineAt(0, "出生后 24 小时内", "乙肝疫苗", "第 1 剂", "free"),
-  vaccineAt(0, "出生时", "卡介苗", "1 剂", "free"),
-  vaccineAt(1, "1 月龄", "乙肝疫苗", "第 2 剂", "free"),
-
-  vaccineAt(2, "2 月龄", "脊灰灭活疫苗 IPV", "第 1 剂", "free"),
-  vaccineAt(2, "2 月龄", "百白破疫苗 DTaP", "第 1 剂", "free"),
-  vaccineAt(2, "2 月龄", "肺炎球菌结合疫苗 PCV", "第 1 剂", "paid"),
-  vaccineAt(2, "2 月龄", "Hib 疫苗", "第 1 剂", "paid"),
-  vaccineAt(2, "2 月龄", "轮状病毒疫苗", "第 1 剂", "paid"),
-
-  vaccineAt(3, "3 月龄", "脊灰灭活疫苗 IPV", "第 2 剂", "free"),
-
-  vaccineAt(4, "4 月龄", "脊灰减毒活疫苗 bOPV", "第 3 剂", "free"),
-  vaccineAt(4, "4 月龄", "百白破疫苗 DTaP", "第 2 剂", "free"),
-  vaccineAt(4, "4 月龄", "肺炎球菌结合疫苗 PCV", "第 2 剂", "paid"),
-  vaccineAt(4, "4 月龄", "Hib 疫苗", "第 2 剂", "paid"),
-  vaccineAt(4, "4 月龄", "轮状病毒疫苗", "第 2 剂", "paid"),
-
-  vaccineAt(6, "6 月龄", "乙肝疫苗", "第 3 剂", "free"),
-  vaccineAt(6, "6 月龄", "百白破疫苗 DTaP", "第 3 剂", "free"),
-  vaccineAt(6, "6 月龄", "A 群流脑多糖疫苗", "第 1 剂", "free"),
-  vaccineAt(6, "6 月龄", "肺炎球菌结合疫苗 PCV", "第 3 剂", "paid"),
-  vaccineAt(6, "6 月龄（三剂基础程序）", "Hib 疫苗", "第 3 剂", "paid"),
-  vaccineAt(6, "6 月龄（三剂程序）", "轮状病毒疫苗", "第 3 剂", "paid"),
-  vaccineAt(6, "满 6 月龄后的首个流感季", "流感疫苗", "首季第 1 剂", "paid", { dateRule: "flu-season" }),
-  vaccineAt(6, "首剂后至少 4 周", "流感疫苗", "首季第 2 剂", "paid", { dateRule: "flu-season", dateOffsetDays: 28 }),
-  vaccineAt(6, "6 月龄", "EV71 手足口疫苗", "第 1 剂", "paid"),
-  vaccineAt(7, "首剂后 1 个月", "EV71 手足口疫苗", "第 2 剂", "paid"),
-
-  vaccineAt(8, "8 月龄", "麻腮风疫苗 MMR", "第 1 剂", "free"),
-  vaccineAt(8, "8 月龄", "乙脑减毒活疫苗", "第 1 剂", "free"),
-
-  vaccineAt(9, "9 月龄", "A 群流脑多糖疫苗", "第 2 剂", "free"),
-
-  vaccineAt(12, "12-15 月龄", "肺炎球菌结合疫苗 PCV", "加强剂", "paid"),
-  vaccineAt(12, "12-15 月龄", "Hib 疫苗", "加强剂", "paid"),
-  vaccineAt(12, "12-15 月龄", "水痘疫苗", "第 1 剂", "paid"),
-
-  vaccineAt(18, "18 月龄", "麻腮风疫苗 MMR", "第 2 剂", "free"),
-  vaccineAt(18, "18 月龄", "百白破疫苗 DTaP", "第 4 剂", "free"),
-  vaccineAt(18, "18 月龄", "甲肝减毒活疫苗", "1 剂", "free"),
-  vaccineAt(18, "第 2 个流感季", "流感疫苗", "年度接种", "paid", { dateRule: "flu-season" }),
-
-  vaccineAt(24, "2 周岁", "乙脑减毒活疫苗", "第 2 剂", "free"),
-  vaccineAt(30, "第 3 个流感季", "流感疫苗", "年度接种", "paid", { dateRule: "flu-season" }),
-
-  vaccineAt(36, "3 周岁", "流脑疫苗（A 群 C 群）", "第 3 剂", "free"),
-  vaccineAt(42, "第 4 个流感季", "流感疫苗", "年度接种", "paid", { dateRule: "flu-season" }),
-
-  vaccineAt(48, "4 周岁", "脊灰减毒活疫苗 bOPV", "第 4 剂", "free"),
-  vaccineAt(48, "4-6 周岁", "水痘疫苗", "第 2 剂", "paid"),
-  vaccineAt(54, "第 5 个流感季", "流感疫苗", "年度接种", "paid", { dateRule: "flu-season" }),
-  vaccineAt(66, "第 6 个流感季", "流感疫苗", "年度接种", "paid", { dateRule: "flu-season" }),
-
-  vaccineAt(72, "6 周岁", "百白破疫苗 DTaP", "第 5 剂", "free"),
-  vaccineAt(72, "6 周岁", "流脑疫苗（A 群 C 群）", "第 4 剂", "free"),
-  vaccineAt(156, "13 周岁（女孩）", "双价 HPV 疫苗 2vHPV", "第 1 剂", "free"),
-  vaccineAt(162, "首剂后 6 个月（女孩）", "双价 HPV 疫苗 2vHPV", "第 2 剂", "free"),
-];
-const statusLabels: Record<VaccineStatus, string> = {
-  planned: "待安排",
-  booked: "已预约",
-  done: "已完成",
-  delayed: "延后",
-  skipped: "跳过",
-};
-
-const statusStyles: Record<VaccineStatus, string> = {
-  planned: "border-stone-200 bg-stone-50 text-stone-700",
-  booked: "border-sky-200 bg-sky-50 text-sky-700",
-  done: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  delayed: "border-amber-200 bg-amber-50 text-amber-700",
-  skipped: "border-zinc-200 bg-zinc-50 text-zinc-500",
-};
-
-const careLabels: Record<CareEntry["type"], string> = {
-  feed: "喂养",
-  sleep: "睡眠",
-  diaper: "尿布",
-  medicine: "用药",
-  note: "观察",
-};
-
-const careStyles: Record<CareEntry["type"], string> = {
-  feed: "bg-amber-50 text-amber-700 border-amber-200",
-  sleep: "bg-indigo-50 text-indigo-700 border-indigo-200",
-  diaper: "bg-sky-50 text-sky-700 border-sky-200",
-  medicine: "bg-rose-50 text-rose-700 border-rose-200",
-  note: "bg-emerald-50 text-emerald-700 border-emerald-200",
-};
-
-function addMonths(dateString: string, months: number) {
-  const date = new Date(`${dateString}T00:00:00`);
-  const day = date.getDate();
-  date.setMonth(date.getMonth() + months);
-  if (date.getDate() < day) date.setDate(0);
-  return toDateValue(date);
-}
-
-function addDays(dateString: string, days: number) {
-  const date = new Date(`${dateString}T00:00:00`);
-  date.setDate(date.getDate() + days);
-  return toDateValue(date);
-}
-
-function fluSeasonDate(earliestDate: string) {
-  const earliest = new Date(`${earliestDate}T00:00:00`);
-  const month = earliest.getMonth() + 1;
-  if (month >= 4 && month <= 8) {
-    earliest.setMonth(8, 15);
-  }
-  return toDateValue(earliest);
-}
-
-function plannedDateForTemplate(birthday: string, template: VaccineTemplate) {
-  let date = addMonths(birthday, template.ageMonths);
-  if (template.dateRule === "flu-season") date = fluSeasonDate(date);
-  if (template.dateOffsetDays) date = addDays(date, template.dateOffsetDays);
-  return date;
-}
-
-function createVaccineSchedule(birthday: string): VaccineEntry[] {
-  return vaccineTemplates.map((template, index) => ({
-    ...template,
-    id: `vaccine-${index + 1}`,
-    planId: `schedule-${String(index + 1).padStart(3, "0")}`,
-    plannedDate: plannedDateForTemplate(birthday, template),
-    bookedDate: "",
-    doneDate: "",
-    place: "",
-    batchNo: "",
-    manufacturer: "",
-    reminder: template.type === "free" ? "提前 7 天确认门诊时间" : "先咨询库存、品牌和价格",
-  }));
-}
-
-function createVaccineScheduleFromCatalog(
-  birthday: string,
-  catalog: CloudVaccinePlan[]
-): VaccineEntry[] {
-  return [...catalog]
-    .sort((left, right) => left.sort_order - right.sort_order)
-    .map((plan) => {
-      const template: VaccineTemplate = {
-        ageMonths: plan.age_months,
-        ageLabel: plan.age_label,
-        vaccine: plan.vaccine,
-        dose: plan.dose,
-        type: plan.funding,
-        route: "",
-        disease: plan.prevents || "",
-        note: plan.schedule_note || "",
-        status: "planned",
-        dateRule: plan.date_rule || undefined,
-        dateOffsetDays: plan.date_offset_days || undefined,
-      };
-      return {
-        ...template,
-        id: plan.id,
-        planId: plan.id,
-        plannedDate: plannedDateForTemplate(birthday, template),
-        bookedDate: "",
-        doneDate: "",
-        place: "",
-        batchNo: "",
-        manufacturer: "",
-        reminder: plan.funding === "free" ? "提前 7 天确认门诊时间" : "先咨询库存、品牌和价格",
-      };
-    });
-}
-
-function scheduleForBirthday(birthday: string, catalog: CloudVaccinePlan[]) {
-  return catalog.length
-    ? createVaccineScheduleFromCatalog(birthday, catalog)
-    : createVaccineSchedule(birthday);
-}
-
-const defaultBirthday = YUDAN_BIRTHDAY;
-
-const defaultData: DashboardData = {
-  birthday: defaultBirthday,
-  growth: [],
-  vaccines: createVaccineSchedule(defaultBirthday),
-  care: [
-    {
-      id: "care-1",
-      time: nowLocal,
-      type: "note",
-      title: "第一次记录",
-      detail: "把鱼蛋今天的重要变化写在这里。",
-    },
-  ],
-};
-
-const previewBirthday = YUDAN_BIRTHDAY;
-const previewVaccines = createVaccineSchedule(previewBirthday).map((item, index) =>
-  index < 2 ? { ...item, doneDate: item.plannedDate, status: "done" as VaccineStatus } : item
-);
-const previewData: DashboardData = {
-  birthday: previewBirthday,
-  growth: [
-    { id: "preview-weight-1", date: previewBirthday, weight: 3.4, height: 0, head: 0, note: "" },
-    { id: "preview-weight-2", date: "2026-08-16", weight: 3.32, height: 0, head: 0, note: "" },
-    { id: "preview-weight-3", date: "2026-08-21", weight: 3.56, height: 0, head: 0, note: "" },
-  ],
-  vaccines: previewVaccines,
-  care: [],
-};
-
-function newId(prefix: string) {
-  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function daysBetween(start: string, end: string) {
-  const startTime = new Date(`${start}T00:00:00`).getTime();
-  const endTime = new Date(`${end}T00:00:00`).getTime();
-  if (Number.isNaN(startTime) || Number.isNaN(endTime)) return 0;
-  return Math.floor((endTime - startTime) / 86400000);
-}
-
-function formatDate(date: string) {
-  if (!date) return "-";
-  return new Intl.DateTimeFormat("zh-CN", {
-    year: "numeric",
-    month: "numeric",
-    day: "numeric",
-  }).format(new Date(`${date}T00:00:00`));
-}
-
-function formatDateTime(date: string) {
-  return new Intl.DateTimeFormat("zh-CN", {
-    month: "numeric",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(date));
-}
-
-function readStoredData(userId?: string): DashboardData {
-  if (typeof window === "undefined") return defaultData;
-
-  try {
-    const scopedKey = userId ? `yudan-dashboard-v2:${userId}` : "yudan-dashboard-v2";
-    const scopedRaw = window.localStorage.getItem(scopedKey);
-    const migrationOwner = window.localStorage.getItem("yudan-dashboard-v2-migrated");
-    const legacyRaw = !userId || !migrationOwner
-      ? window.localStorage.getItem("yudan-dashboard-v2")
-      : null;
-    const raw = scopedRaw || legacyRaw;
-    if (raw) {
-      const stored = JSON.parse(raw) as Partial<DashboardData>;
-      const birthday = defaultBirthday;
-      const storedVaccines = stored.vaccines || [];
-      return {
-        ...defaultData,
-        ...stored,
-        birthday,
-        growth: stored.growth || defaultData.growth,
-        care: stored.care || defaultData.care,
-        vaccines: createVaccineSchedule(birthday).map((fresh) => {
-          const previous = storedVaccines.find(
-            (item) => item.vaccine === fresh.vaccine && item.dose === fresh.dose && item.ageLabel === fresh.ageLabel
-          );
-          return previous ? { ...fresh, ...previous, plannedDate: fresh.plannedDate } : fresh;
-        }),
-      };
-    }
-
-    const oldRaw = !userId || !migrationOwner
-      ? window.localStorage.getItem("yudan-dashboard-v1")
-      : null;
-    if (!oldRaw) return defaultData;
-    const oldData = JSON.parse(oldRaw) as Partial<DashboardData>;
-    return {
-      ...defaultData,
-      birthday: defaultBirthday,
-      growth: oldData.growth || defaultData.growth,
-      care: oldData.care || defaultData.care,
-      vaccines: createVaccineSchedule(defaultBirthday),
-    };
-  } catch {
-    return defaultData;
-  }
-}
-
-function dashboardFromCloud(
-  row: CloudDashboardRow,
-  weightRecords: CloudWeightRecord[],
-  vaccineRecords: CloudVaccineRecord[],
-  localData: DashboardData,
-  catalog: CloudVaccinePlan[]
-): DashboardData {
-  const birthday = row.birthday || defaultBirthday;
-
-  return {
-    ...localData,
-    birthday,
-    vaccines: scheduleForBirthday(birthday, catalog).map((fresh) => {
-      const stored = vaccineRecords.find(
-        (item) => item.plan_id === fresh.planId || item.plan_id === fresh.id
-      );
-      return stored
-        ? { ...fresh, doneDate: stored.administered_on, status: "done" }
-        : fresh;
-    }),
-    growth: weightRecords.map((item) => ({
-      id: item.id,
-      date: item.measured_on,
-      weight: Number(item.weight_kg),
-      height: item.height_cm === null ? 0 : Number(item.height_cm),
-      head: item.head_circumference_cm === null ? 0 : Number(item.head_circumference_cm),
-      note: item.note || "",
-    })),
-  };
-}
-
-async function saveCloudDashboard(
-  supabase: SupabaseClient,
-  userId: string,
-  data: DashboardData
-) {
-  const updatedAt = new Date().toISOString();
-  const weightRows = data.growth.map((item) => ({
-    user_id: userId,
-    measured_on: item.date,
-    weight_kg: item.weight,
-    height_cm: item.height > 0 ? item.height : null,
-    head_circumference_cm: item.head > 0 ? item.head : null,
-    note: item.note,
-    updated_at: updatedAt,
-  }));
-  const vaccineRows = data.vaccines
-    .filter((item) => item.doneDate && item.planId)
-    .map((item) => ({
-      user_id: userId,
-      plan_id: item.planId as string,
-      administered_on: item.doneDate,
-      place: item.place,
-      batch_no: item.batchNo,
-      manufacturer: item.manufacturer,
-      note: item.note,
-      updated_at: updatedAt,
-    }));
-
-  const [profileResult, currentWeights, currentVaccines] = await Promise.all([
-    supabase
-      .from("yudan_dashboards")
-      .upsert({ user_id: userId, birthday: defaultBirthday, updated_at: updatedAt }, { onConflict: "user_id" }),
-    supabase.from("yudan_weight_records").select("id, measured_on").eq("user_id", userId),
-    supabase.from("yudan_vaccine_records").select("id, plan_id").eq("user_id", userId),
-  ]);
-
-  if (profileResult.error) throw profileResult.error;
-  if (currentWeights.error) throw currentWeights.error;
-  if (currentVaccines.error) throw currentVaccines.error;
-
-  const savedDates = new Set(weightRows.map((item) => item.measured_on));
-  const savedPlans = new Set(vaccineRows.map((item) => item.plan_id));
-  // Inactive catalog entries are absent from this screen, not deleted by the user.
-  const visiblePlans = new Set(data.vaccines.map((item) => item.planId).filter(Boolean));
-  const staleWeightIds = (currentWeights.data || [])
-    .filter((item) => !savedDates.has(item.measured_on))
-    .map((item) => item.id);
-  const staleVaccineIds = (currentVaccines.data || [])
-    .filter((item) => visiblePlans.has(item.plan_id) && !savedPlans.has(item.plan_id))
-    .map((item) => item.id);
-
-  const results = await Promise.all([
-    weightRows.length
-      ? supabase.from("yudan_weight_records").upsert(weightRows, { onConflict: "user_id,measured_on" })
-      : Promise.resolve({ error: null }),
-    vaccineRows.length
-      ? supabase.from("yudan_vaccine_records").upsert(vaccineRows, { onConflict: "user_id,plan_id" })
-      : Promise.resolve({ error: null }),
-    staleWeightIds.length
-      ? supabase.from("yudan_weight_records").delete().in("id", staleWeightIds)
-      : Promise.resolve({ error: null }),
-    staleVaccineIds.length
-      ? supabase.from("yudan_vaccine_records").delete().in("id", staleVaccineIds)
-      : Promise.resolve({ error: null }),
-  ]);
-  const failed = results.find((result) => result.error);
-  if (failed?.error) throw failed.error;
-}
-
-function getCloudErrorMessage(error: unknown) {
-  if (error && typeof error === "object") {
-    const details = error as { code?: string; message?: string };
-    if (details.code === "42P01") return "云端数据表尚未创建，请先执行 yudan-schema.sql。";
-    if (details.message) return details.message;
-  }
-  return "云端保存失败，请检查网络后重试。";
-}
-
-function getDueState(vaccine: VaccineEntry) {
+import WeightChart from "./lazy-weight-chart";
+import { useHealthSync } from "./use-health-sync";
+import { useShanghaiToday } from "./use-shanghai-today";
+import { daysBetween, formatDate } from "@/src/lib/health-model";
+import type { GrowthEntry, VaccineEntry, VaccineType, SyncStatus, VaccineFilter, YudanDashboardProps } from "@/src/lib/health-model";
+const HealthRecordDialogs = lazy(() => import("./record-dialogs"));
+function getDueState(vaccine: VaccineEntry, today: string) {
   if (vaccine.doneDate) return "done";
   const diff = daysBetween(today, vaccine.plannedDate);
-  if (diff < 0) return "overdue";
-  if (diff <= 14) return "soon";
-  return "future";
+  return diff < 0 ? "overdue" : diff <= 14 ? "soon" : "future";
 }
 
 export default function YudanDashboard({
@@ -593,40 +53,21 @@ export default function YudanDashboard({
 }: YudanDashboardProps) {
   const hasSupabase = Boolean(supabaseUrl && supabasePublishableKey);
   const [supabase, setSupabase] = useState<SupabaseClient | null>(null);
-  const [data, setData] = useState<DashboardData>(hasSupabase ? previewData : defaultData);
-  const [vaccineCatalog, setVaccineCatalog] = useState<CloudVaccinePlan[]>([]);
+  const today = useShanghaiToday();
   const [ready, setReady] = useState(true);
   const [authReady, setAuthReady] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
-  const [cloudReady, setCloudReady] = useState(false);
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>(hasSupabase ? "loading" : "local");
-  const [cloudError, setCloudError] = useState("");
   const [loginPending, setLoginPending] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [activeView, setActiveView] = useState<"vaccines" | "growth" | "care">("growth");
   const [vaccineFilter, setVaccineFilter] = useState<VaccineFilter>("all");
   const [recordingVaccineId, setRecordingVaccineId] = useState<string | null>(null);
-  const [vaccineDateDraft, setVaccineDateDraft] = useState(today);
   const [weightDialogOpen, setWeightDialogOpen] = useState(false);
-  const cloudReadSucceededRef = useRef(false);
-  const saveChainRef = useRef<Promise<void>>(Promise.resolve());
-  const latestSaveRef = useRef(0);
-  const [growthForm, setGrowthForm] = useState({
-    date: today,
-    weight: "",
-    height: "",
-    head: "",
-    note: "",
-  });
-  const [careForm, setCareForm] = useState({
-    time: nowLocal,
-    type: "feed" as CareEntry["type"],
-    title: "",
-    detail: "",
-  });
   const isOwner = isOwnerEmail(session?.user.email) && isGitHubProvider(session?.user.app_metadata);
   const isPreview = Boolean(hasSupabase && (!session || !isOwner));
-  const canEdit = !hasSupabase || Boolean(session && isOwner);
+  const { data, cloudReady, syncStatus, cloudError, conflict, submit, retry, resolveConflict } = useHealthSync(supabase, session, isOwner, hasSupabase);
+  const canEdit = !hasSupabase || Boolean(session && isOwner && cloudReady);
+  const syncFeedback = canEdit && cloudError ? <div className="space-y-2" role="status"><CloudError message={cloudError} /><div className="flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => void retry()}>{conflict ? "重新读取并核对" : "重试同步"}</Button>{conflict?.reviewed && <><span className="self-center text-xs text-stone-600">云端：{String(conflict.current?.value ?? "无记录")}；本次：{conflict.mutation.action === "delete" ? "删除" : conflict.mutation.changes.weight_kg ?? conflict.mutation.changes.administered_on}</span><Button size="sm" onClick={() => resolveConflict(true)}>确认保存我的修改</Button><Button size="sm" variant="outline" onClick={() => resolveConflict(false)}>采用云端记录</Button></>}</div></div> : null;
 
   useEffect(() => {
     let active = true;
@@ -639,7 +80,6 @@ export default function YudanDashboard({
   }, [supabasePublishableKey, supabaseUrl]);
 
   useEffect(() => {
-    setData(hasSupabase ? previewData : readStoredData());
     if (view === "health") {
       const tab = new URLSearchParams(window.location.search).get("tab");
       setActiveView(tab === "vaccine" || tab === "vaccines" ? "vaccines" : tab === "care" ? "care" : "growth");
@@ -650,8 +90,6 @@ export default function YudanDashboard({
   useEffect(() => {
     if (!hasSupabase) {
       setAuthReady(true);
-      setCloudReady(true);
-      setSyncStatus("local");
       return;
     }
     if (!supabase) return;
@@ -672,11 +110,7 @@ export default function YudanDashboard({
       if (!active) return;
       setSession(nextSession);
       setAuthReady(true);
-      if (!nextSession) {
-        setData(previewData);
-        setCloudReady(false);
-        setSyncStatus("loading");
-      }
+
     });
 
     return () => {
@@ -684,120 +118,6 @@ export default function YudanDashboard({
       subscription.unsubscribe();
     };
   }, [hasSupabase, supabase]);
-
-  useEffect(() => {
-    if (!ready || !supabase || !session?.user.id || !isOwner) return;
-
-    let active = true;
-    const userId = session.user.id;
-    const localSnapshot = readStoredData(userId);
-    cloudReadSucceededRef.current = false;
-    setCloudReady(false);
-    setSyncStatus("loading");
-    setCloudError("");
-
-    void (async () => {
-      try {
-        const [dashboardResult, catalogResult, weightResult, vaccineResult] = await Promise.all([
-          supabase
-            .from("yudan_dashboards")
-            .select("birthday")
-            .eq("user_id", userId)
-            .maybeSingle(),
-          supabase
-            .from("yudan_vaccine_catalog")
-            .select("id, sort_order, age_months, age_label, vaccine, dose, funding, date_rule, date_offset_days, region, schedule_version, prevents, aliases, audience, schedule_note, source")
-            .eq("active", true)
-            .order("sort_order"),
-          supabase
-            .from("yudan_weight_records")
-            .select("id, measured_on, weight_kg, height_cm, head_circumference_cm, note")
-            .eq("user_id", userId)
-            .order("measured_on"),
-          supabase
-            .from("yudan_vaccine_records")
-            .select("id, plan_id, administered_on")
-            .eq("user_id", userId)
-            .order("administered_on"),
-        ]);
-
-        if (dashboardResult.error) throw dashboardResult.error;
-        if (catalogResult.error) throw catalogResult.error;
-        if (weightResult.error) throw weightResult.error;
-        if (vaccineResult.error) throw vaccineResult.error;
-        if (!active) return;
-        const cloudRow = dashboardResult.data;
-        const catalog = (catalogResult.data || []) as CloudVaccinePlan[];
-        setVaccineCatalog(catalog);
-
-        if (cloudRow) {
-          setData(dashboardFromCloud(
-            cloudRow as CloudDashboardRow,
-            (weightResult.data || []) as CloudWeightRecord[],
-            (vaccineResult.data || []) as CloudVaccineRecord[],
-            localSnapshot,
-            catalog
-          ));
-        } else {
-          await saveCloudDashboard(supabase, userId, localSnapshot);
-          if (!active) return;
-          setData(localSnapshot);
-        }
-
-        window.localStorage.setItem("yudan-dashboard-v2-migrated", userId);
-        cloudReadSucceededRef.current = true;
-        setSyncStatus("saved");
-      } catch (error) {
-        if (!active) return;
-        setData(localSnapshot);
-        setCloudError(getCloudErrorMessage(error));
-        setSyncStatus("error");
-      } finally {
-        if (active) setCloudReady(true);
-      }
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [isOwner, ready, session?.user.id, supabase]);
-
-  useEffect(() => {
-    if (!ready) return;
-    if (hasSupabase && (!session?.user.id || !isOwner || !cloudReady)) return;
-
-    const storageKey = session?.user.id
-      ? `yudan-dashboard-v2:${session.user.id}`
-      : "yudan-dashboard-v2";
-    window.localStorage.setItem(storageKey, JSON.stringify(data));
-  }, [cloudReady, data, hasSupabase, isOwner, ready, session?.user.id]);
-
-  useEffect(() => {
-    if (!ready || !cloudReady || !cloudReadSucceededRef.current || !supabase || !session?.user.id || !isOwner) return;
-
-    const userId = session.user.id;
-    const snapshot = data;
-    const timer = window.setTimeout(() => {
-      const saveId = ++latestSaveRef.current;
-      setSyncStatus("saving");
-
-      saveChainRef.current = saveChainRef.current
-        .catch(() => undefined)
-        .then(() => saveCloudDashboard(supabase, userId, snapshot))
-        .then(() => {
-          if (saveId !== latestSaveRef.current) return;
-          setCloudError("");
-          setSyncStatus("saved");
-        })
-        .catch((error) => {
-          if (saveId !== latestSaveRef.current) return;
-          setCloudError(getCloudErrorMessage(error));
-          setSyncStatus("error");
-        });
-    }, 650);
-
-    return () => window.clearTimeout(timer);
-  }, [cloudReady, data, isOwner, ready, session?.user.id, supabase]);
 
   const sortedGrowth = useMemo(
     () => [...data.growth].sort((a, b) => a.date.localeCompare(b.date)),
@@ -812,20 +132,14 @@ export default function YudanDashboard({
   const latestGrowth = sortedGrowth.at(-1);
   const doneVaccines = sortedVaccines.filter((item) => item.doneDate).length;
   const freeVaccines = sortedVaccines.filter((item) => item.type === "free");
-  const paidVaccines = sortedVaccines.filter((item) => item.type === "paid");
   const doneFreeVaccines = freeVaccines.filter((item) => item.doneDate).length;
-  const undoneFree = sortedVaccines.filter((item) => item.type === "free" && !item.doneDate);
   const nextVaccine = sortedVaccines.find((item) => !item.doneDate);
   const babyAgeDays = Math.max(0, daysBetween(data.birthday, today));
 
   const dueVaccines = sortedVaccines.filter((item) => {
     if (item.doneDate) return false;
-    const state = getDueState(item);
+    const state = getDueState(item, today);
     return state === "soon" || state === "overdue";
-  });
-  const dueCareMilestones = ZHENGZHENG_CARE_MILESTONES.filter((item) => {
-    const diff = daysBetween(today, item.date);
-    return diff >= 0 && diff <= 14;
   });
 
   const filteredVaccines = sortedVaccines.filter((item) => {
@@ -834,97 +148,30 @@ export default function YudanDashboard({
   });
 
   const chartData = sortedGrowth.map((item) => ({
-    date: formatDate(item.date),
+    date: item.date,
     weight: item.weight,
     height: item.height,
     head: item.head,
   }));
 
-  function updateVaccine(id: string, patch: Partial<VaccineEntry>) {
-    setData((current) => ({
-      ...current,
-      vaccines: current.vaccines.map((item) => (item.id === id ? { ...item, ...patch } : item)),
-    }));
+  function saveWeight(date: string, weight: number) {
+    const existing = data.growth.find((item) => item.date === date);
+    return submit({ request_id: crypto.randomUUID(), kind: "weight", key: date, action: "save", expected_updated_at: existing?.updatedAt ?? null, changes: { weight_kg: weight } });
   }
 
-  function addGrowth() {
-    const weight = Number(growthForm.weight);
-    const height = Number(growthForm.height);
-    const head = Number(growthForm.head);
-    if (!growthForm.date || !weight) return;
-
-    setData((current) => {
-      const existing = current.growth.find((item) => item.date === growthForm.date);
-      const record: GrowthEntry = {
-        id: existing?.id || newId("growth"),
-        date: growthForm.date,
-        weight,
-        height: Number.isFinite(height) ? height : 0,
-        head: Number.isFinite(head) ? head : 0,
-        note: growthForm.note.trim(),
-      };
-      return {
-        ...current,
-        growth: existing
-          ? current.growth.map((item) => (item.id === existing.id ? record : item))
-          : [...current.growth, record],
-      };
-    });
-    setGrowthForm({ date: today, weight: "", height: "", head: "", note: "" });
-    setWeightDialogOpen(false);
+  function openVaccineRecorder(item: VaccineEntry) { setRecordingVaccineId(item.id); }
+  function saveVaccine(item: VaccineEntry, doneDate: string) {
+    return submit({ request_id: crypto.randomUUID(), kind: "vaccine", key: item.planId || item.id, action: doneDate ? "save" : "delete", expected_updated_at: item.updatedAt ?? null, changes: doneDate ? { administered_on: doneDate } : {} });
   }
 
-  function openVaccineRecorder(item: VaccineEntry) {
-    setRecordingVaccineId(item.id);
-    setVaccineDateDraft(item.doneDate || today);
-  }
-
-  function saveVaccineRecord() {
-    if (!recordingVaccineId || !vaccineDateDraft) return;
-    updateVaccine(recordingVaccineId, { doneDate: vaccineDateDraft, status: "done" });
-    setRecordingVaccineId(null);
-  }
-
-  function addCare() {
-    if (!careForm.time || !careForm.title.trim()) return;
-
-    setData((current) => ({
-      ...current,
-      care: [
-        {
-          id: newId("care"),
-          time: careForm.time,
-          type: careForm.type,
-          title: careForm.title.trim(),
-          detail: careForm.detail.trim(),
-        },
-        ...current.care,
-      ].slice(0, 80),
-    }));
-    setCareForm({ time: nowLocal, type: "feed", title: "", detail: "" });
-  }
-
-  function removeEntry(section: keyof Pick<DashboardData, "growth" | "care">, id: string) {
-    setData((current) => ({
-      ...current,
-      [section]: current[section].filter((item) => item.id !== id),
-    }));
+  function removeEntry(_section: "growth", id: string) {
+    const existing = data.growth.find((item) => item.id === id);
+    if (existing) submit({ request_id: crypto.randomUUID(), kind: "weight", key: existing.date, action: "delete", expected_updated_at: existing.updatedAt ?? null, changes: {} });
   }
 
   async function handleSignOut() {
-    if (!supabase || !session?.user.id || !isOwner) return;
-
-    try {
-      setSyncStatus("saving");
-      await saveChainRef.current.catch(() => undefined);
-      await saveCloudDashboard(supabase, session.user.id, data);
-    } catch (error) {
-      setCloudError(getCloudErrorMessage(error));
-    }
-
+    if (!supabase) return;
     await supabase.auth.signOut();
-    setData(previewData);
-    setCloudReady(false);
   }
 
   async function handleLogin() {
@@ -979,7 +226,7 @@ export default function YudanDashboard({
           onLogin={() => void handleLogin()}
           syncStatus={syncStatus}
           canEdit={canEdit}
-          cloudError={cloudError}
+          syncFeedback={syncFeedback}
           onSignOut={handleSignOut}
           babyAgeDays={babyAgeDays}
           birthday={data.birthday}
@@ -1013,7 +260,7 @@ export default function YudanDashboard({
             </header>
 
             {isPreview && <PreviewNotice email={session?.user.email} error={loginError} pending={loginPending} onLogin={() => void handleLogin()} />}
-            {canEdit && cloudError && <CloudError message={cloudError} />}
+            {syncFeedback}
 
             <div className="grid grid-cols-3 rounded-lg bg-stone-200/70 p-1 sm:w-[27rem]">
               <Button type="button" variant="ghost" onClick={() => setActiveView("growth")} className={cn("h-10 rounded-md", activeView === "growth" ? "bg-white text-stone-950 shadow-sm" : "text-stone-600")}><Weight className="h-4 w-4" />体重</Button>
@@ -1042,12 +289,12 @@ export default function YudanDashboard({
                     <table className="w-full text-left text-sm">
                       <thead className="bg-stone-50 text-xs text-stone-500"><tr><th className="px-5 py-3 font-medium">疫苗</th><th className="w-44 px-4 py-3 font-medium">建议日期</th><th className="w-44 px-4 py-3 font-medium">实际日期</th><th className="w-28 px-5 py-3 text-right font-medium">操作</th></tr></thead>
                       <tbody className="divide-y divide-stone-100">
-                        {filteredVaccines.map((item) => <tr key={item.id} className={cn("hover:bg-stone-50", item.id === nextVaccine?.id && "bg-emerald-50/55")}><td className="px-5 py-3"><div className="flex flex-wrap items-center gap-2">{item.doneDate && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}<span className="font-medium text-stone-950">{item.vaccine} {item.dose}</span><TypeBadge type={item.type} /></div><p className="mt-1 text-xs text-stone-500">{item.ageLabel}{item.disease ? ` · 预防${item.disease}` : ""}</p></td><td className="px-4 py-3"><p className="font-medium text-stone-700">{formatDate(item.plannedDate)}</p><DueBadge item={item} /></td><td className="px-4 py-3 text-stone-600">{item.doneDate ? formatDate(item.doneDate) : "尚未登记"}</td><td className="px-5 py-3 text-right">{canEdit ? <Button size="sm" variant={item.doneDate ? "outline" : "default"} onClick={() => openVaccineRecorder(item)}><CalendarCheck className="h-4 w-4" />{item.doneDate ? "修改" : "登记"}</Button> : <Button size="sm" variant="outline" onClick={() => void handleLogin()}><CircleUserRound className="h-4 w-4" />登录</Button>}</td></tr>)}
+                        {filteredVaccines.map((item) => <tr key={item.id} className={cn("hover:bg-stone-50", item.id === nextVaccine?.id && "bg-emerald-50/55")}><td className="px-5 py-3"><div className="flex flex-wrap items-center gap-2">{item.doneDate && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}<span className="font-medium text-stone-950">{item.vaccine} {item.dose}</span><TypeBadge type={item.type} /></div><p className="mt-1 text-xs text-stone-500">{item.ageLabel}{item.disease ? ` · 预防${item.disease}` : ""}</p></td><td className="px-4 py-3"><p className="font-medium text-stone-700">{formatDate(item.plannedDate)}</p><DueBadge item={item} today={today} /></td><td className="px-4 py-3 text-stone-600">{item.doneDate ? formatDate(item.doneDate) : "尚未登记"}</td><td className="px-5 py-3 text-right">{canEdit ? <Button size="sm" variant={item.doneDate ? "outline" : "default"} onClick={() => openVaccineRecorder(item)}><CalendarCheck className="h-4 w-4" />{item.doneDate ? "修改" : "登记"}</Button> : <Button size="sm" variant="outline" onClick={() => void handleLogin()}><CircleUserRound className="h-4 w-4" />登录</Button>}</td></tr>)}
                       </tbody>
                     </table>
                   </div>
                   <div className="divide-y divide-stone-100 md:hidden">
-                    {filteredVaccines.map((item) => <article key={item.id} className={cn("p-4", item.id === nextVaccine?.id && "bg-emerald-50/55")}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2">{item.doneDate && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}<h3 className="font-semibold text-stone-950">{item.vaccine} {item.dose}</h3><TypeBadge type={item.type} /></div><p className="mt-1 text-xs text-stone-500">{item.ageLabel}</p>{item.disease && <p className="mt-1 text-xs text-stone-500">预防：{item.disease}</p>}</div>{canEdit ? <Button size="sm" variant={item.doneDate ? "outline" : "default"} onClick={() => openVaccineRecorder(item)}>{item.doneDate ? "修改" : "登记"}</Button> : <Button size="sm" variant="outline" onClick={() => void handleLogin()}>登录</Button>}</div><div className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><p className="text-xs text-stone-500">建议日期</p><p className="mt-1 font-medium text-stone-700">{formatDate(item.plannedDate)}</p><DueBadge item={item} /></div><div><p className="text-xs text-stone-500">实际日期</p><p className="mt-1 font-medium text-stone-700">{item.doneDate ? formatDate(item.doneDate) : "尚未登记"}</p></div></div></article>)}
+                    {filteredVaccines.map((item) => <article key={item.id} className={cn("p-4", item.id === nextVaccine?.id && "bg-emerald-50/55")}><div className="flex items-start justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2">{item.doneDate && <CheckCircle2 className="h-4 w-4 text-emerald-600" />}<h3 className="font-semibold text-stone-950">{item.vaccine} {item.dose}</h3><TypeBadge type={item.type} /></div><p className="mt-1 text-xs text-stone-500">{item.ageLabel}</p>{item.disease && <p className="mt-1 text-xs text-stone-500">预防：{item.disease}</p>}</div>{canEdit ? <Button size="sm" variant={item.doneDate ? "outline" : "default"} onClick={() => openVaccineRecorder(item)}>{item.doneDate ? "修改" : "登记"}</Button> : <Button size="sm" variant="outline" onClick={() => void handleLogin()}>登录</Button>}</div><div className="mt-3 grid grid-cols-2 gap-3 text-sm"><div><p className="text-xs text-stone-500">建议日期</p><p className="mt-1 font-medium text-stone-700">{formatDate(item.plannedDate)}</p><DueBadge item={item} today={today} /></div><div><p className="text-xs text-stone-500">实际日期</p><p className="mt-1 font-medium text-stone-700">{item.doneDate ? formatDate(item.doneDate) : "尚未登记"}</p></div></div></article>)}
                   </div>
                 </section>
               </div>
@@ -1069,22 +316,7 @@ export default function YudanDashboard({
           </div>
         </main>
 
-        <Dialog open={canEdit && Boolean(recordingVaccine)} onOpenChange={(open) => !open && setRecordingVaccineId(null)}>
-          <DialogContent className="w-[calc(100%-2rem)] max-w-md rounded-lg p-5 sm:p-6">
-            <DialogHeader><DialogTitle>登记实际接种日期</DialogTitle><DialogDescription>{recordingVaccine ? `${recordingVaccine.vaccine} ${recordingVaccine.dose} · 建议 ${formatDate(recordingVaccine.plannedDate)}` : ""}</DialogDescription></DialogHeader>
-            <Field label="实际接种日期"><Input type="date" max={today} value={vaccineDateDraft} onChange={(event) => setVaccineDateDraft(event.target.value)} /></Field>
-            <div className="grid grid-cols-2 gap-3"><Button variant="outline" onClick={() => setVaccineDateDraft(today)}>设为今天</Button><Button disabled={!vaccineDateDraft} onClick={saveVaccineRecord}><CheckCircle2 className="h-4 w-4" />保存记录</Button></div>
-            {recordingVaccine?.doneDate && <Button type="button" variant="ghost" className="text-rose-700 hover:bg-rose-50 hover:text-rose-700" onClick={() => { updateVaccine(recordingVaccine.id, { doneDate: "", status: "planned" }); setRecordingVaccineId(null); }}>清除实际接种日期</Button>}
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={canEdit && weightDialogOpen} onOpenChange={setWeightDialogOpen}>
-          <DialogContent className="w-[calc(100%-2rem)] max-w-md rounded-lg p-5 sm:p-6">
-            <DialogHeader><DialogTitle>记录体重</DialogTitle><DialogDescription>同一天再次保存会更新原记录，不会生成重复数据。</DialogDescription></DialogHeader>
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-3"><Field label="测量日期"><Input className="min-w-0 max-w-full appearance-none" type="date" max={today} value={growthForm.date} onChange={(event) => setGrowthForm({ ...growthForm, date: event.target.value })} /></Field><Field label="体重（kg）"><Input className="min-w-0 max-w-full" type="number" min="0.1" max="200" step="0.01" inputMode="decimal" value={growthForm.weight} onChange={(event) => setGrowthForm({ ...growthForm, weight: event.target.value })} placeholder="例如 6.80" autoFocus /></Field></div>
-            <Button className="w-full" disabled={!growthForm.date || !Number(growthForm.weight)} onClick={addGrowth}><CheckCircle2 className="h-4 w-4" />保存体重</Button>
-          </DialogContent>
-        </Dialog>
+        {canEdit && (weightDialogOpen || recordingVaccine) && <Suspense fallback={<div role="status" className="fixed bottom-24 left-4 rounded-lg bg-white p-3 shadow">正在打开记录表单…</div>}><HealthRecordDialogs userId={session?.user.id || "local"} today={today} weightOpen={weightDialogOpen} onWeightOpenChange={setWeightDialogOpen} vaccine={recordingVaccine} onVaccineClose={() => setRecordingVaccineId(null)} onSaveWeight={saveWeight} onSaveVaccine={saveVaccine} /></Suspense>}
       </>
     );
   }
@@ -1099,7 +331,7 @@ type DashboardLayoutProps = {
   onLogin: () => void;
   syncStatus: SyncStatus;
   canEdit: boolean;
-  cloudError: string;
+  syncFeedback: ReactNode;
   onSignOut: () => void;
   babyAgeDays: number;
   birthday: string;
@@ -1115,10 +347,11 @@ type DashboardLayoutProps = {
 };
 
 function DashboardLayout({
-  isPreview, previewEmail, previewError, loginPending, onLogin, syncStatus, canEdit, cloudError, onSignOut,
+  isPreview, previewEmail, previewError, loginPending, onLogin, syncStatus, canEdit, syncFeedback, onSignOut,
   babyAgeDays, birthday, latestGrowth, weightAssessments, nextVaccine, nextCareMilestone,
   doneVaccines, totalVaccines, dueVaccineCount, chartData, weightChange,
 }: DashboardLayoutProps) {
+  const today = useShanghaiToday();
   const nextAction = nextCareMilestone && nextVaccine
     ? new Date(nextCareMilestone.date).getTime() <= new Date(nextVaccine.plannedDate).getTime()
       ? { type: "care" as const, title: `${nextCareMilestone.label}儿保`, detail: `${formatDate(nextCareMilestone.date)} · ${nextCareMilestone.weekday}`, date: nextCareMilestone.date, href: "/health?tab=care", action: "查看儿保" }
@@ -1154,7 +387,7 @@ function DashboardLayout({
         </header>
 
         {isPreview && <PreviewNotice email={previewEmail} error={previewError} pending={loginPending} onLogin={onLogin} />}
-        {canEdit && cloudError && <CloudError message={cloudError} />}
+        {syncFeedback}
 
         <section className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
           <article className="relative min-h-[300px] overflow-hidden rounded-[28px] bg-[#183c2f] p-6 text-white shadow-[0_24px_60px_-32px_rgba(24,60,47,0.75)] sm:p-8">
@@ -1248,6 +481,7 @@ function DashboardLayout({
 }
 
 function PediatricCareSchedule() {
+  const today = useShanghaiToday();
   return (
     <section className="overflow-hidden rounded-lg border border-sky-200 bg-white shadow-sm">
       <div className="border-b border-sky-100 bg-sky-50 px-4 py-4 sm:px-5">
@@ -1328,6 +562,8 @@ function SyncIndicator({ status }: { status: SyncStatus }) {
     saving: "保存中",
     saved: "已同步",
     error: "同步失败",
+    pending: "待同步",
+    conflict: "需要核对",
   };
   const isBusy = status === "loading" || status === "saving";
   const Icon = isBusy ? LoaderCircle : status === "error" || status === "local" ? CloudOff : Cloud;
@@ -1403,160 +639,6 @@ function QuickLink({
   );
 }
 
-function VaccineRow({
-  item,
-  isEditing,
-  onEdit,
-  onUpdate,
-}: {
-  item: VaccineEntry;
-  isEditing: boolean;
-  onEdit: () => void;
-  onUpdate: (patch: Partial<VaccineEntry>) => void;
-}) {
-  return (
-    <>
-      <tr className={cn(getDueState(item) === "overdue" && "bg-rose-50/45", getDueState(item) === "soon" && "bg-amber-50/45")}>
-        <td className="py-3 pr-4 align-top">
-          <div className="font-medium text-stone-950">{item.ageLabel}</div>
-          <div className="mt-1 text-xs text-stone-500">{item.route}</div>
-        </td>
-        <td className="py-3 pr-4 align-top">
-          <div className="font-medium text-stone-950">{item.vaccine} <span className="text-stone-500">{item.dose}</span></div>
-          <div className="mt-1 text-xs leading-5 text-stone-500">{item.disease}</div>
-        </td>
-        <td className="py-3 pr-4 align-top">
-          <TypeBadge type={item.type} />
-        </td>
-        <td className="py-3 pr-4 align-top">
-          <DateInput value={item.plannedDate} onChange={(value) => onUpdate({ plannedDate: value })} />
-          <DueBadge item={item} />
-        </td>
-        <td className="py-3 pr-4 align-top">
-          <StatusSelect value={item.status} onChange={(status) => onUpdate({ status, doneDate: status === "done" && !item.doneDate ? today : item.doneDate })} />
-        </td>
-        <td className="py-3 pr-4 align-top text-sm text-stone-600">
-          <div>{item.place || "机构待填"}</div>
-          <div className="mt-1 text-xs text-stone-500">{item.batchNo || "批号待填"}</div>
-        </td>
-        <td className="py-3 text-right align-top">
-          <Button variant="ghost" size="sm" onClick={onEdit}>
-            档案
-            <ChevronRight className={cn("h-4 w-4 transition-transform", isEditing && "rotate-90")} />
-          </Button>
-        </td>
-      </tr>
-      {isEditing && (
-        <tr>
-          <td colSpan={7} className="bg-stone-50 p-4">
-            <VaccineEditor item={item} onUpdate={onUpdate} />
-          </td>
-        </tr>
-      )}
-    </>
-  );
-}
-
-function VaccineCard({
-  item,
-  isEditing,
-  onEdit,
-  onUpdate,
-}: {
-  item: VaccineEntry;
-  isEditing: boolean;
-  onEdit: () => void;
-  onUpdate: (patch: Partial<VaccineEntry>) => void;
-}) {
-  return (
-    <article className={cn("rounded-lg border bg-white p-3", getDueState(item) === "overdue" ? "border-rose-200" : getDueState(item) === "soon" ? "border-amber-200" : "border-stone-200")}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-stone-500">{item.ageLabel}</span>
-            <TypeBadge type={item.type} />
-          </div>
-          <h3 className="mt-2 text-base font-semibold text-stone-950">{item.vaccine} <span className="text-sm font-medium text-stone-500">{item.dose}</span></h3>
-          <p className="mt-1 text-sm leading-5 text-stone-600">{item.disease} · {item.route}</p>
-        </div>
-        <StatusSelect value={item.status} onChange={(status) => onUpdate({ status, doneDate: status === "done" && !item.doneDate ? today : item.doneDate })} compact />
-      </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-        <Field label="计划日期">
-          <DateInput value={item.plannedDate} onChange={(value) => onUpdate({ plannedDate: value })} />
-        </Field>
-        <div className="flex flex-col justify-end">
-          <DueBadge item={item} />
-        </div>
-      </div>
-      <Button variant="ghost" className="mt-3 w-full justify-between bg-stone-50 text-stone-700" onClick={onEdit}>
-        接种档案和批号
-        <ChevronRight className={cn("h-4 w-4 transition-transform", isEditing && "rotate-90")} />
-      </Button>
-      {isEditing && <div className="mt-3"><VaccineEditor item={item} onUpdate={onUpdate} /></div>}
-    </article>
-  );
-}
-
-function VaccineEditor({ item, onUpdate }: { item: VaccineEntry; onUpdate: (patch: Partial<VaccineEntry>) => void }) {
-  return (
-    <div className="grid gap-3 rounded-lg border border-stone-200 bg-white p-3 sm:grid-cols-2 xl:grid-cols-4">
-      <Field label="预约日期">
-        <Input type="date" value={item.bookedDate} onChange={(event) => onUpdate({ bookedDate: event.target.value, status: event.target.value ? "booked" : item.status })} />
-      </Field>
-      <Field label="实际接种日期">
-        <Input type="date" value={item.doneDate} onChange={(event) => onUpdate({ doneDate: event.target.value, status: event.target.value ? "done" : item.status })} />
-      </Field>
-      <Field label="接种机构">
-        <Input value={item.place} onChange={(event) => onUpdate({ place: event.target.value })} placeholder="社区医院 / 私立门诊" />
-      </Field>
-      <Field label="疫苗批号">
-        <Input value={item.batchNo} onChange={(event) => onUpdate({ batchNo: event.target.value })} placeholder="贴本上的批号" />
-      </Field>
-      <Field label="生产厂家">
-        <Input value={item.manufacturer} onChange={(event) => onUpdate({ manufacturer: event.target.value })} placeholder="厂家 / 品牌" />
-      </Field>
-      <Field label="提醒">
-        <Input value={item.reminder} onChange={(event) => onUpdate({ reminder: event.target.value })} placeholder="提前几天预约" />
-      </Field>
-      <div className="sm:col-span-2 xl:col-span-4 rounded-lg bg-stone-50 p-3 text-sm leading-6 text-stone-600">
-        <p>{item.note}</p>
-        {item.alternative && <p className="mt-1 font-medium text-amber-800">{item.alternative}</p>}
-      </div>
-    </div>
-  );
-}
-
-function StatusSelect({
-  value,
-  onChange,
-  compact = false,
-}: {
-  value: VaccineStatus;
-  onChange: (value: VaccineStatus) => void;
-  compact?: boolean;
-}) {
-  return (
-    <Select
-      value={value}
-      onValueChange={(nextValue) => onChange(nextValue as VaccineStatus)}
-    >
-      <SelectTrigger className={cn("h-8 text-xs font-medium", statusStyles[value], compact ? "w-24" : "w-28")}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {Object.entries(statusLabels).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
-      </SelectContent>
-    </Select>
-  );
-}
-
-function DateInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
-  return (
-    <Input className="h-9 w-full min-w-0 text-xs" type="date" value={value} onChange={(event) => onChange(event.target.value)} />
-  );
-}
-
 function TypeBadge({ type }: { type: VaccineType }) {
   return (
     <Badge variant="outline" className={cn("rounded text-[11px]", type === "free" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-indigo-200 bg-indigo-50 text-indigo-700")}>
@@ -1574,137 +656,13 @@ function SimpleMetric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function DueBadge({ item }: { item: VaccineEntry }) {
-  const state = getDueState(item);
+function DueBadge({ item, today }: { item: VaccineEntry; today: string }) {
+  const state = getDueState(item, today);
   const diff = daysBetween(today, item.plannedDate);
   if (state === "done") return <span className="mt-1 inline-flex text-xs text-emerald-700">已完成</span>;
   if (state === "overdue") return <span className="mt-1 inline-flex text-xs font-medium text-rose-700">逾期 {Math.abs(diff)} 天</span>;
   if (state === "soon") return <span className="mt-1 inline-flex text-xs font-medium text-amber-700">{diff === 0 ? "今天到期" : `${diff} 天后到期`}</span>;
   return <span className="mt-1 inline-flex text-xs text-stone-500">{diff} 天后</span>;
-}
-
-function ReminderItem({ vaccine, onOpen }: { vaccine: VaccineEntry; onOpen: () => void }) {
-  const state = getDueState(vaccine);
-  return (
-    <Button variant="outline" className="h-auto w-full justify-start rounded-lg border-stone-200 bg-white p-3 text-left hover:bg-stone-50" onClick={onOpen}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-medium text-stone-950">{vaccine.vaccine} {vaccine.dose}</p>
-          <p className="mt-1 text-sm text-stone-600">{vaccine.ageLabel} · {formatDate(vaccine.plannedDate)}</p>
-        </div>
-        <Badge variant="secondary" className={cn(state === "overdue" ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700")}>
-          {state === "overdue" ? "逾期" : "临近"}
-        </Badge>
-      </div>
-    </Button>
-  );
-}
-
-function ProgressBlock({ label, done, total }: { label: string; done: number; total: number }) {
-  const percent = total ? Math.round((done / total) * 100) : 0;
-  return (
-    <div className="rounded-lg border border-stone-200 bg-stone-50 p-3">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-medium text-stone-700">{label}</p>
-        <p className="text-sm font-semibold text-stone-950">{done}/{total}</p>
-      </div>
-      <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
-        <div className="h-full rounded-full bg-emerald-500" style={{ width: `${percent}%` }} />
-      </div>
-      <p className="mt-2 text-xs text-stone-500">完成 {percent}%</p>
-    </div>
-  );
-}
-
-function Panel({
-  title,
-  icon: Icon,
-  children,
-}: {
-  title: string;
-  icon: ComponentType<{ className?: string }>;
-  children: ReactNode;
-}) {
-  return (
-    <Card className="rounded-lg border-stone-200 bg-white p-4 shadow-sm sm:p-5">
-      <div className="mb-4 flex items-center gap-2">
-        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-100 text-stone-700">
-          <Icon className="h-4 w-4" />
-        </span>
-        <h2 className="text-base font-semibold text-stone-950">{title}</h2>
-      </div>
-      {children}
-    </Card>
-  );
-}
-
-function TabButton({
-  active,
-  icon: Icon,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      variant={active ? "default" : "secondary"}
-      className={cn(
-        "h-10 rounded-lg",
-        active ? "bg-emerald-600 text-white shadow-sm" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
-      )}
-      onClick={onClick}
-    >
-      <Icon className="h-4 w-4" />
-      {label}
-    </Button>
-  );
-}
-
-function FilterButton({
-  active,
-  label,
-  count,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  count: number;
-  onClick: () => void;
-}) {
-  return (
-    <Button
-      variant="outline"
-      className={cn(
-        "h-10 justify-between rounded-lg px-3",
-        active ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50"
-      )}
-      onClick={onClick}
-    >
-      <span>{label}</span>
-      <Badge variant="secondary" className="bg-white text-stone-500">{count}</Badge>
-    </Button>
-  );
-}
-
-function Field({
-  label,
-  children,
-  className,
-}: {
-  label: string;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <label className={cn("flex min-w-0 flex-col gap-1.5 text-sm font-medium text-stone-700", className)}>
-      {label}
-      {children}
-    </label>
-  );
 }
 
 function IconButton({ label, onClick }: { label: string; onClick: () => void }) {

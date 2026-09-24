@@ -76,7 +76,7 @@ const jsonLd = {
     <header class="sticky top-0 z-50 glass-effect border-b border-border/30">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center gap-3">
         <a href="/blog" class="text-muted-foreground hover:text-foreground transition-colors p-2 -ml-2 rounded-xl hover:bg-muted/80 active:bg-muted" aria-label="返回文章列表">
-          <ArrowLeft class="h-5 w-5" />
+          <ArrowLeft className="h-5 w-5" />
         </a>
         <div class="flex-1 min-w-0">
           <h1 class="text-sm font-semibold text-foreground truncate">{post.title}</h1>
@@ -95,12 +95,12 @@ const jsonLd = {
             <div class="mt-4 sm:mt-5 flex flex-wrap items-center gap-3 sm:gap-5 text-xs sm:text-sm text-muted-foreground">
               {post.date && (
                 <div class="flex items-center gap-1.5">
-                  <Calendar class="h-4 w-4" />
+                  <Calendar className="h-4 w-4" />
                   <span>{post.date}</span>
                 </div>
               )}
               <div class="flex items-center gap-1.5">
-                <Clock3 class="h-4 w-4" />
+                <Clock3 className="h-4 w-4" />
               <span>{post.readingTime} 分钟阅读</span>
               </div>
             </div>

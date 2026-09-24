@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,6 +54,7 @@ export function SettingsDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="text-center">账本写入权限</DialogTitle>
+          <DialogDescription className="text-center">选择登录方式，授权后即可新增、修改或删除账单。</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="rounded-lg border border-border bg-muted/30 p-3">
@@ -88,13 +89,13 @@ export function SettingsDialog({
           </div>
 
           <div className="space-y-2">
-            <Label className="flex items-center gap-2">
+            <Label htmlFor="ledger-api-key" className="flex items-center gap-2">
               <KeyRound className="h-4 w-4" />
               API Key
             </Label>
-            <Input type="password" value={value} onChange={(e) => setValue(e.target.value)} placeholder="输入 API Key" />
+            <Input id="ledger-api-key" type="password" value={value} onChange={(e) => setValue(e.target.value)} placeholder="输入 API Key" autoComplete="off" />
             <p className="text-xs text-muted-foreground leading-relaxed">
-              用于网页备用登录和 API 写入，只保存在当前浏览器。
+              用于网页备用登录和 API 写入；浏览器无法保存时，仍可在本次会话中使用。
             </p>
           </div>
           <div className="flex gap-2">

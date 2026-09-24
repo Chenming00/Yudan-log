@@ -1,70 +1,90 @@
 "use client";
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { categoryLabel } from '@/lib/categories';
-import { toLocalDatetimeInput } from '@/lib/utils';
+import { toShanghaiDatetimeInput, fromShanghaiDatetimeInput } from '@/lib/ledger-query-client';
 import { validateLedgerForm } from '@/lib/ledger';
+import { LedgerMutationClient, readLedgerStorage, writeLedgerStorage } from '@/lib/ledger-mutation-client';
 import { TransactionFields } from './transaction-fields';
-import type { TransactionFormState } from '../types';
+import type { Transaction, TransactionFormState } from '../types';
 
 interface AddDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   authToken: string | null;
   onAdded: () => void;
+  onAuthorize: () => void;
 }
-
 function createDefaultForm(): TransactionFormState {
-  const lastCategory = typeof window !== 'undefined' ? localStorage.getItem('last_category') : null;
+  const lastCategory = readLedgerStorage('last_category');
   return {
     amount: '', brand: '', product: '', note: '',
     category: lastCategory ? categoryLabel(lastCategory) : '',
-    transaction_time: toLocalDatetimeInput(new Date()),
+    transaction_time: toShanghaiDatetimeInput(new Date()),
   };
 }
 
-export function AddDialog({ open, onOpenChange, authToken, onAdded }: AddDialogProps) {
+export function AddDialog({ open, onOpenChange, authToken, onAdded, onAuthorize }: AddDialogProps) {
   const [saving, setSaving] = useState(false);
+  const [uncertain, setUncertain] = useState(false);
+  const [needsAuth, setNeedsAuth] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(createDefaultForm);
+  const client = useRef(new LedgerMutationClient<Transaction>());
+  const submitting = useRef(false);
+  const locked = saving || uncertain;
+
+  useEffect(() => {
+    if (!locked) return;
+    const preventExit = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', preventExit);
+    return () => window.removeEventListener('beforeunload', preventExit);
+  }, [locked]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (saving) return;
-    if (!authToken) { setError('请先使用 GitHub 登录或填写 API Key'); return; }
+    if (submitting.current) return;
+    if (!authToken) { setNeedsAuth(true); setError('请先使用 GitHub 登录或填写 API Key'); return; }
     const validation = validateLedgerForm(form, true);
     if (validation) { setError(validation); return; }
+    submitting.current = true;
     setSaving(true);
     setError(null);
-    try {
-      const res = await fetch('/api/add', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({ ...form, amount: Number(form.amount), category: form.category ? categoryLabel(form.category) : null,
-          type: 'expense', transaction_time: form.transaction_time ? new Date(form.transaction_time).toISOString() : null }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.success) { setError(data.error || '新增失败'); return; }
-      localStorage.setItem('last_category', form.category);
-      onOpenChange(false);
-      onAdded();
-    } catch { setError('网络错误，请稍后再试'); }
-    finally { setSaving(false); }
+    const result = await client.current.submit('add', {
+      ...form, amount: Number(form.amount), category: form.category ? categoryLabel(form.category) : null,
+      type: 'expense', transaction_time: fromShanghaiDatetimeInput(form.transaction_time),
+    }, authToken);
+    submitting.current = false;
+    setSaving(false);
+    if (result.kind === 'busy') return;
+    if (result.kind !== 'success') {
+      setUncertain(result.kind === 'uncertain' || result.kind === 'blocked');
+      setNeedsAuth(result.kind === 'uncertain' && (result.status === 401 || result.status === 403));
+      setError(result.error);
+      return;
+    }
+    setUncertain(false);
+    setNeedsAuth(false);
+    // Remembering a preference and refreshing the view cannot turn a committed write into a failure.
+    writeLedgerStorage('last_category', form.category);
+    setForm(createDefaultForm());
+    onOpenChange(false);
+    onAdded();
   };
 
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!saving) onOpenChange(next); }}>
-      <DialogContent className="w-[calc(100%-2rem)] max-w-md max-h-[90dvh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={(next) => { if (!locked && !submitting.current) onOpenChange(next); }}>
+      <DialogContent className={`w-[calc(100%-2rem)] max-w-md max-h-[90dvh] overflow-y-auto ${locked ? '[&>button:last-child]:hidden' : ''}`}>
         <DialogHeader>
           <DialogTitle>记一笔</DialogTitle>
           <DialogDescription>记录商品和实付金额，方便以后查找。</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-5">
-          <fieldset disabled={saving} className="min-w-0 space-y-5">
+          <fieldset disabled={locked} className="min-w-0 space-y-5">
             <div className="space-y-1.5">
               <Label htmlFor="add-amount">实付金额（元） *</Label>
               <Input id="add-amount" autoFocus type="number" min="0.01" step="0.01" inputMode="decimal" required
@@ -74,9 +94,10 @@ export function AddDialog({ open, onOpenChange, authToken, onAdded }: AddDialogP
             <TransactionFields form={form} onChange={setForm} />
           </fieldset>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+          {(needsAuth || !authToken) && <Button type="button" variant="outline" onClick={onAuthorize}>更新写入权限</Button>}
           <div className="flex gap-2">
-            <Button type="button" variant="outline" disabled={saving} onClick={() => onOpenChange(false)} className="flex-1">取消</Button>
-            <Button type="submit" disabled={saving} className="flex-1 bg-expense text-expense-foreground hover:bg-expense/90">{saving ? '保存中...' : '保存账单'}</Button>
+            <Button type="button" variant="outline" disabled={locked} onClick={() => onOpenChange(false)} className="flex-1">取消</Button>
+            <Button type="submit" disabled={saving} className="flex-1 bg-expense text-expense-foreground hover:bg-expense/90">{saving ? '保存中...' : uncertain ? '重试确认保存' : '保存账单'}</Button>
           </div>
         </form>
       </DialogContent>

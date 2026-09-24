@@ -44,4 +44,4 @@ const server = createServer(async (req, res) => {
   const single = req.headers.accept?.includes('vnd.pgrst.object');
   send(single ? selected[0] || null : selected);
 });
-server.listen(54329, '127.0.0.1', () => console.log('Local ledger fixture ready on 54329'));
+server.listen(54329, '127.0.0.1', () => process.stdout.write('Local ledger fixture ready on 54329\n'));

@@ -1,5 +1,7 @@
 -- Normalized Fish Egg health records.
 -- Run health-schema.sql first so yudan_vaccine_catalog exists.
+-- The transaction preserves legacy columns when validation fails.
+begin;
 
 create table if not exists public.yudan_dashboards (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -95,12 +97,16 @@ begin
   ) then
     execute $migration$
       insert into public.yudan_vaccine_records (
-        user_id, plan_id, administered_on, legacy_id, updated_at
+        user_id, plan_id, administered_on, place, batch_no, manufacturer, note, legacy_id, updated_at
       )
       select
         dashboard.user_id,
         catalog.id,
         (record.item ->> 'doneDate')::date,
+        coalesce(record.item ->> 'place', ''),
+        coalesce(record.item ->> 'batchNo', record.item ->> 'batch_no', ''),
+        coalesce(record.item ->> 'manufacturer', ''),
+        coalesce(record.item ->> 'note', ''),
         nullif(record.item ->> 'id', ''),
         dashboard.updated_at
       from public.yudan_dashboards as dashboard
@@ -117,6 +123,10 @@ begin
       on conflict (user_id, plan_id) do update
       set
         administered_on = excluded.administered_on,
+        place = coalesce(nullif(excluded.place, ''), public.yudan_vaccine_records.place),
+        batch_no = coalesce(nullif(excluded.batch_no, ''), public.yudan_vaccine_records.batch_no),
+        manufacturer = coalesce(nullif(excluded.manufacturer, ''), public.yudan_vaccine_records.manufacturer),
+        note = coalesce(nullif(excluded.note, ''), public.yudan_vaccine_records.note),
         legacy_id = coalesce(public.yudan_vaccine_records.legacy_id, excluded.legacy_id),
         updated_at = excluded.updated_at
     $migration$;
@@ -171,25 +181,29 @@ alter table public.yudan_dashboards enable row level security;
 alter table public.yudan_weight_records enable row level security;
 alter table public.yudan_vaccine_records enable row level security;
 
-revoke all on table public.yudan_dashboards from anon, authenticated;
-revoke all on table public.yudan_weight_records from anon, authenticated;
-revoke all on table public.yudan_vaccine_records from anon, authenticated;
-grant select, insert, update, delete on table public.yudan_dashboards to authenticated;
-grant select, insert, update, delete on table public.yudan_weight_records to authenticated;
-grant select, insert, update, delete on table public.yudan_vaccine_records to authenticated;
+revoke all on table public.yudan_dashboards from public, anon, authenticated;
+revoke all on table public.yudan_weight_records from public, anon, authenticated;
+revoke all on table public.yudan_vaccine_records from public, anon, authenticated;
+grant select on table public.yudan_dashboards to authenticated;
+grant select on table public.yudan_weight_records to authenticated;
+grant select on table public.yudan_vaccine_records to authenticated;
+
+grant select, insert, update, delete on public.yudan_dashboards, public.yudan_weight_records, public.yudan_vaccine_records to service_role;
+
+-- Retire all known browser write policies from earlier installations.
+drop policy if exists "Users can read their own Yudan dashboard" on public.yudan_dashboards;
+drop policy if exists "Users can create their own Yudan dashboard" on public.yudan_dashboards;
+drop policy if exists "Users can update their own Yudan dashboard" on public.yudan_dashboards;
+drop policy if exists "Users can delete their own Yudan dashboard" on public.yudan_dashboards;
+drop policy if exists "Owner can read the Yudan dashboard" on public.yudan_dashboards;
+drop policy if exists "Owner can create the Yudan dashboard" on public.yudan_dashboards;
+drop policy if exists "Owner can update the Yudan dashboard" on public.yudan_dashboards;
+drop policy if exists "Owner can delete the Yudan dashboard" on public.yudan_dashboards;
 
 drop policy if exists "Owner manages the Yudan dashboard" on public.yudan_dashboards;
 create policy "Owner manages the Yudan dashboard"
-on public.yudan_dashboards for all to authenticated
+on public.yudan_dashboards for select to authenticated
 using (
-  (select auth.uid()) = user_id
-  and lower(coalesce((select auth.jwt()) ->> 'email', '')) = 'william.chen@utah.edu'
-  and (
-    (select auth.jwt()) -> 'app_metadata' ->> 'provider' = 'github'
-    or ((select auth.jwt()) -> 'app_metadata' -> 'providers') ? 'github'
-  )
-)
-with check (
   (select auth.uid()) = user_id
   and lower(coalesce((select auth.jwt()) ->> 'email', '')) = 'william.chen@utah.edu'
   and (
@@ -200,16 +214,8 @@ with check (
 
 drop policy if exists "Owner manages Yudan weights" on public.yudan_weight_records;
 create policy "Owner manages Yudan weights"
-on public.yudan_weight_records for all to authenticated
+on public.yudan_weight_records for select to authenticated
 using (
-  (select auth.uid()) = user_id
-  and lower(coalesce((select auth.jwt()) ->> 'email', '')) = 'william.chen@utah.edu'
-  and (
-    (select auth.jwt()) -> 'app_metadata' ->> 'provider' = 'github'
-    or ((select auth.jwt()) -> 'app_metadata' -> 'providers') ? 'github'
-  )
-)
-with check (
   (select auth.uid()) = user_id
   and lower(coalesce((select auth.jwt()) ->> 'email', '')) = 'william.chen@utah.edu'
   and (
@@ -220,16 +226,8 @@ with check (
 
 drop policy if exists "Owner manages Yudan vaccines" on public.yudan_vaccine_records;
 create policy "Owner manages Yudan vaccines"
-on public.yudan_vaccine_records for all to authenticated
+on public.yudan_vaccine_records for select to authenticated
 using (
-  (select auth.uid()) = user_id
-  and lower(coalesce((select auth.jwt()) ->> 'email', '')) = 'william.chen@utah.edu'
-  and (
-    (select auth.jwt()) -> 'app_metadata' ->> 'provider' = 'github'
-    or ((select auth.jwt()) -> 'app_metadata' -> 'providers') ? 'github'
-  )
-)
-with check (
   (select auth.uid()) = user_id
   and lower(coalesce((select auth.jwt()) ->> 'email', '')) = 'william.chen@utah.edu'
   and (
@@ -244,3 +242,5 @@ comment on table public.yudan_weight_records is
   'One normalized growth measurement per user and measurement date.';
 comment on table public.yudan_vaccine_records is
   'One normalized vaccination record per user and canonical vaccine plan.';
+
+commit;

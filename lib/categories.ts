@@ -30,6 +30,7 @@ export function categoryEmoji(key: string | undefined | null): string {
 
 /** 把内部 value 或已是 label 的值，统一成展示用 label */
 export function categoryLabel(key: string | undefined | null): string {
-  if (!key) return '未分类';
-  return findCategory(key)?.label ?? key;
+  const normalized = key?.trim();
+  if (!normalized) return '未分类';
+  return findCategory(normalized)?.label ?? normalized;
 }

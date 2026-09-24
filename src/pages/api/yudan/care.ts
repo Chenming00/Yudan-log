@@ -21,6 +21,6 @@ export const GET: APIRoute = async ({ request }) => {
         })),
       },
     },
-    { headers: { 'Cache-Control': 'public, max-age=3600' } }
+    { headers: { 'Cache-Control': 'private, no-store' } }
   );
 };

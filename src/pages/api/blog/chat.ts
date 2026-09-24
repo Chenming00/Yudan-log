@@ -1,118 +1,37 @@
 import type { APIRoute } from 'astro';
-import { json } from '../../../lib/http';
+import { getSupabaseAdminClient } from '../../../../lib/supabase';
 import { getBlogEntries, stripMarkdown } from '../../../lib/astro-blog';
+import { createBlogChatHandlers, type BlogChatConfig, type ChatQuota } from '../../../lib/blog-chat-server';
 
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
+function env(key: string) { return process.env[key] || import.meta.env[key] || ''; }
+function limit(key: string, fallback: number, max: number) {
+  const value = Number(env(key));
+  return Number.isInteger(value) && value > 0 ? Math.min(value, max) : fallback;
 }
-
-function getMimoEndpoint(baseUrl: string) {
-  const trimmed = baseUrl.replace(/\/+$/, '');
-  return trimmed.endsWith('/v1/chat/completions') ? trimmed : `${trimmed}/v1/chat/completions`;
+function handlers() {
+  const config: BlogChatConfig = {
+    baseUrl: env('MIMO_BASE_URL'), apiKey: env('MIMO_API_KEY'), cookieSecret: env('BLOG_CHAT_COOKIE_SECRET'),
+    dailyLimit: limit('BLOG_CHAT_DAILY_LIMIT', 5, 100), globalDailyLimit: limit('BLOG_CHAT_GLOBAL_DAILY_LIMIT', 100, 100000),
+    rateLimit: limit('BLOG_CHAT_RATE_LIMIT', 3, 60), globalRateLimit: limit('BLOG_CHAT_GLOBAL_RATE_LIMIT', 20, 1000),
+    maxOutputTokens: limit('BLOG_CHAT_MAX_OUTPUT_TOKENS', 800, 2000),
+  };
+  return createBlogChatHandlers({
+    config,
+    async getPost(slug) {
+      const post = (await getBlogEntries()).find((entry) => entry.id === slug);
+      return post ? { title: post.data.title, text: stripMarkdown(post.body || '') } : null;
+    },
+    async quota(action, visitor, slug) {
+      const args = { p_visitor: visitor, p_article: slug, p_daily_limit: config.dailyLimit, p_global_limit: config.globalDailyLimit };
+      const { data, error } = await getSupabaseAdminClient().rpc(`blog_chat_${action}`, action === 'reserve' ? { ...args, p_rate_limit: config.rateLimit, p_global_rate_limit: config.globalRateLimit } : args).abortSignal(AbortSignal.timeout(10000));
+      if (error) throw error;
+      return data as ChatQuota;
+    },
+    async finish(ticket, produced) {
+      const { error } = await getSupabaseAdminClient().rpc('blog_chat_finish', { p_ticket: ticket, p_produced: produced }).abortSignal(AbortSignal.timeout(10000));
+      if (error) throw error;
+    },
+  });
 }
-
-function isChatMessage(value: unknown): value is ChatMessage {
-  if (!value || typeof value !== 'object') return false;
-  const message = value as Record<string, unknown>;
-  return (
-    (message.role === 'user' || message.role === 'assistant') &&
-    typeof message.content === 'string'
-  );
-}
-
-export const POST: APIRoute = async ({ request }) => {
-  try {
-    const mimoBaseUrl = process.env.MIMO_BASE_URL || import.meta.env.MIMO_BASE_URL || '';
-    const mimoApiKey = process.env.MIMO_API_KEY || import.meta.env.MIMO_API_KEY || '';
-
-    if (!mimoBaseUrl || !mimoApiKey) {
-      return json({ error: 'AI not configured' }, { status: 503 });
-    }
-
-    const { slug, question, history } = await request.json();
-    if (!slug || typeof slug !== 'string') {
-      return json({ error: 'Missing slug' }, { status: 400 });
-    }
-    if (!question || typeof question !== 'string') {
-      return json({ error: 'Missing question' }, { status: 400 });
-    }
-
-    const posts = await getBlogEntries();
-    const post = posts.find((entry) => entry.id === slug);
-    if (!post) {
-      return json({ error: 'Post not found' }, { status: 404 });
-    }
-
-    const plainText = stripMarkdown(post.body ?? '').slice(0, 4000);
-    const safeHistory = Array.isArray(history) ? history.filter(isChatMessage).slice(-8) : [];
-    const endpoint = getMimoEndpoint(mimoBaseUrl);
-
-    const messages = [
-      {
-        role: 'system',
-        content: `你是一个文章问答助手。以下是文章内容，请基于文章内容回答用户的问题。如果文章中没有相关信息，请如实说明。回答要求简洁、准确，使用中文。
-
-文章标题：${post.data.title}
-
-文章内容：
-${plainText}`,
-      },
-      ...safeHistory,
-      { role: 'user', content: question },
-    ];
-
-    const mimoRes = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${mimoApiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'mimo-v2.5',
-        stream: true,
-        messages,
-      }),
-    });
-
-    if (!mimoRes.ok) {
-      const errText = await mimoRes.text();
-      console.error('MIMO API error:', mimoRes.status, errText);
-      return json({ error: 'AI service error' }, { status: 502 });
-    }
-
-    const reader = mimoRes.body?.getReader();
-    if (!reader) {
-      return json({ error: 'No response body' }, { status: 502 });
-    }
-
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
-
-    const stream = new ReadableStream({
-      async pull(controller) {
-        const { done, value } = await reader.read();
-        if (done) {
-          controller.close();
-          return;
-        }
-        controller.enqueue(encoder.encode(decoder.decode(value, { stream: true })));
-      },
-      cancel() {
-        void reader.cancel();
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
-      },
-    });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Blog chat error:', message);
-    return json({ error: message }, { status: 500 });
-  }
-};
+export const GET: APIRoute = ({ request }) => handlers().GET(request);
+export const POST: APIRoute = ({ request }) => handlers().POST(request);

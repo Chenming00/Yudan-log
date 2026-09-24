@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { transactionTitle } from "@/lib/ledger";
+import { formatLedgerRelativeDate } from "@/lib/ledger-query-client";
 import type { LastTransaction } from "../types";
 
 interface SummaryCardsProps {
@@ -15,18 +16,6 @@ interface SummaryCardsProps {
   prevMonthExpense: number;
   transactionCount: number;
   lastTransaction: LastTransaction | null;
-}
-
-function formatRelativeDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return "今天";
-  if (diffDays === 1) return "昨天";
-  if (diffDays < 7) return `${diffDays}天前`;
-  return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
 export function SummaryCards({
@@ -86,7 +75,7 @@ export function SummaryCards({
           <span className="text-xs text-muted-foreground">最近一笔</span>
           <span className="text-xs text-muted-foreground truncate ml-2">
             ¥{lastTransaction.amount.toLocaleString()} · {transactionTitle(lastTransaction)} ·{" "}
-            {formatRelativeDate(lastTransaction.transaction_time)}
+            {lastTransaction.transaction_time ? formatLedgerRelativeDate(lastTransaction.transaction_time) : "购买时间未知"}
           </span>
         </div>
       )}

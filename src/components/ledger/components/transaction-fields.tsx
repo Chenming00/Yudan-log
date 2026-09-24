@@ -40,7 +40,7 @@ export function TransactionFields({ form, onChange, requireProduct = true }: {
       <div className="min-w-0 space-y-1.5">
         <Label htmlFor={`${id}-time`}>时间</Label>
         <Input id={`${id}-time`} type="datetime-local" value={form.transaction_time} onChange={(e) => update('transaction_time', e.target.value)} className="min-w-0 max-w-full" />
-        <p className="text-xs text-muted-foreground">按设备当地时间填写；不确定可留空。</p>
+        <p className="text-xs text-muted-foreground">按北京时间填写；不确定可留空。</p>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor={`${id}-note`}>备注 <span className="font-normal text-muted-foreground">（可选）</span></Label>
