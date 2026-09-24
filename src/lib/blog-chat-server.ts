@@ -2,6 +2,8 @@ import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import { createSseDecoder, readChatEvent } from './blog-chat-stream';
 
 export const BLOG_CHAT_MAX_QUESTION = 1000;
+// Keep the provider deadline below the 120-second quota lease, leaving time to settle it.
+export const BLOG_CHAT_DEFAULT_TIMEOUT_MS = 90000;
 const MAX_BODY_BYTES = 65536;
 const MAX_HISTORY = 8;
 const MAX_HISTORY_CONTENT = 6000;
@@ -119,7 +121,8 @@ export function createBlogChatHandlers(deps: ChatDependencies) {
     let settlement: Promise<void> | null = null;
     const upstream = new AbortController();
     let timeout: ReturnType<typeof setTimeout> | undefined;
-    const cancel = () => upstream.abort();
+    let cancellation: 'timeout' | 'client_cancelled' | undefined;
+    const cancel = () => { cancellation ??= 'client_cancelled'; upstream.abort(); };
     const cleanup = () => { clearTimeout(timeout); request.signal.removeEventListener('abort', cancel); };
     const settle = () => {
       if (!ticket) return Promise.resolve();
@@ -135,7 +138,7 @@ export function createBlogChatHandlers(deps: ChatDependencies) {
       if (!ticket) throw new Error('Quota reservation did not return a ticket');
       request.signal.addEventListener('abort', cancel, { once: true });
       if (request.signal.aborted) cancel();
-      timeout = setTimeout(cancel, config.timeoutMs || 45000);
+      timeout = setTimeout(() => { cancellation ??= 'timeout'; upstream.abort(); }, config.timeoutMs || BLOG_CHAT_DEFAULT_TIMEOUT_MS);
       const base = config.baseUrl.replace(/\/+$/, '');
       const endpoint = base.endsWith('/chat/completions') ? base : `${base}${base.endsWith('/v1') ? '' : '/v1'}/chat/completions`;
       const result = await (deps.fetch || fetch)(endpoint, {
@@ -153,16 +156,39 @@ export function createBlogChatHandlers(deps: ChatDependencies) {
       let complete = false;
       let outputLength = 0;
       let streamFailure: Error | null = null;
+      let failureCategory = 'stream_error';
+      const contentType = result.headers.get('Content-Type')?.split(';', 1)[0].trim().toLowerCase();
+      const diagnostic = {
+        upstream_hostname: new URL(endpoint).hostname,
+        content_type: contentType === 'text/event-stream' ? 'event-stream' : contentType === 'application/json' || contentType?.endsWith('+json') ? 'json' : 'other',
+        chunks: 0, bytes: 0, sse_events: 0, reasoning_characters: 0, visible_characters: 0,
+        finish_reason: null as string | null,
+      };
+      const finishReasons = new Set(['stop', 'length', 'tool_calls', 'content_filter', 'repetition_truncation']);
+      let diagnosed = false;
+      const reportStreamFailure = () => {
+        if (diagnosed) return;
+        diagnosed = true;
+        // Counts and a hostname only: never log events, prompts, credentials, or provider errors.
+        const metadata = { ...diagnostic, category: cancellation || (cancelled ? 'client_cancelled' : failureCategory) };
+        if (deps.report) deps.report(metadata);
+        else console.error('Blog chat stream failure', metadata);
+      };
       const stream = new ReadableStream<Uint8Array>({
         async start(controller) {
           const send = (data: string) => { if (!cancelled) controller.enqueue(encoder.encode(`data: ${data}\n\n`)); };
           let pendingText: string[] = [];
           const parser = createSseDecoder((data) => {
             if (complete || cancelled) return;
+            diagnostic.sse_events += 1;
             const event = readChatEvent(data);
             if (event.error) throw new Error('AI 暂时无法回答');
             if (event.done) { complete = true; return; }
+            const choice = (JSON.parse(data) as { choices?: { delta?: { reasoning_content?: unknown }; finish_reason?: unknown }[] }).choices?.[0];
+            if (typeof choice?.delta?.reasoning_content === 'string') diagnostic.reasoning_characters += [...choice.delta.reasoning_content].length;
+            if (typeof choice?.finish_reason === 'string' && finishReasons.has(choice.finish_reason)) diagnostic.finish_reason = choice.finish_reason;
             if (event.text) {
+              diagnostic.visible_characters += [...event.text].length;
               const text = [...event.text].slice(0, MAX_OUTPUT_CHARACTERS - outputLength).join('');
               outputLength += [...text].length;
               if (text) pendingText.push(text);
@@ -173,14 +199,17 @@ export function createBlogChatHandlers(deps: ChatDependencies) {
             while (!cancelled && !complete) {
               const chunk = await reader.read();
               if (chunk.done) parser.finish();
-              else parser.push(chunk.value);
+              else {
+                diagnostic.chunks += 1; diagnostic.bytes += chunk.value.byteLength;
+                parser.push(chunk.value);
+              }
               if (pendingText.length && !cancelled) {
                 // Confirm the charge before exposing text. If the database fails,
                 // stop the provider and leave the uncharged lease to be refunded.
                 if (!produced) {
                   settlement = deps.finish(ticket!, true);
                   try { await settlement; }
-                  catch (error) { settlement = null; throw error; }
+                  catch (error) { settlement = null; failureCategory = 'quota_error'; throw error; }
                   produced = true;
                 }
                 for (const text of pendingText) send(JSON.stringify({ choices: [{ delta: { content: text } }] }));
@@ -188,10 +217,11 @@ export function createBlogChatHandlers(deps: ChatDependencies) {
               }
               if (chunk.done) break;
             }
-            if (!cancelled && !produced) throw new Error('AI 暂未生成回复，请重试');
-            if (!cancelled && !complete) throw new Error('回复连接已中断，请重试');
+            if (!cancelled && !produced) { failureCategory = 'empty_response'; throw new Error('AI 暂未生成回复，请重试'); }
+            if (!cancelled && !complete) { failureCategory = 'incomplete_stream'; throw new Error('回复连接已中断，请重试'); }
           } catch (error) { streamFailure = error instanceof Error ? error : new Error('AI 暂时无法回答'); }
           finally {
+            if (streamFailure || cancelled) reportStreamFailure();
             cleanup(); upstream.abort();
             await reader.cancel().catch(() => undefined);
             await settle().catch(report);
@@ -201,7 +231,7 @@ export function createBlogChatHandlers(deps: ChatDependencies) {
             }
           }
         },
-        async cancel() { cancelled = true; cleanup(); upstream.abort(); await reader.cancel().catch(() => undefined); await settle().catch(report); },
+        async cancel() { cancelled = true; cancel(); reportStreamFailure(); cleanup(); await reader.cancel().catch(() => undefined); await settle().catch(report); },
       });
       return new Response(stream, { headers: { ...headers, 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-store', 'X-Accel-Buffering': 'no', 'X-Chat-Remaining': String(quota.remaining) } });
     } catch (error) {

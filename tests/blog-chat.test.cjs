@@ -6,7 +6,7 @@ require.extensions['.ts'] = (module, filename) => {
   module._compile(ts.transpileModule(fs.readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, filename);
 };
 const { createSseDecoder, readChatEvent } = require('../src/lib/blog-chat-stream.ts');
-const { createBlogChatHandlers, visitorIdentity, parseChatInput } = require('../src/lib/blog-chat-server.ts');
+const { createBlogChatHandlers, visitorIdentity, parseChatInput, BLOG_CHAT_DEFAULT_TIMEOUT_MS } = require('../src/lib/blog-chat-server.ts');
 const config = { baseUrl: 'https://example.test/v1', apiKey: 'not-a-real-key', cookieSecret: 's'.repeat(40), dailyLimit: 5, globalDailyLimit: 100, rateLimit: 3, globalRateLimit: 20, maxOutputTokens: 800 };
 const event = (text) => `data: ${JSON.stringify({ choices: [{ delta: { content: text } }] })}\n\n`;
 const makeRequest = (body = {}, options = {}) => new Request('https://example.test/api/blog/chat', { method: 'POST', body: JSON.stringify({ slug: 'example', question: '这篇文章讲什么？', ...body }), ...options });
@@ -81,6 +81,8 @@ test('same-origin, bounded bodies and known article are checked before reservati
 });
 
 test('successful streamed answer charges exactly once and caps provider tokens', async () => {
+  assert.equal(BLOG_CHAT_DEFAULT_TIMEOUT_MS, 90000);
+  assert.ok(BLOG_CHAT_DEFAULT_TIMEOUT_MS < 120000, 'provider timeout must leave time to settle the quota lease');
   const { handlers, calls } = setup();
   const result = await handlers.POST(makeRequest());
   assert.equal(result.status, 200); assert.match(await result.text(), /你好，鱼蛋🐟/);
@@ -125,6 +127,52 @@ test('client cancellation and timeout abort provider requests without charging e
   }
 });
 
+test('timeout after upstream headers logs only safe stream counts and refunds an empty answer', async () => {
+  const reasoning = 'private-reasoning-鱼🐟';
+  const raw = `data: ${JSON.stringify({ choices: [{ delta: { reasoning_content: reasoning }, finish_reason: 'private-finish-reason' }], internal: 'private-event-body' })}\n\n`;
+  for (const prefix of ['', raw]) {
+    const reports = [];
+    const { handlers, calls } = setup({
+      config: { ...config, timeoutMs: 20, baseUrl: 'https://provider.example/private-path?credential=private-url-secret', apiKey: 'private-api-key' },
+      getPost: async () => ({ title: 'private-title', text: 'private-article' }),
+      report: (metadata) => reports.push(metadata),
+      fetch: async (_url, options) => new Response(new ReadableStream({
+        start(controller) {
+          if (prefix) controller.enqueue(new TextEncoder().encode(prefix));
+          options.signal.addEventListener('abort', () => controller.error(new Error('private-provider-error-body')), { once: true });
+        },
+      })),
+    });
+    const result = await handlers.POST(makeRequest({ question: 'private-question' }));
+    assert.equal(result.status, 200, 'the upstream response already opened before timing out');
+    const responseText = await result.text();
+    assert.match(responseText, /未扣次数/);
+    assert.match(responseText, /\[DONE\]/);
+    assert.deepEqual(calls.finishes, [{ ticket: 'ticket', produced: false }]);
+    assert.deepEqual(reports, [{
+      upstream_hostname: 'provider.example', content_type: 'other', category: 'timeout',
+      chunks: prefix ? 1 : 0, bytes: Buffer.byteLength(prefix), sse_events: prefix ? 1 : 0,
+      reasoning_characters: prefix ? [...reasoning].length : 0, visible_characters: 0, finish_reason: null,
+    }]);
+    assert.ok(!JSON.stringify(reports).includes('private-'));
+    assert.ok(!responseText.includes('private-'));
+  }
+});
+
+test('stream diagnostics whitelist finish reasons and count visible text without logging it', async () => {
+  const raw = event('private-visible-text') + `data: ${JSON.stringify({ choices: [{ delta: {}, finish_reason: 'length' }] })}\n\n`;
+  for (const [header, classification] of [['text/event-stream; charset=utf-8', 'event-stream'], ['application/json', 'json'], ['application/problem+json', 'json'], ['private-header-value', 'other']]) {
+    const reports = [];
+    const { handlers } = setup({ report: (metadata) => reports.push(metadata), fetch: async () => new Response(raw, { headers: { 'Content-Type': header } }) });
+    await (await handlers.POST(makeRequest())).text();
+    assert.deepEqual(reports, [{
+      upstream_hostname: 'example.test', content_type: classification, category: 'incomplete_stream', chunks: 1, bytes: Buffer.byteLength(raw),
+      sse_events: 2, reasoning_characters: 0, visible_characters: [...'private-visible-text'].length, finish_reason: 'length',
+    }]);
+    assert.ok(!JSON.stringify(reports).includes('private-'));
+  }
+});
+
 test('output is cut at a Unicode character boundary even if provider ignores max_completion_tokens', async () => {
   const { handlers, calls } = setup({ fetch: async () => new Response(event('🐟'.repeat(7000)) + 'data: [DONE]\n\n') });
   const result = await handlers.POST(makeRequest());
@@ -137,11 +185,14 @@ test('output is cut at a Unicode character boundary even if provider ignores max
 
 test('cancelling an already-open response stops the provider and releases an empty reservation', async () => {
   let providerCancelled = false;
-  const { handlers, calls } = setup({ fetch: async () => new Response(new ReadableStream({ cancel() { providerCancelled = true; } })) });
+  const reports = [];
+  const { handlers, calls } = setup({ report: (metadata) => reports.push(metadata), fetch: async () => new Response(new ReadableStream({ cancel() { providerCancelled = true; } })) });
   const result = await handlers.POST(makeRequest());
   await result.body.cancel();
   assert.equal(providerCancelled, true);
   assert.deepEqual(calls.finishes, [{ ticket: 'ticket', produced: false }]);
+  assert.equal(reports.length, 1);
+  assert.equal(reports[0].category, 'client_cancelled');
 });
 
 test('failed charge persistence does not expose generated text and requests a refund', async () => {
