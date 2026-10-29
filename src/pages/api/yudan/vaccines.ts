@@ -1,9 +1,8 @@
 import type { APIRoute } from 'astro';
 import { getErrorMessage, json, validateApiKey } from '../../../lib/http';
 import {
-  getOwnerDashboard,
-  getVaccineCatalog,
-  getVaccineRecords,
+  getOwnerContext,
+  getVaccineScheduleData,
   suggestedDateForPlan,
 } from '../../../lib/yudan-api';
 
@@ -13,11 +12,8 @@ export const GET: APIRoute = async ({ request }) => {
   }
 
   try {
-    const { supabase, row } = await getOwnerDashboard();
-    const [catalog, records] = await Promise.all([
-      getVaccineCatalog(supabase),
-      getVaccineRecords(supabase, row.user_id),
-    ]);
+    const { supabase, userId, birthday } = await getOwnerContext();
+    const { catalog, records } = await getVaccineScheduleData(supabase, userId);
 
     const plans = catalog.map((plan) => {
       const record = records.find(
@@ -41,7 +37,7 @@ export const GET: APIRoute = async ({ request }) => {
         schedule_version: plan.schedule_version,
         schedule_note: plan.schedule_note,
         source: plan.source,
-        suggested_date: suggestedDateForPlan(row.birthday, plan),
+        suggested_date: suggestedDateForPlan(birthday, plan),
         actual_date: record?.doneDate || null,
       };
     });

@@ -7,7 +7,7 @@ const row = {
   created_at: '2026-09-24T02:00:00Z',
 };
 
-async function openLedger(page, { blockedStorage = false } = {}) {
+async function openLedger(page, { blockedStorage = false, transaction = row } = {}) {
   await page.clock.setFixedTime(new Date('2026-09-24T04:00:00Z'));
   await page.addInitScript(({ blockedStorage }) => {
     if (blockedStorage) {
@@ -19,12 +19,12 @@ async function openLedger(page, { blockedStorage = false } = {}) {
     }
   }, { blockedStorage });
   await page.route('**/api/monthly?**', (route) => route.fulfill({ json: { success: true, data: {
-    year: 2026, month: 9, totalExpense: 29.9, allTimeExpense: 29.9,
+    year: 2026, month: 9, totalExpense: transaction.type === 'expense' ? transaction.amount : 0, allTimeExpense: transaction.type === 'expense' ? transaction.amount : 0,
     prevMonthExpense: 0, transactionCount: 1, dailyExpenses: [],
     calendarData: {}, categoryBreakdown: [], lastTransaction: null,
   } } }));
   await page.route('**/api/list?**', (route) => route.fulfill({ json: {
-    success: true, data: [row], hasMore: false, nextCursor: null,
+    success: true, data: [transaction], hasMore: false, nextCursor: null,
   } }));
   await page.goto('/ledger');
   await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
@@ -171,3 +171,129 @@ test('a delete conflict requires a fresh confirmation before deleting the latest
   expect(requests[1].expected_version).toBe(2);
   expect(requests[1].request_id).not.toBe(requests[0].request_id);
 });
+
+
+async function openDetail(page, name) {
+  await page.getByRole('tab', { name: '历史', exact: true }).click();
+  await page.getByRole('button', { name }).click();
+  const dialog = page.getByRole('dialog', { name: '账单详情', exact: true });
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
+async function expectContainedDialog(page, dialog, { fitsWithoutScrolling = false } = {}) {
+  const layout = await dialog.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return {
+      left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom,
+      width: window.innerWidth, height: window.innerHeight,
+      clientWidth: element.clientWidth, scrollWidth: element.scrollWidth,
+      clientHeight: element.clientHeight, scrollHeight: element.scrollHeight,
+      pageWidth: document.documentElement.scrollWidth,
+    };
+  });
+  expect(layout.left).toBeGreaterThanOrEqual(0);
+  expect(layout.right).toBeLessThanOrEqual(layout.width + 1);
+  expect(layout.top).toBeGreaterThanOrEqual(0);
+  expect(layout.bottom).toBeLessThanOrEqual(layout.height + 1);
+  expect(layout.scrollWidth).toBeLessThanOrEqual(layout.clientWidth + 1);
+  expect(layout.pageWidth).toBeLessThanOrEqual(layout.width + 1);
+  if (fitsWithoutScrolling) expect(layout.scrollHeight).toBeLessThanOrEqual(layout.clientHeight + 1);
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+}
+
+for (const size of [
+  { name: 'mobile', viewport: { width: 360, height: 800 } },
+  { name: 'desktop', viewport: { width: 1440, height: 1000 } },
+]) {
+  test.describe(`ledger detail ${size.name}`, () => {
+    test.use({ viewport: size.viewport });
+
+    test('expense detail is compact, starts on its title, and keeps both actions reachable', async ({ page }, testInfo) => {
+      const transaction = { ...row, brand: '尼塔', product: '黑标纸尿裤 M码4片', amount: 8.61, category: '护理清洁', note: '淘宝' };
+      const errors = [];
+      page.on('pageerror', (error) => errors.push(error.message));
+      await openLedger(page, { transaction });
+      const dialog = await openDetail(page, /黑标纸尿裤 M码4片/);
+      const remove = dialog.getByRole('button', { name: '删除', exact: true });
+      const edit = dialog.getByRole('button', { name: '编辑', exact: true });
+      await expect(dialog.getByRole('heading', { name: '账单详情', exact: true })).toBeFocused();
+      await expect(remove).not.toBeFocused();
+      await expect(dialog.getByText('支出金额', { exact: true })).toBeVisible();
+      await expect(dialog.getByText('−¥8.61', { exact: true })).toBeVisible();
+      await expect(dialog.getByText(transaction.product, { exact: true })).toBeVisible();
+      await expect(dialog).toContainText('尼塔');
+      await expect(dialog.getByText(transaction.category, { exact: true })).toBeVisible();
+      await expect(dialog.getByLabel('备注内容')).toHaveText('淘宝');
+      await expect(remove).toBeInViewport();
+      await expect(edit).toBeInViewport();
+      await expectContainedDialog(page, dialog, { fitsWithoutScrolling: true });
+      const imagePath = testInfo.outputPath(`ledger-detail-${size.name}.png`);
+      await page.screenshot({ path: imagePath, animations: 'disabled' });
+      await testInfo.attach(`ledger-detail-${size.name}`, { path: imagePath, contentType: 'image/png' });
+
+      // Keyboard users can reach the primary action without accidentally deleting anything.
+      await edit.focus();
+      await page.keyboard.press('Enter');
+      const form = page.getByRole('dialog', { name: '编辑账单', exact: true });
+      await expect(form.getByLabel('实付金额（元） *')).toBeFocused();
+      await expect(form.getByLabel('实付金额（元） *')).toHaveValue('8.61');
+      await form.getByRole('button', { name: '取消', exact: true }).click();
+      await remove.click();
+      const confirmation = page.getByRole('dialog', { name: '确认删除', exact: true });
+      await expect(confirmation.getByText('−¥8.61', { exact: true })).toBeVisible();
+      await expect(confirmation.getByRole('button', { name: '确认删除', exact: true })).toBeInViewport();
+      await confirmation.getByRole('button', { name: '取消', exact: true }).click();
+      await expect(dialog).toBeVisible();
+      expect(errors).toEqual([]);
+    });
+
+    test('income with missing optional fields stays clear and within the viewport', async ({ page }) => {
+      const transaction = { ...row, type: 'income', amount: 36.5, brand: null, product: null, category: null, note: null, transaction_time: null };
+      await openLedger(page, { transaction });
+      const dialog = await openDetail(page, /购买时间未知/);
+      await expect(dialog.getByText('收入金额', { exact: true })).toBeVisible();
+      await expect(dialog.getByText('+¥36.50', { exact: true })).toBeVisible();
+      await expect(dialog.getByText('支出金额', { exact: true })).toHaveCount(0);
+      await expect(dialog.getByText('商品未填写', { exact: true })).toBeVisible();
+      await expect(dialog.getByText('品牌未填写', { exact: true })).toBeVisible();
+      await expect(dialog.getByText('未分类', { exact: true })).toBeVisible();
+      await expect(dialog.getByText('未填写购买时间', { exact: true })).toBeVisible();
+      await expect(dialog.getByLabel('备注内容')).toHaveCount(0);
+      await expect(dialog.getByRole('button', { name: '删除', exact: true })).not.toBeFocused();
+      await expect(dialog.getByRole('button', { name: '编辑', exact: true })).toBeInViewport();
+      await expectContainedDialog(page, dialog, { fitsWithoutScrolling: true });
+    });
+
+    test('long fields and large amounts wrap while notes and actions remain usable', async ({ page }) => {
+      const transaction = {
+        ...row, amount: 999999999.99,
+        product: `长商品名称 ${'UnbrokenProductDescription'.repeat(65)}`,
+        brand: `长品牌 ${'UnbrokenBrand'.repeat(12)}`,
+        category: `自定义分类 ${'LongCategory'.repeat(12)}`,
+        note: Array.from({ length: 24 }, (_, index) => `第 ${index + 1} 行：淘宝订单记录 ${'ORDER'.repeat(16)}`).join('\n'),
+      };
+      await openLedger(page, { transaction });
+      const dialog = await openDetail(page, /长商品名称/);
+      await expect(dialog.getByText('−¥999,999,999.99', { exact: true })).toBeVisible();
+      await expect(dialog.getByText(transaction.product, { exact: true })).toHaveText(transaction.product);
+      await expect(dialog).toContainText(transaction.brand);
+      await expect(dialog.getByText(transaction.category, { exact: true })).toHaveText(transaction.category);
+      await expectContainedDialog(page, dialog);
+
+      const note = dialog.getByLabel('备注内容');
+      await expect(note).toHaveText(transaction.note);
+      await note.scrollIntoViewIfNeeded();
+      await note.focus();
+      await page.keyboard.press('End');
+      await expect.poll(() => note.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+      expect(await note.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+      const edit = dialog.getByRole('button', { name: '编辑', exact: true });
+      await edit.scrollIntoViewIfNeeded();
+      await expect(edit).toBeInViewport();
+      await expect(dialog.getByRole('button', { name: '删除', exact: true })).toBeInViewport();
+      await edit.click();
+      await expect(page.getByRole('dialog', { name: '编辑账单', exact: true }).getByPlaceholder('商品名称、规格、数量')).toHaveValue(transaction.product);
+    });
+  });
+}

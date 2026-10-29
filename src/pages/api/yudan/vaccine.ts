@@ -3,7 +3,7 @@ import { readExpectedVersion } from '../../../lib/health-records';
 import { getErrorMessage, json, validateApiKey } from '../../../lib/http';
 import {
   HealthConflictError,
-  getOwnerDashboard,
+  getOwnerContext,
   readDate,
   resolveVaccinePlan,
   upsertVaccineRecord,
@@ -33,9 +33,9 @@ export const POST: APIRoute = async ({ request }) => {
       : typeof body.dose === 'string'
         ? body.dose.trim()
         : undefined;
-    const { supabase, row } = await getOwnerDashboard();
-    const plan = await resolveVaccinePlan({ birthday: row.birthday, planId, vaccine, dose });
-    const saved = await upsertVaccineRecord(supabase, row.user_id, plan, doneDate, readExpectedVersion(body));
+    const { supabase, userId, birthday } = await getOwnerContext();
+    const plan = await resolveVaccinePlan({ birthday, planId, vaccine, dose });
+    const saved = await upsertVaccineRecord(supabase, userId, plan, doneDate, readExpectedVersion(body));
 
     return json({ success: true, data: saved });
   } catch (error: unknown) {

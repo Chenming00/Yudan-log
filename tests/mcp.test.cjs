@@ -3,10 +3,19 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
+const { createMcpHandler } = require('@modelcontextprotocol/server');
 
 const token = 'mcp-test-only';
 const requestId = 'f850b722-bebd-442c-a139-9f17203dfce1';
 const id = 'bdad71d7-2725-46eb-9f53-536826ba4f3e';
+
+async function readMcpResponse(response) {
+  const text = await response.text();
+  const data = response.headers.get('content-type')?.includes('text/event-stream')
+    ? JSON.parse(text.split('\n').find((line) => line.startsWith('data: ')).slice(6))
+    : JSON.parse(text);
+  return { response, data };
+}
 
 function fixture() {
   const calls = [];
@@ -55,18 +64,15 @@ function fixture() {
       });
       const response = await ALL({ request, url: new URL(request.url) });
       assert.equal(response.headers.get('cache-control'), 'private, no-store');
-      const text = await response.text();
-      const data = response.headers.get('content-type')?.includes('text/event-stream')
-        ? JSON.parse(text.split('\n').find((line) => line.startsWith('data: ')).slice(6))
-        : JSON.parse(text);
-      return { response, data };
+      return await readMcpResponse(response);
     } finally {
       if (previous === undefined) delete process.env.API_KEY;
       else process.env.API_KEY = previous;
     }
   }
   const tool = (name, args, options) => invoke({ method: 'tools/call', params: { name, arguments: args } }, options);
-  return { invoke, tool, calls, state };
+  const { createYudanMcpServer: createServer } = load(path.resolve(__dirname, '../src/lib/mcp-server.ts'));
+  return { invoke, tool, calls, state, createServer };
 }
 
 test('MCP protects discovery and tools, rejects foreign origins, and requires POST', async () => {
@@ -171,6 +177,59 @@ test('MCP rejects unknown tools and invalid arguments before dispatch', async ()
     assert.ok(data.error || data.result?.isError, `${name} should reject input`);
   }
   assert.equal(f.calls.length, 0);
+});
+
+test('shared schemas retain strict add requirements after partial edit validation', async () => {
+  const f = fixture();
+  const edit = { request_id: requestId, id, expected_version: 3, note: '只修改备注' };
+  assert.equal((await f.tool('edit_transaction', edit)).data.result.isError, undefined);
+  assert.deepEqual(f.calls[0].body, edit);
+  for (const input of [
+    { request_id: requestId, note: '缺少金额和类型' },
+    { request_id: requestId, amount: 1, type: 'expense', currency: 'CNY' },
+  ]) {
+    const { data } = await f.tool('add_transaction', input);
+    assert.ok(data.error || data.result?.isError);
+  }
+  assert.equal(f.calls.length, 1);
+  const add = { request_id: requestId, amount: 1, type: 'expense' };
+  assert.equal((await f.tool('add_transaction', add)).data.result.isError, undefined);
+  assert.deepEqual(f.calls[1].body, add);
+  const { data } = await f.invoke({ method: 'tools/list' });
+  const schema = data.result.tools.find((tool) => tool.name === 'add_transaction').inputSchema;
+  assert.deepEqual(schema.required.toSorted(), ['amount', 'request_id', 'type']);
+  assert.equal(schema.additionalProperties, false);
+});
+
+test('servers sharing schemas keep concurrent callbacks and results isolated', { timeout: 5000 }, async () => {
+  const { createServer } = fixture();
+  const calls = [];
+  let release;
+  const bothStarted = new Promise((resolve) => { release = resolve; });
+  const handlers = ['first', 'second'].map((scope) => createMcpHandler(() => createServer(async (method, path, input) => {
+    calls.push({ scope, method, path, input });
+    if (calls.length === 2) release();
+    await bothStarted;
+    return Response.json({ success: true, scope, input });
+  })));
+  const call = (handler, q) => handler.fetch(new Request('https://example.test/api/mcp', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/event-stream', 'MCP-Protocol-Version': '2025-11-25' },
+    body: JSON.stringify({ jsonrpc: '2.0', id: q, method: 'tools/call', params: { name: 'list_transactions', arguments: { q } } }),
+  })).then(readMcpResponse);
+  try {
+    const responses = await Promise.all(handlers.map((handler, index) => call(handler, `query-${index}`)));
+    for (const [index, scope] of ['first', 'second'].entries()) {
+      assert.equal(responses[index].response.status, 200);
+      assert.deepEqual(responses[index].data.result.structuredContent, { success: true, scope, input: { q: `query-${index}` } });
+      assert.deepEqual(calls.find((entry) => entry.scope === scope), { scope, method: 'GET', path: '/api/list', input: { q: `query-${index}` } });
+    }
+    await handlers[0].close();
+    const next = await call(handlers[1], 'still-second');
+    assert.deepEqual(next.data.result.structuredContent, { success: true, scope: 'second', input: { q: 'still-second' } });
+  } finally {
+    await Promise.all(handlers.map((handler) => handler.close()));
+  }
 });
 
 test('MCP keeps actionable conflicts but redacts internal failures', async () => {

@@ -1,7 +1,7 @@
 import type { APIRoute } from 'astro';
 import { getSupabaseAdminClient } from '../../../../lib/supabase';
 import { json, validateWriteAuth } from '../../../lib/http';
-import { getOwnerDashboard, HealthConflictError, mutateHealthRecord } from '../../../lib/yudan-api';
+import { getOwnerContext, HealthConflictError, mutateHealthRecord } from '../../../lib/yudan-api';
 import { validateHealthMutation } from '../../../lib/health-records';
 
 export const POST: APIRoute = async ({ request }) => {
@@ -16,7 +16,7 @@ export const POST: APIRoute = async ({ request }) => {
     return json({ error: error instanceof Error ? error.message : '无效请求。' }, { status: 400, headers });
   }
   try {
-    const userId = auth.method === 'github' ? auth.userId : (await getOwnerDashboard()).row.user_id;
+    const userId = auth.method === 'github' ? auth.userId : (await getOwnerContext()).userId;
     const data = await mutateHealthRecord(getSupabaseAdminClient(), userId, mutation);
     return json({ success: true, data }, { headers });
   } catch (error) {

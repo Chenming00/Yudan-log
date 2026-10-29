@@ -78,17 +78,25 @@ type YudanVaccineDatabaseRow = {
 
 let ownerUserIdPromise: Promise<string> | null = null;
 
-export async function getVaccineCatalog(supabase?: SupabaseClient, includeRetired = false) {
-  const client = supabase || getSupabaseAdminClient();
-  let query = client
+type VaccineCatalogRow = YudanVaccinePlan & { active: boolean };
+
+async function readVaccineCatalog(supabase: SupabaseClient, includeRetired: boolean) {
+  let query = supabase
     .from('yudan_vaccine_catalog')
-    .select('id, sort_order, age_months, age_label, vaccine, dose, funding, date_rule, date_offset_days, region, schedule_version, prevents, aliases, audience, schedule_note, source')
+    .select('id, sort_order, age_months, age_label, vaccine, dose, funding, date_rule, date_offset_days, region, schedule_version, prevents, aliases, audience, schedule_note, source, active')
     .order('sort_order');
   if (!includeRetired) query = query.eq('active', true);
   const { data, error } = await query;
-
   if (error) throw error;
-  return (data || []) as YudanVaccinePlan[];
+  return (data || []) as VaccineCatalogRow[];
+}
+
+function catalogPlan({ active: _active, ...plan }: VaccineCatalogRow): YudanVaccinePlan {
+  return plan;
+}
+
+export async function getVaccineCatalog(supabase?: SupabaseClient, includeRetired = false) {
+  return (await readVaccineCatalog(supabase || getSupabaseAdminClient(), includeRetired)).map(catalogPlan);
 }
 
 function normalizeVaccineName(value: string) {
@@ -219,9 +227,14 @@ async function getOwnerUserId(supabase: SupabaseClient) {
   return ownerUserIdPromise;
 }
 
-export async function getOwnerDashboard() {
+export async function getOwnerContext() {
   const supabase = getSupabaseAdminClient();
   const userId = await getOwnerUserId(supabase);
+  return { supabase, userId, birthday: YUDAN_BIRTHDAY };
+}
+
+export async function getOwnerDashboard() {
+  const { supabase, userId, birthday } = await getOwnerContext();
   const { data, error } = await supabase
     .from('yudan_dashboards')
     .select('user_id, birthday, updated_at')
@@ -229,9 +242,9 @@ export async function getOwnerDashboard() {
     .maybeSingle<YudanDashboardRow>();
 
   if (error) throw error;
-  if (!data) return { supabase, row: { user_id: userId, birthday: YUDAN_BIRTHDAY, updated_at: '' } };
+  if (!data) return { supabase, row: { user_id: userId, birthday, updated_at: '' } };
 
-  return { supabase, row: { ...data, birthday: YUDAN_BIRTHDAY } };
+  return { supabase, row: { ...data, birthday } };
 }
 
 async function readAllHealthRows(supabase: SupabaseClient, table: string, columns: string, userId: string, order: string) {
@@ -249,15 +262,36 @@ export async function getWeightRecords(supabase: SupabaseClient, userId: string)
   return (rows as YudanWeightDatabaseRow[]).map((record) => ({ id: record.id, date: record.measured_on, weight: Number(record.weight_kg), updated_at: record.updated_at } satisfies YudanWeightRecord));
 }
 
-export async function getVaccineRecords(supabase: SupabaseClient, userId: string) {
-  const [rows, catalog] = await Promise.all([
-    readAllHealthRows(supabase, 'yudan_vaccine_records', 'id, plan_id, administered_on, updated_at', userId, 'plan_id'),
-    getVaccineCatalog(supabase, true),
-  ]);
-  return (rows as YudanVaccineDatabaseRow[]).map((record) => {
-    const plan = catalog.find((item) => item.id === record.plan_id);
+function vaccineRecords(rows: YudanVaccineDatabaseRow[], catalog: YudanVaccinePlan[]) {
+  const plansById = new Map(catalog.map((plan) => [plan.id, plan]));
+  return rows.map((record) => {
+    const plan = plansById.get(record.plan_id);
     return { id: record.id, planId: record.plan_id, vaccine: plan?.vaccine || record.plan_id, dose: plan?.dose || '', ageLabel: plan?.age_label || '', doneDate: record.administered_on, updated_at: record.updated_at } satisfies YudanVaccineRecord;
   });
+}
+
+function readVaccineRecords(supabase: SupabaseClient, userId: string) {
+  return readAllHealthRows(supabase, 'yudan_vaccine_records', 'id, plan_id, administered_on, updated_at', userId, 'plan_id') as Promise<YudanVaccineDatabaseRow[]>;
+}
+
+export async function getVaccineRecords(supabase: SupabaseClient, userId: string) {
+  const [rows, catalog] = await Promise.all([
+    readVaccineRecords(supabase, userId),
+    getVaccineCatalog(supabase, true),
+  ]);
+  return vaccineRecords(rows, catalog);
+}
+
+/** One catalog read supplies active plans and the names of retired recorded plans. */
+export async function getVaccineScheduleData(supabase: SupabaseClient, userId: string) {
+  const [rows, catalog] = await Promise.all([
+    readVaccineRecords(supabase, userId),
+    readVaccineCatalog(supabase, true),
+  ]);
+  return {
+    catalog: catalog.filter((plan) => plan.active).map(catalogPlan),
+    records: vaccineRecords(rows, catalog),
+  };
 }
 
 export class HealthConflictError extends Error {

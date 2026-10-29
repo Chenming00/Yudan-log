@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { PencilLine, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,21 +29,50 @@ function createEditForm(transaction: Transaction | null) {
     transaction_time: transaction?.transaction_time ? toShanghaiDatetimeInput(transaction.transaction_time) : '',
   };
 }
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return <div className="flex min-w-0 flex-col gap-1.5 border-b border-border/60 py-2.5 last:border-0"><span className="text-muted-foreground text-xs">{label}</span><span className="text-foreground font-medium [overflow-wrap:anywhere] min-w-0 whitespace-pre-wrap leading-relaxed">{value}</span></div>;
-}
-function TransactionDetails({ transaction }: { transaction: Transaction }) {
+function TransactionDetails({ transaction, compact = false }: { transaction: Transaction; compact?: boolean }) {
+  const income = transaction.type === 'income';
+  const amount = Number(transaction.amount).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const when = transaction.transaction_time ? new Date(transaction.transaction_time).toLocaleString('zh-CN', {
-    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai',
-  }) : '未知（未填写购买时间）';
-  return <>
-    <DetailRow label="实付金额" value={`¥${Number(transaction.amount).toFixed(2)}`} />
-    <DetailRow label="品牌" value={transaction.brand || '未填写'} />
-    <DetailRow label="商品" value={transaction.product || '未填写'} />
-    <DetailRow label="分类" value={categoryLabel(transaction.category)} />
-    <DetailRow label="时间" value={when} />
-    <DetailRow label="备注" value={transaction.note || '无'} />
-  </>;
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Shanghai',
+  }) : '未填写购买时间';
+
+  return (
+    <div className="min-w-0">
+      <div className={compact ? 'mb-4' : 'mb-6 text-center'}>
+        <p className="text-xs text-muted-foreground">{income ? '收入金额' : '支出金额'}</p>
+        <p className={`${compact ? 'mt-1 text-2xl' : 'mt-1.5 text-[34px] sm:text-[38px]'} break-words font-semibold leading-tight tracking-tight tabular-nums ${income ? 'text-primary' : 'text-foreground'}`}>
+          {income ? '+' : '−'}¥{amount}
+        </p>
+      </div>
+
+      <div className="min-w-0 space-y-1.5">
+        <p className="whitespace-pre-wrap text-base font-semibold leading-relaxed text-foreground [overflow-wrap:anywhere]">
+          {transaction.product || '商品未填写'}
+        </p>
+        <p className="whitespace-pre-wrap text-xs leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">
+          {transaction.brand ? <><span className="mr-2 text-muted-foreground/70">品牌</span>{transaction.brand}</> : '品牌未填写'}
+        </p>
+      </div>
+
+      <dl className="mt-5 space-y-3 text-xs">
+        <div className="flex items-start justify-between gap-5">
+          <dt className="shrink-0 text-muted-foreground">分类</dt>
+          <dd className="min-w-0 text-right font-medium text-foreground [overflow-wrap:anywhere]">{categoryLabel(transaction.category)}</dd>
+        </div>
+        <div className="flex items-start justify-between gap-5">
+          <dt className="shrink-0 text-muted-foreground">时间</dt>
+          <dd className="min-w-0 text-right leading-relaxed text-foreground [overflow-wrap:anywhere]">{when}</dd>
+        </div>
+      </dl>
+
+      {transaction.note && (
+        <div className="mt-4 rounded-xl bg-[#f2f4ee] px-3.5 py-3">
+          <p className="mb-1 text-[11px] text-muted-foreground">备注</p>
+          <p tabIndex={0} aria-label="备注内容" className="max-h-36 overflow-y-auto overscroll-contain whitespace-pre-wrap rounded-sm text-xs leading-6 text-foreground [overflow-wrap:anywhere] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">{transaction.note}</p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function TransactionDialog({ transaction, open, onOpenChange, authToken, onUpdated, onAuthorize }: TransactionDetailProps) {
@@ -57,6 +87,7 @@ export function TransactionDialog({ transaction, open, onOpenChange, authToken, 
   const [confirmOverwrite, setConfirmOverwrite] = useState(false);
   const [notFound, setNotFound] = useState(false);
   const [needsAuth, setNeedsAuth] = useState(false);
+  const titleRef = useRef<HTMLHeadingElement>(null);
   const client = useRef(new LedgerMutationClient<Transaction>());
   const submitting = useRef(false);
   const locked = action !== null || uncertain !== null;
@@ -134,10 +165,13 @@ export function TransactionDialog({ transaction, open, onOpenChange, authToken, 
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!locked && !submitting.current) onOpenChange(next); }}>
-      <DialogContent className={`w-[calc(100%-2rem)] max-w-lg max-h-[90dvh] overflow-y-auto rounded-3xl ${locked ? '[&>button:last-child]:hidden' : ''}`}>
-        <DialogHeader className="border-b border-border pb-5">
-          <DialogTitle className="text-left text-xl">{confirmDeleteOpen ? '确认删除' : editing ? '编辑账单' : '账单详情'}</DialogTitle>
-          <DialogDescription className="text-left">{confirmDeleteOpen ? '请核对将要删除的账单，删除后无法恢复。' : '品牌、商品与订单信息'}</DialogDescription>
+      <DialogContent
+        onOpenAutoFocus={(event) => { event.preventDefault(); titleRef.current?.focus({ preventScroll: true }); }}
+        className={`w-[calc(100%-2rem)] max-w-[448px] max-h-[calc(100dvh-2rem)] gap-5 overflow-y-auto rounded-3xl p-5 sm:p-6 ${locked ? '[&>button:last-child]:hidden' : ''}`}
+      >
+        <DialogHeader className="space-y-1">
+          <DialogTitle ref={titleRef} tabIndex={-1} className="text-left text-sm font-medium text-muted-foreground focus:outline-none">{confirmDeleteOpen ? '确认删除' : editing ? '编辑账单' : '账单详情'}</DialogTitle>
+          <DialogDescription className={confirmDeleteOpen ? 'text-left text-xs' : 'sr-only'}>{confirmDeleteOpen ? '请核对将要删除的账单，删除后无法恢复。' : '查看金额、商品和购买信息。'}</DialogDescription>
         </DialogHeader>
 
         {!versionAvailable && authToken && <div role="alert" className="space-y-2 text-sm text-destructive"><p>这条账单缺少有效版本，请刷新账单后再操作。</p><Button variant="outline" onClick={refresh}>刷新账单</Button></div>}
@@ -147,7 +181,7 @@ export function TransactionDialog({ transaction, open, onOpenChange, authToken, 
             <fieldset disabled={locked} className="min-w-0 space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="edit-amount">实付金额（元） *</Label>
-                <Input id="edit-amount" type="number" min="0.01" step="0.01" inputMode="decimal" required value={editForm.amount} onChange={(e) => setEditForm((form) => ({ ...form, amount: e.target.value }))} />
+                <Input id="edit-amount" autoFocus type="number" min="0.01" step="0.01" inputMode="decimal" required value={editForm.amount} onChange={(e) => setEditForm((form) => ({ ...form, amount: e.target.value }))} />
               </div>
               <TransactionFields form={editForm} onChange={setEditForm} requireProduct={Boolean(current.product)} />
             </fieldset>
@@ -165,19 +199,19 @@ export function TransactionDialog({ transaction, open, onOpenChange, authToken, 
             {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
             {(needsAuth || confirmDeleteOpen && !authToken) && <Button variant="outline" onClick={onAuthorize}>更新写入权限</Button>}
             {notFound && <Button variant="outline" onClick={refresh}>刷新账单</Button>}
-            {confirmDeleteOpen ? <div className="flex gap-2 pt-2">
+            {confirmDeleteOpen ? <div className="flex gap-2 border-t border-border/70 pt-4">
               <Button variant="ghost" disabled={locked} onClick={() => { setConfirmDeleteOpen(false); setConflict(null); setActionError(null); }} className="flex-1">取消</Button>
               <Button variant="destructive" disabled={Boolean(action) || Boolean(conflict) || !writable} onClick={() => void mutate('delete')} className="flex-1">{action === 'delete' ? '删除中...' : uncertain === 'delete' ? '重试确认删除' : '确认删除'}</Button>
-            </div> : authToken && <div className="flex gap-2 pt-3">
-              <Button variant="ghost" onClick={() => setConfirmDeleteOpen(true)} disabled={!writable} className="flex-1 text-destructive">删除</Button>
-              <Button onClick={() => { setEditForm(createEditForm(current)); setActionError(null); setEditing(true); }} disabled={!writable} className="flex-1">编辑</Button>
+            </div> : authToken && <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-4">
+              <Button variant="ghost" size="sm" onClick={() => setConfirmDeleteOpen(true)} disabled={!writable} className="h-10 px-2 text-muted-foreground hover:bg-destructive/5 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" aria-hidden="true" />删除</Button>
+              <Button onClick={() => { setEditForm(createEditForm(current)); setActionError(null); setEditing(true); }} disabled={!writable} className="h-10 min-w-28 px-5"><PencilLine className="h-3.5 w-3.5" aria-hidden="true" />编辑</Button>
             </div>}
           </div>
         )}
 
         {conflict && <section aria-label="云端最新账单" className="min-w-0 space-y-3 rounded-xl border border-amber-500/40 bg-amber-500/5 p-4">
           <h3 className="text-sm font-semibold">云端最新版本（版本 {conflict.version}）</h3>
-          <TransactionDetails transaction={conflict} />
+          <TransactionDetails transaction={conflict} compact />
           {confirmDeleteOpen ? <>
             <p className="text-sm text-muted-foreground">云端内容与原先不同。采用最新版本后，还需要再次确认删除。</p>
             <Button variant="destructive" className="w-full" onClick={loadConflict}>删除云端最新版本</Button>

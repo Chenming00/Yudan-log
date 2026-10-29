@@ -3,7 +3,7 @@ import { readExpectedVersion } from '../../../lib/health-records';
 import { getErrorMessage, json, validateApiKey } from '../../../lib/http';
 import {
   HealthConflictError,
-  getOwnerDashboard,
+  getOwnerContext,
   readDate,
   upsertWeightRecord,
 } from '../../../lib/yudan-api';
@@ -29,8 +29,8 @@ export const POST: APIRoute = async ({ request }) => {
       return json({ error: 'weight 必须是 0.1 到 200 之间的公斤数' }, { status: 400 });
     }
 
-    const { supabase, row } = await getOwnerDashboard();
-    const saved = await upsertWeightRecord(supabase, row.user_id, date, weight, readExpectedVersion(body));
+    const { supabase, userId } = await getOwnerContext();
+    const saved = await upsertWeightRecord(supabase, userId, date, weight, readExpectedVersion(body));
 
     return json({ success: true, data: saved });
   } catch (error: unknown) {
