@@ -30,7 +30,7 @@ export function TransactionFields({ form, onChange, requireProduct = true }: {
             <Button key={cat.value} type="button" size="sm" variant="outline"
               aria-pressed={categoryLabel(form.category) === cat.label}
               onClick={() => update('category', categoryLabel(form.category) === cat.label ? '' : cat.label)}
-              className={`rounded-full ${categoryLabel(form.category) === cat.label ? 'border-expense/30 bg-expense/10 text-expense' : 'border-transparent bg-muted text-muted-foreground'}`}>
+              className={`h-9 rounded-lg ${categoryLabel(form.category) === cat.label ? 'border-primary/30 bg-primary/10 text-primary' : 'border-border bg-card text-muted-foreground'}`}>
               {cat.emoji} {cat.label}
             </Button>
           ))}

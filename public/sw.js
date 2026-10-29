@@ -1,4 +1,4 @@
-const CACHE_NAME = 'yudanhuafei-v6';
+const CACHE_NAME = 'yudanhuafei-v7';
 const PRECACHE_URLS = ['/offline.html'];
 
 self.addEventListener('install', (event) => {

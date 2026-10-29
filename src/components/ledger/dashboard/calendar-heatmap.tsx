@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CalendarDays } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,13 +22,20 @@ interface CalendarHeatmapProps {
 const WEEKDAY_LABELS = ["一", "二", "三", "四", "五", "六", "日"];
 
 function getHeatStyle(amount: number, max: number): { bg: string; text: string } {
-  if (amount === 0) return { bg: "bg-muted/50", text: "text-muted-foreground/50" };
+  if (amount === 0) return { bg: "bg-[#f3f5ef]", text: "text-muted-foreground" };
   const ratio = amount / max;
-  if (ratio < 0.2) return { bg: "bg-expense/10", text: "text-expense" };
-  if (ratio < 0.4) return { bg: "bg-expense/20", text: "text-expense" };
-  if (ratio < 0.6) return { bg: "bg-expense/40", text: "text-expense" };
-  if (ratio < 0.8) return { bg: "bg-expense/60", text: "text-white" };
-  return { bg: "bg-expense/80", text: "text-white" };
+  if (ratio < 0.2) return { bg: "bg-[#e4ebdd]", text: "text-[#426047]" };
+  if (ratio < 0.4) return { bg: "bg-[#cedcbe]", text: "text-[#3e573c]" };
+  if (ratio < 0.6) return { bg: "bg-[#a9c194]", text: "text-[#304c32]" };
+  if (ratio < 0.8) return { bg: "bg-[#67885c]", text: "text-white" };
+  return { bg: "bg-[#3f6348]", text: "text-white" };
+}
+
+function compactAmount(amount: number) {
+  if (amount >= 100000000) return `${(amount / 100000000).toFixed(1)}亿`;
+  if (amount >= 10000) return `${(amount / 10000).toFixed(amount >= 1000000 ? 0 : 1)}万`;
+  if (amount >= 1000) return `${(amount / 1000).toFixed(1)}k`;
+  return amount.toFixed(0);
 }
 
 function formatTime(dateStr: string) {
@@ -68,19 +76,19 @@ export function CalendarHeatmap({ calendarData, year, month }: CalendarHeatmapPr
 
   return (
     <>
-      <Card className="p-5">
-        <div className="flex items-center justify-between mb-4">
-          <p className="text-sm font-medium text-muted-foreground">支出日历</p>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="w-2.5 h-2.5 rounded-sm bg-muted/50" />
-            <span>少</span>
-            <span className="w-2.5 h-2.5 rounded-sm bg-expense/40" />
-            <span className="w-2.5 h-2.5 rounded-sm bg-expense/80" />
-            <span>多</span>
+      <Card className="grid gap-6 p-5 shadow-none sm:p-6 lg:grid-cols-[190px_1fr] lg:gap-8">
+        <div className="flex flex-col items-start">
+          <span className="mb-4 hidden h-12 w-12 items-center justify-center rounded-2xl bg-[#e9eee4] text-primary lg:flex"><CalendarDays className="h-6 w-6" /></span>
+          <h2 className="section-title">支出日历</h2>
+          <p className="mt-2 text-xs leading-6 text-muted-foreground">{year} 年 {month} 月的生活足迹。<br className="hidden lg:block" />点击日期，回看当天的花费。</p>
+          <div className="mt-5 flex items-center gap-1.5 text-[11px] text-muted-foreground lg:mt-auto lg:pt-6" aria-label="颜色越深，支出越多">
+            <span className="mr-1">少</span>
+            {["#f3f5ef", "#e4ebdd", "#cedcbe", "#a9c194", "#67885c", "#3f6348"].map((color) => <span key={color} className="h-3 w-3 rounded-sm" style={{ backgroundColor: color }} />)}
+            <span className="ml-1">多</span>
           </div>
         </div>
-
-        <div className="grid grid-cols-7 gap-1 mb-1">
+        <div className="min-w-0">
+        <div className="mb-2 grid grid-cols-7 gap-1.5 sm:gap-2">
           {WEEKDAY_LABELS.map((label) => (
             <div key={label} className="text-center text-xs text-muted-foreground py-1">
               {label}
@@ -88,7 +96,7 @@ export function CalendarHeatmap({ calendarData, year, month }: CalendarHeatmapPr
           ))}
         </div>
 
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
           {cells.map((day, i) => {
             if (day === null) return <div key={`empty-${i}`} />;
             const amount = calendarData[day] || 0;
@@ -101,35 +109,37 @@ export function CalendarHeatmap({ calendarData, year, month }: CalendarHeatmapPr
                 variant="ghost"
                 onClick={() => setSelectedDate(`${monthKey}-${String(day).padStart(2, "0")}`)}
                 aria-label={`${year}年${month}月${day}日，支出${amount}元`}
-                className={`h-auto aspect-square rounded-md p-0 flex flex-col items-center justify-center text-xs ${heat.bg} ${
+                className={`h-12 rounded-lg p-0 flex flex-col items-center justify-center gap-1 text-xs sm:h-14 ${heat.bg} ${
                   isToday ? "ring-2 ring-primary ring-offset-1 ring-offset-card" : ""
-                } cursor-pointer hover:ring-2 hover:ring-expense/30 hover:ring-offset-1 hover:ring-offset-card active:scale-95`}
+                } cursor-pointer hover:ring-2 hover:ring-primary/30 hover:ring-offset-1 hover:ring-offset-card active:scale-95`}
               >
-                <span className={`leading-none ${isToday ? "font-bold text-primary" : heat.text}`}>
+                <span className={`leading-none ${isToday ? `font-bold ${heat.text}` : heat.text}`}>
                   {day}
                 </span>
                 {hasData && (
-                  <span className={`text-[8px] leading-none mt-0.5 font-medium ${heat.text}`}>
-                    {amount >= 1000 ? `${(amount / 1000).toFixed(1)}k` : amount.toFixed(0)}
+                  <span className={`max-w-full truncate text-[9px] leading-none font-medium sm:text-[10px] ${heat.text}`}>
+                    {compactAmount(amount)}
                   </span>
                 )}
               </Button>
             );
           })}
         </div>
+        </div>
       </Card>
 
       {/* 当日详情弹窗 */}
       <Dialog open={selectedDay !== null} onOpenChange={(open) => { if (!open) setSelectedDate(null); }}>
-        <DialogContent className="max-w-sm rounded-2xl max-h-[70vh] flex flex-col">
+        <DialogContent className="max-w-md rounded-3xl max-h-[80dvh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="text-base">
               {year}年{month}月{selectedDay}日
             </DialogTitle>
+            <DialogDescription>这一天，为生活添置的小小心意。</DialogDescription>
           </DialogHeader>
 
-          <div className="text-center py-3">
-            <p className="text-2xl font-bold text-expense">¥{selectedDayTotal.toLocaleString()}</p>
+          <div className="rounded-2xl bg-[#edf0e9] py-5 text-center">
+            <p className="break-words text-3xl font-semibold text-primary">¥{selectedDayTotal.toLocaleString()}</p>
             <p className="text-xs text-muted-foreground mt-1">当日总支出</p>
           </div>
 

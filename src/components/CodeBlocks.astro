@@ -1,0 +1,74 @@
+---
+import '../styles/code.css';
+---
+
+<template id="article-code-toolbar">
+  <div class="code-toolbar">
+    <span class="code-language"></span>
+    <button type="button" class="code-copy">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+      <span class="code-copy-label">复制代码</span>
+    </button>
+    <span class="code-copy-status sr-only" role="status" aria-live="polite"></span>
+  </div>
+</template>
+
+<script>
+  const languageNames: Record<string, string> = {
+    bash: 'Bash', shell: 'Shell', sh: 'Shell', zsh: 'Shell',
+    js: 'JavaScript', javascript: 'JavaScript', ts: 'TypeScript', typescript: 'TypeScript',
+    json: 'JSON', http: 'HTTP', html: 'HTML', css: 'CSS', sql: 'SQL',
+    python: 'Python', py: 'Python', yaml: 'YAML', yml: 'YAML',
+    text: '纯文本', txt: '纯文本', plaintext: '纯文本',
+  };
+
+  function enhanceCodeBlocks() {
+    const template = document.querySelector<HTMLTemplateElement>('#article-code-toolbar');
+    if (!template) return;
+    document.querySelectorAll<HTMLPreElement>('.blog-content pre').forEach((pre, index) => {
+      if (pre.dataset.codeEnhanced || !pre.querySelector('code')) return;
+      const code = pre.querySelector('code')!;
+      const language = pre.dataset.language || code.className.match(/language-([\w-]+)/)?.[1] || 'text';
+      const label = languageNames[language.toLowerCase()] || language;
+      const block = document.createElement('div');
+      block.className = 'code-block not-prose';
+      block.setAttribute('role', 'group');
+      block.setAttribute('aria-label', `${label} 代码块 ${index + 1}`);
+      const toolbar = template.content.cloneNode(true) as DocumentFragment;
+      toolbar.querySelector('.code-language')!.textContent = label;
+      const button = toolbar.querySelector<HTMLButtonElement>('.code-copy')!;
+      const buttonLabel = toolbar.querySelector('.code-copy-label')!;
+      const status = toolbar.querySelector<HTMLElement>('.code-copy-status')!;
+      button.setAttribute('aria-label', `复制 ${label} 代码`);
+      let resetTimer: ReturnType<typeof setTimeout> | undefined;
+      button.addEventListener('click', async () => {
+        clearTimeout(resetTimer);
+        status.textContent = '';
+        try {
+          // textContent preserves indentation and line breaks and excludes the toolbar.
+          await navigator.clipboard.writeText(code.textContent || '');
+          button.dataset.state = 'copied';
+          buttonLabel.textContent = '已复制';
+          status.textContent = '代码已复制';
+        } catch {
+          button.dataset.state = 'error';
+          buttonLabel.textContent = '请手动复制';
+          status.textContent = '复制未成功，请选中代码后手动复制。';
+        }
+        resetTimer = setTimeout(() => {
+          delete button.dataset.state;
+          buttonLabel.textContent = '复制代码';
+          status.textContent = '';
+        }, 3000);
+      });
+      pre.dataset.codeEnhanced = 'true';
+      pre.tabIndex = 0;
+      pre.setAttribute('aria-label', `${label} 代码，可横向滚动`);
+      pre.before(block);
+      block.append(toolbar, pre);
+    });
+  }
+
+  enhanceCodeBlocks();
+  document.addEventListener('astro:page-load', enhanceCodeBlocks);
+</script>

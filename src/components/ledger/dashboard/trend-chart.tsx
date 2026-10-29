@@ -1,6 +1,6 @@
 "use client";
 
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { Button } from "@/components/ui/button";
 import { useState, useMemo } from "react";
 import type { DailyExpense } from "../types";
@@ -27,7 +27,7 @@ const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
     return (
       <div className="rounded-lg bg-popover p-3 shadow-md border border-border">
         <p className="text-xs text-muted-foreground mb-1">{label}</p>
-        <p className="text-sm font-medium text-expense">
+        <p className="text-sm font-medium text-primary">
           ¥{Number(value).toLocaleString()}
         </p>
       </div>
@@ -56,15 +56,15 @@ export function TrendChart({ dailyExpenses, title = "每日支出趋势" }: Tren
   const avgDaily = chartData.length ? totalExpense / chartData.length : 0;
 
   return (
-    <div className="rounded-2xl bg-card border border-border p-5">
-      <div className="flex items-center justify-between mb-4">
+    <div className="surface-card min-w-0 p-5 sm:p-6">
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-sm text-muted-foreground">{title}</p>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="section-title">{title}</p>
+          <p className="mt-1.5 text-xs text-muted-foreground">
             平均每日 ¥{avgDaily.toFixed(0)}
           </p>
         </div>
-        <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
+        <div className="flex items-center gap-1 rounded-lg bg-[#eff1eb] p-1">
           <Button
             variant="ghost"
             size="sm"
@@ -93,15 +93,10 @@ export function TrendChart({ dailyExpenses, title = "每日支出趋势" }: Tren
           </Button>
         </div>
       </div>
-      <div className="h-44 w-full">
-        <ResponsiveContainer width="100%" height="100%" minHeight={176}>
+      <div className="h-56 w-full min-w-0">
+        <ResponsiveContainer width="100%" height="100%" minHeight={224}>
           <AreaChart data={chartData} margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-            <defs>
-              <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="var(--color-expense)" stopOpacity={0.18} />
-                <stop offset="95%" stopColor="var(--color-expense)" stopOpacity={0} />
-              </linearGradient>
-            </defs>
+            <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 5" vertical={false} />
             <XAxis
               dataKey="date"
               tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
@@ -110,6 +105,7 @@ export function TrendChart({ dailyExpenses, title = "每日支出趋势" }: Tren
               interval={timeRange === 7 ? 0 : 4}
             />
             <YAxis
+              width={52}
               tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
               axisLine={false}
               tickLine={false}
@@ -119,9 +115,10 @@ export function TrendChart({ dailyExpenses, title = "每日支出趋势" }: Tren
             <Area
               type="monotone"
               dataKey="value"
-              stroke="var(--color-expense)"
-              strokeWidth={2}
-              fill="url(#colorValue)"
+              stroke="var(--color-primary)"
+              strokeWidth={2.5}
+              fill="#e9eee4"
+              activeDot={{ r: 5, fill: "var(--color-primary)", stroke: "white", strokeWidth: 3 }}
             />
           </AreaChart>
         </ResponsiveContainer>

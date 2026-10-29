@@ -1,78 +1,52 @@
 ---
-import { BookOpen, HeartPulse, NotebookPen, PanelsTopLeft, Wallet } from 'lucide-react';
+import { BookOpen, Heart, HeartPulse, House, NotebookPen, Wallet } from 'lucide-react';
 
-interface Props {
-  activePath: string;
-}
-
+interface Props { activePath: string }
 const { activePath } = Astro.props;
-
 const items = [
-  {
-    href: '/',
-    label: '看板',
-    icon: PanelsTopLeft,
-    match: (pathname: string) => pathname === '/',
-  },
-  {
-    href: '/health',
-    label: '保健',
-    icon: HeartPulse,
-    match: (pathname: string) => pathname.startsWith('/health'),
-  },
-  {
-    href: '/ledger',
-    label: '账本',
-    icon: Wallet,
-    match: (pathname: string) => pathname.startsWith('/ledger'),
-  },
-  {
-    href: '/blog',
-    label: '日志',
-    icon: BookOpen,
-    match: (pathname: string) => pathname.startsWith('/blog'),
-  },
-  {
-    href: '/about',
-    label: '关于',
-    icon: NotebookPen,
-    match: (pathname: string) => pathname.startsWith('/about'),
-  },
+  { href: '/', label: '成长看板', short: '看板', icon: House, match: (path: string) => path === '/' },
+  { href: '/health', label: '保健档案', short: '保健', icon: HeartPulse, match: (path: string) => path.startsWith('/health') },
+  { href: '/ledger', label: '鱼蛋小账本', short: '账本', icon: Wallet, match: (path: string) => path.startsWith('/ledger') },
+  { href: '/blog', label: '成长日志', short: '日志', icon: BookOpen, match: (path: string) => path.startsWith('/blog') },
+  { href: '/about', label: '关于小站', short: '关于', icon: NotebookPen, match: (path: string) => path.startsWith('/about') },
 ];
 ---
 
-<nav
-  aria-label="底部导航"
-  class="fixed inset-x-0 bottom-0 z-40 border-t border-border/50 bg-card/95 px-3 pb-[env(safe-area-inset-bottom)] pt-2 shadow-sm backdrop-blur lg:px-6"
->
-  <div class="flex w-full items-center justify-around gap-1 lg:justify-center lg:gap-3">
+<aside class="site-sidebar">
+  <a href="/" class="site-brand" aria-label="鱼蛋看板首页">
+    <img src="/apple-home-logo.png" width="44" height="44" alt="" />
+    <span><strong>鱼蛋的小世界<span class="brand-dot">.</span></strong><small>A LITTLE LIFE, A LOT OF LOVE</small></span>
+  </a>
+  <div class="sidebar-section-label">日常 · 慢慢记录</div>
+  <nav aria-label="主导航" class="sidebar-links">
     {items.map((item) => {
-      const isActive = item.match(activePath);
       const Icon = item.icon;
-
-      return (
-        <a
-          href={item.href}
-          aria-current={isActive ? 'page' : undefined}
-          class:list={[
-            'relative flex min-w-0 flex-1 flex-col items-center justify-center gap-1 rounded-lg px-2.5 py-2 text-[11px] font-medium transition-all duration-200 active:scale-95 sm:min-w-[88px] sm:px-3 sm:text-xs lg:max-w-[128px]',
-            isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
-          ]}
-        >
-          <span
-            class:list={[
-              'flex h-8.5 w-8.5 items-center justify-center rounded-lg transition-all duration-200',
-              isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground',
-            ]}
-          >
-            <Icon class:list={['h-4.5 w-4.5', isActive ? 'fill-current' : '']} />
-          </span>
-          <span class="truncate leading-none">{item.label}</span>
-          {isActive && (
-            <span class="absolute -bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-primary"></span>
-          )}
-        </a>
-      );
+      const active = item.match(activePath);
+      return <a href={item.href} aria-current={active ? 'page' : undefined} class:list={['sidebar-link', { 'is-active': active }]}>
+        <Icon size={19} strokeWidth={1.7} /><span>{item.label}</span><span class="nav-active-dot" />
+      </a>;
     })}
+  </nav>
+  <div class="sidebar-bottom">
+    <div class="sidebar-note">
+      <svg width="72" height="76" viewBox="0 0 72 76" fill="none" aria-hidden="true">
+        <path d="M37 65V30M37 48C22 47 18 39 20 30C33 30 38 36 37 48ZM37 38C51 38 57 31 54 22C43 23 37 29 37 38Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M26 64H49M24 69H51" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" />
+        <circle cx="22" cy="14" r="3" fill="#d5af70" /><path d="m55 51 2 2 2-2M11 51l2-2 2 2" stroke="#d5af70" stroke-width="1.5" stroke-linecap="round" />
+      </svg>
+      <p>长大，是每一天的小事。</p>
+      <span>把平凡的日子，慢慢收藏。</span>
+    </div>
+    <div class="sidebar-signature"><Heart size={13} strokeWidth={1.6} /><span>为鱼蛋，用心记录</span><span class="signature-dot" /></div>
   </div>
+</aside>
+
+<nav aria-label="底部导航" class="mobile-nav">
+  {items.map((item) => {
+    const Icon = item.icon;
+    const active = item.match(activePath);
+    return <a href={item.href} aria-current={active ? 'page' : undefined} class:list={['mobile-nav-link', { 'is-active': active }]}>
+      <span class="mobile-nav-icon"><Icon size={21} strokeWidth={active ? 2 : 1.7} /></span><span>{item.short}</span>
+    </a>;
+  })}
 </nav>

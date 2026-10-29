@@ -1,0 +1,134 @@
+/* Readable code on the same soft paper as the rest of the journal.
+   These rules also style the original Markdown pre before enhancement / without JS. */
+.prose.blog-content pre,
+.code-block > pre.code-content {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 1.6em 0;
+  padding: 18px 20px;
+  overflow-x: auto;
+  border: 1px solid #dfe6d8;
+  border-radius: 14px;
+  background: #f3f6ef !important;
+  color: #304136 !important;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.8;
+  text-align: left;
+  white-space: pre;
+  tab-size: 2;
+  scrollbar-width: thin;
+  scrollbar-color: #c1cdb8 #f3f6ef;
+  -webkit-overflow-scrolling: touch;
+}
+
+.prose.blog-content pre > code,
+.code-content > code {
+  display: block;
+  width: max-content;
+  min-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  white-space: inherit;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.code-block {
+  min-width: 0;
+  max-width: 100%;
+  margin: 1.6em 0;
+  overflow: hidden;
+  border: 1px solid #dfe6d8;
+  border-radius: 14px;
+  background: #f3f6ef;
+}
+
+.prose.blog-content .code-block > pre,
+.code-block > pre.code-content {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+.code-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  min-height: 45px;
+  gap: 12px;
+  padding: 6px 12px 6px 18px;
+  border-bottom: 1px solid #dfe6d8;
+  background: #edf2e7;
+  font-family: var(--font-sans);
+}
+
+.code-language {
+  color: #62765a;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+}
+
+.code-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  min-height: 32px;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #526b4a;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.code-copy:hover { border-color: #d5dfcd; background: #fcfdf9; }
+.code-copy[data-state="copied"] { background: #dce8d3; color: #315b46; }
+.code-copy[data-state="error"] { color: #865d31; }
+.code-copy:focus-visible,
+.prose.blog-content pre:focus-visible,
+.code-content:focus-visible {
+  outline: 2px solid #78936b;
+  outline-offset: -3px;
+}
+
+.prose.blog-content :not(pre) > code {
+  padding: 0.15em 0.4em;
+  border: 1px solid #e1e8da;
+  border-radius: 5px;
+  background: #edf2e7;
+  color: #3b6048;
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.prose.blog-content code::before,
+.prose.blog-content code::after { content: none; }
+
+@media (max-width: 639px) {
+  .prose.blog-content pre,
+  .code-block > pre.code-content { padding: 16px; }
+  .code-toolbar { padding-left: 16px; }
+}

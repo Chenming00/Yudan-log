@@ -11,7 +11,7 @@ const posts = await getBlogCardPosts();
   description="用文字记录成长的每一步"
   canonical="/blog"
 >
-  <main class="min-h-screen px-4 sm:px-6 py-8 bg-background" style="padding-bottom: var(--nav-height)">
+  <main class="page-shell">
     <BlogList posts={posts} client:load />
   </main>
 </BaseLayout>

@@ -29,7 +29,7 @@ function createEditForm(transaction: Transaction | null) {
   };
 }
 function DetailRow({ label, value }: { label: string; value: string }) {
-  return <div className="flex flex-col gap-1"><span className="text-muted-foreground text-xs">{label}</span><span className="text-foreground font-medium break-words min-w-0 whitespace-pre-wrap leading-relaxed">{value}</span></div>;
+  return <div className="flex min-w-0 flex-col gap-1.5 border-b border-border/60 py-2.5 last:border-0"><span className="text-muted-foreground text-xs">{label}</span><span className="text-foreground font-medium [overflow-wrap:anywhere] min-w-0 whitespace-pre-wrap leading-relaxed">{value}</span></div>;
 }
 function TransactionDetails({ transaction }: { transaction: Transaction }) {
   const when = transaction.transaction_time ? new Date(transaction.transaction_time).toLocaleString('zh-CN', {
@@ -134,16 +134,16 @@ export function TransactionDialog({ transaction, open, onOpenChange, authToken, 
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!locked && !submitting.current) onOpenChange(next); }}>
-      <DialogContent className={`w-[calc(100%-2rem)] max-w-md max-h-[90dvh] overflow-y-auto ${locked ? '[&>button:last-child]:hidden' : ''}`}>
-        <DialogHeader>
-          <DialogTitle className="text-center">{confirmDeleteOpen ? '确认删除' : editing ? '编辑账单' : '账单详情'}</DialogTitle>
-          <DialogDescription className="text-center">{confirmDeleteOpen ? '请核对将要删除的账单，删除后无法恢复。' : '品牌、商品与订单信息'}</DialogDescription>
+      <DialogContent className={`w-[calc(100%-2rem)] max-w-lg max-h-[90dvh] overflow-y-auto rounded-3xl ${locked ? '[&>button:last-child]:hidden' : ''}`}>
+        <DialogHeader className="border-b border-border pb-5">
+          <DialogTitle className="text-left text-xl">{confirmDeleteOpen ? '确认删除' : editing ? '编辑账单' : '账单详情'}</DialogTitle>
+          <DialogDescription className="text-left">{confirmDeleteOpen ? '请核对将要删除的账单，删除后无法恢复。' : '品牌、商品与订单信息'}</DialogDescription>
         </DialogHeader>
 
         {!versionAvailable && authToken && <div role="alert" className="space-y-2 text-sm text-destructive"><p>这条账单缺少有效版本，请刷新账单后再操作。</p><Button variant="outline" onClick={refresh}>刷新账单</Button></div>}
 
         {editing && !confirmDeleteOpen ? (
-          <form onSubmit={handleSave} className="space-y-4">
+          <form onSubmit={handleSave} className="min-w-0 space-y-4">
             <fieldset disabled={locked} className="min-w-0 space-y-4">
               <div className="space-y-1.5">
                 <Label htmlFor="edit-amount">实付金额（元） *</Label>
@@ -160,7 +160,7 @@ export function TransactionDialog({ transaction, open, onOpenChange, authToken, 
             </div>}
           </form>
         ) : (
-          <div className="space-y-4">
+          <div className="min-w-0 space-y-4">
             <TransactionDetails transaction={current} />
             {actionError && <p role="alert" className="text-sm text-destructive">{actionError}</p>}
             {(needsAuth || confirmDeleteOpen && !authToken) && <Button variant="outline" onClick={onAuthorize}>更新写入权限</Button>}
@@ -175,7 +175,7 @@ export function TransactionDialog({ transaction, open, onOpenChange, authToken, 
           </div>
         )}
 
-        {conflict && <section aria-label="云端最新账单" className="space-y-3 rounded-xl border border-amber-500/40 bg-amber-500/5 p-4">
+        {conflict && <section aria-label="云端最新账单" className="min-w-0 space-y-3 rounded-xl border border-amber-500/40 bg-amber-500/5 p-4">
           <h3 className="text-sm font-semibold">云端最新版本（版本 {conflict.version}）</h3>
           <TransactionDetails transaction={conflict} />
           {confirmDeleteOpen ? <>
@@ -184,7 +184,7 @@ export function TransactionDialog({ transaction, open, onOpenChange, authToken, 
           </> : <>
             <Button type="button" variant="outline" onClick={loadConflict} className="w-full">载入云端版本</Button>
             {confirmOverwrite ? <div className="space-y-2">
-              <p className="text-sm">确认以你的输入覆盖「{transactionTitle(conflict)}」的云端最新版本？</p>
+              <p className="text-sm [overflow-wrap:anywhere]">确认以你的输入覆盖「{transactionTitle(conflict)}」的云端最新版本？</p>
               <div className="flex gap-2">
                 <Button type="button" variant="outline" onClick={() => setConfirmOverwrite(false)} className="flex-1">返回核对</Button>
                 <Button type="button" onClick={() => void mutate('edit', conflict)} className="flex-1">确认覆盖</Button>

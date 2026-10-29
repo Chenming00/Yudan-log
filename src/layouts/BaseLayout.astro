@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import FloatingNav from '../components/FloatingNav.astro';
+import SiteHeader from '../components/SiteHeader.astro';
 import RegisterSW from '../components/RegisterSW.astro';
 
 interface Props {
@@ -35,7 +36,7 @@ const imageUrl = new URL(image, siteUrl).toString();
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#FFFFFF" />
+    <meta name="theme-color" content="#f7f8f2" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="description" content={description} />
     <meta name="keywords" content="鱼蛋,成长记录,疫苗记录,喂养记录,宝宝看板" />
@@ -63,8 +64,13 @@ const imageUrl = new URL(image, siteUrl).toString();
     <slot name="head" />
   </head>
   <body class="bg-background font-sans text-foreground">
-    <slot />
+    <a href="#main-content" class="skip-link">跳至主要内容</a>
     <FloatingNav activePath={Astro.url.pathname} />
+    <div class="site-workspace">
+      <SiteHeader activePath={Astro.url.pathname} />
+      <div id="main-content" tabindex="-1"><slot /></div>
+      <footer class="site-footer"><span>鱼蛋的小世界</span><span>每一份记录，都是长大的足迹。</span></footer>
+    </div>
     <RegisterSW />
   </body>
 </html>

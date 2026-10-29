@@ -6,6 +6,9 @@ export default defineConfig({
   output: 'server',
   adapter: vercel(),
   integrations: [react()],
+  markdown: {
+    shikiConfig: { theme: 'github-light', wrap: false },
+  },
   vite: {
     server: {
       watch: {

@@ -5,8 +5,8 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#F7F8FA",
-  "theme_color": "#F7F8FA",
+  "background_color": "#f7f8f2",
+  "theme_color": "#f7f8f2",
   "orientation": "portrait",
   "icons": [
     {
@@ -25,13 +25,23 @@
       "name": "鱼蛋小账本",
       "short_name": "记账",
       "url": "/ledger",
-      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/logo.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "成长 Log",
       "short_name": "日志",
       "url": "/blog",
-      "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/logo.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ]
 }

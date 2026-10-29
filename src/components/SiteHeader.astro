@@ -1,0 +1,19 @@
+---
+import { CalendarDays, ChevronRight, Heart } from 'lucide-react';
+interface Props { activePath: string }
+const { activePath } = Astro.props;
+const section = activePath.startsWith('/health') ? '保健档案'
+  : activePath.startsWith('/ledger') ? '鱼蛋小账本'
+  : activePath.startsWith('/blog') ? '成长日志'
+  : activePath.startsWith('/about') ? '关于小站' : '成长看板';
+const date = new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', month: 'long', day: 'numeric', weekday: 'long' }).format(new Date());
+---
+<header class="site-header">
+  <div class="site-breadcrumb"><span>鱼蛋的小世界</span><ChevronRight size={13} /><strong>{section}</strong></div>
+  <a class="mobile-brand" href="/" aria-label="鱼蛋看板首页"><img src="/apple-home-logo.png" alt="" width="34" height="34" /><span>鱼蛋的小世界<span class="brand-dot">.</span></span></a>
+  <div class="site-header-right"><span class="header-motto"><Heart size={14} /> 把爱写进每一天</span><span class="header-date"><CalendarDays size={15} /><time data-local-date>{date}</time></span><span class="mobile-section">{section}</span></div>
+</header>
+<script>
+  const display = document.querySelector('[data-local-date]');
+  if (display) display.textContent = new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', month: 'long', day: 'numeric', weekday: 'long' }).format(new Date());
+</script>

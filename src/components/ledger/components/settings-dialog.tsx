@@ -51,13 +51,13 @@ export function SettingsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="text-center">账本写入权限</DialogTitle>
-          <DialogDescription className="text-center">选择登录方式，授权后即可新增、修改或删除账单。</DialogDescription>
+      <DialogContent className="max-w-lg rounded-3xl">
+        <DialogHeader className="border-b border-border pb-5">
+          <DialogTitle className="text-left text-xl">账本写入权限</DialogTitle>
+          <DialogDescription className="text-left">选择登录方式，授权后即可新增、修改或删除账单。</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 pt-2">
-          <div className="rounded-lg border border-border bg-muted/30 p-3">
+          <div className="rounded-2xl border border-border bg-[#edf0e9] p-4">
             <div className="flex items-start gap-3">
               <CircleUserRound className="mt-0.5 h-5 w-5 shrink-0" />
               <div className="min-w-0 flex-1">

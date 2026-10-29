@@ -1,6 +1,7 @@
 ---
 import { Bot, CheckCircle2, Copy, PlugZap } from 'lucide-react';
 import { MCP_EXAMPLES, MCP_TOOLS } from '../lib/mcp-guide';
+import '../styles/code.css';
 
 const endpoint = new URL('/api/mcp', Astro.url.origin).href;
 const cursorConfig = JSON.stringify({
@@ -17,112 +18,112 @@ const troubleshooting = [
 ];
 ---
 
-<section id="mcp" aria-labelledby="mcp-title" class="scroll-mt-8 space-y-4">
-  <div class="rounded-[28px] bg-[#e5ebdb] p-5 shadow-sm ring-1 ring-stone-900/5 sm:p-7">
+<section id="mcp" aria-labelledby="mcp-title" class="scroll-mt-28 space-y-5">
+  <div class="rounded-[22px] border border-[#dce3d5] bg-[#eaf0e3] p-5 sm:p-7">
     <div class="flex flex-wrap items-center justify-between gap-4">
       <div class="flex items-center gap-3">
-        <span class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-white/70 text-[#49613d]">
+        <span class="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-card/80 text-primary">
           <PlugZap className="h-5 w-5" />
         </span>
         <div>
-          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-[#49613d]">Connect your AI</p>
-          <h2 id="mcp-title" class="mt-1 text-xl font-semibold tracking-tight text-[#24341e] sm:text-2xl">用 MCP 连上鱼蛋看板</h2>
+          <p class="text-xs font-semibold uppercase tracking-[0.16em] text-primary">Connect your AI</p>
+          <h2 id="mcp-title" class="mt-1 text-xl font-semibold tracking-tight text-foreground sm:text-2xl">用 MCP 连上鱼蛋看板</h2>
         </div>
       </div>
-      <span class="rounded-full bg-white/60 px-3 py-1.5 text-[11px] font-medium text-[#49613d]">Streamable HTTP · API Key</span>
+      <span class="rounded-full bg-card/80 px-3 py-1.5 text-[11px] font-medium text-primary">Streamable HTTP · API Key</span>
     </div>
-    <p class="mt-4 max-w-3xl text-sm leading-7 text-[#49613d]/85">
+    <p class="mt-4 max-w-3xl text-sm leading-7 text-primary/85">
       MCP 是 AI 使用外部工具的一种连接方式。接入后，你可以直接对 AI 说“帮我记一笔”或“看看这个月的花费”，由它调用本站的账本和健康记录工具。
     </p>
-    <div class="mt-5 flex min-w-0 items-start gap-3 rounded-2xl bg-white/75 p-4 sm:items-center">
+    <div class="mt-5 flex min-w-0 items-start gap-3 rounded-2xl bg-card/80 p-4 sm:items-center">
       <div class="min-w-0 flex-1">
-        <p class="text-xs font-medium text-stone-500">当前站点的 MCP 地址</p>
-        <code id="mcp-endpoint" class="mt-1 block break-all text-sm font-semibold text-[#183c2f]">{endpoint}</code>
+        <p class="text-xs font-medium text-muted-foreground">当前站点的 MCP 地址</p>
+        <code id="mcp-endpoint" class="mt-1 block break-all text-sm font-semibold text-foreground">{endpoint}</code>
       </div>
-      <button type="button" data-mcp-copy="mcp-endpoint" aria-label="复制 MCP 地址" class="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-[#183c2f] px-3 text-xs font-semibold text-white transition hover:bg-[#254d3e] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#183c2f]">
+      <button type="button" data-mcp-copy="mcp-endpoint" aria-label="复制 MCP 地址" class="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-white transition hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
         <Copy className="h-3.5 w-3.5" />复制
       </button>
     </div>
-    <p class="mt-3 text-xs leading-6 text-[#49613d]/80">
+    <p class="mt-3 text-xs leading-6 text-primary/80">
       本地调试使用本地地址；部署后使用部署域名下的 /api/mcp。所有工具都需要 Key，真实健康记录只在通过认证后返回。
     </p>
   </div>
 
   <div class="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-    <div class="min-w-0 rounded-[28px] bg-white/90 p-5 shadow-sm ring-1 ring-stone-900/5 sm:p-7">
-      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">Getting started</p>
-      <h3 class="mt-1 text-xl font-semibold tracking-tight text-[#183c2f]">三步开始使用</h3>
-      <ol class="mt-5 space-y-4 text-sm leading-7 text-stone-500">
-        <li><strong class="font-semibold text-stone-900">1. 获取 API Key。</strong>向站点维护者获取，与服务端 API_KEY 一致。不要填写 Supabase Secret Key 或 GitHub 登录令牌。</li>
-        <li><strong class="font-semibold text-stone-900">2. 添加 MCP 服务。</strong>选择下面的客户端配置，把 YOUR_API_KEY 换成自己的 Key。配置含有凭据，请保存在个人配置中，不要提交到公开仓库。</li>
-        <li><strong class="font-semibold text-stone-900">3. 连接并开始对话。</strong>在客户端启用 yudan-log，确认工具列表出现，再试试下面的对话示例。修改或删除时，先让 AI 查清楚目标记录。</li>
+    <div class="min-w-0 rounded-[22px] border border-border bg-card p-5 sm:p-7">
+      <p class="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Getting started</p>
+      <h3 class="mt-1 text-xl font-semibold tracking-tight text-foreground">三步开始使用</h3>
+      <ol class="mt-5 space-y-5 text-sm leading-7 text-muted-foreground">
+        <li><strong class="font-semibold text-foreground">1. 获取 API Key。</strong>向站点维护者获取，与服务端 API_KEY 一致。不要填写 Supabase Secret Key 或 GitHub 登录令牌。</li>
+        <li><strong class="font-semibold text-foreground">2. 添加 MCP 服务。</strong>选择下面的客户端配置，把 YOUR_API_KEY 换成自己的 Key。配置含有凭据，请保存在个人配置中，不要提交到公开仓库。</li>
+        <li><strong class="font-semibold text-foreground">3. 连接并开始对话。</strong>在客户端启用 yudan-log，确认工具列表出现，再试试下面的对话示例。修改或删除时，先让 AI 查清楚目标记录。</li>
       </ol>
 
-      <details open class="mt-6 min-w-0 rounded-2xl border border-stone-200/80">
-        <summary class="cursor-pointer px-4 py-3.5 text-sm font-semibold text-[#183c2f]">Cursor 配置</summary>
-        <div class="min-w-0 border-t border-stone-100 px-4 pb-4">
-          <p class="mt-3 text-xs leading-6 text-stone-500">合并到个人配置 ~/.cursor/mcp.json 的 mcpServers 中，保存后在 MCP 设置里启用服务。</p>
-          <div class="mt-3 flex justify-end">
-            <button type="button" data-mcp-copy="mcp-cursor-config" class="rounded-full bg-[#e5ebdb] px-3 py-2 text-xs font-semibold text-[#49613d] transition hover:bg-[#d6e4a9]">复制配置</button>
+      <details open class="mt-6 min-w-0 rounded-2xl border border-border">
+        <summary class="cursor-pointer px-4 py-3.5 text-sm font-semibold text-foreground">Cursor 配置</summary>
+        <div class="min-w-0 border-t border-border px-4 pb-4">
+          <p class="mt-3 text-xs leading-6 text-muted-foreground">合并到个人配置 ~/.cursor/mcp.json 的 mcpServers 中，保存后在 MCP 设置里启用服务。</p>
+          <div class="code-block">
+            <div class="code-toolbar"><span class="code-language">JSON</span><button type="button" data-mcp-copy="mcp-cursor-config" class="code-copy"><Copy className="h-3.5 w-3.5" />复制配置</button></div>
+            <pre class="code-content" tabindex="0" aria-label="Cursor MCP 配置"><code id="mcp-cursor-config">{cursorConfig}</code></pre>
           </div>
-          <pre class="mt-2 max-w-full overflow-x-auto rounded-2xl bg-[#f5f2eb] p-4 text-xs leading-6 text-[#183c2f]" tabindex="0" aria-label="Cursor MCP 配置"><code id="mcp-cursor-config">{cursorConfig}</code></pre>
-          <a href="https://cursor.com/docs/mcp" target="_blank" rel="noopener noreferrer" class="mt-3 inline-block text-xs font-medium text-[#49613d] underline underline-offset-4">Cursor 官方 MCP 文档 ↗</a>
+          <a href="https://cursor.com/docs/mcp" target="_blank" rel="noopener noreferrer" class="mt-3 inline-block text-xs font-medium text-primary underline underline-offset-4">Cursor 官方 MCP 文档 ↗</a>
         </div>
       </details>
 
-      <details class="mt-3 min-w-0 rounded-2xl border border-stone-200/80">
-        <summary class="cursor-pointer px-4 py-3.5 text-sm font-semibold text-[#183c2f]">Claude Code 命令</summary>
-        <div class="min-w-0 border-t border-stone-100 px-4 pb-4">
-          <p class="mt-3 text-xs leading-6 text-stone-500">替换 Key 后在终端运行，在 Claude Code 内用 /mcp 查看连接状态。该命令会保存到当前用户的 MCP 配置。</p>
-          <div class="mt-3 flex justify-end">
-            <button type="button" data-mcp-copy="mcp-claude-command" class="rounded-full bg-[#e5ebdb] px-3 py-2 text-xs font-semibold text-[#49613d] transition hover:bg-[#d6e4a9]">复制命令</button>
+      <details class="mt-3 min-w-0 rounded-2xl border border-border">
+        <summary class="cursor-pointer px-4 py-3.5 text-sm font-semibold text-foreground">Claude Code 命令</summary>
+        <div class="min-w-0 border-t border-border px-4 pb-4">
+          <p class="mt-3 text-xs leading-6 text-muted-foreground">替换 Key 后在终端运行，在 Claude Code 内用 /mcp 查看连接状态。该命令会保存到当前用户的 MCP 配置。</p>
+          <div class="code-block">
+            <div class="code-toolbar"><span class="code-language">Shell</span><button type="button" data-mcp-copy="mcp-claude-command" class="code-copy"><Copy className="h-3.5 w-3.5" />复制命令</button></div>
+            <pre class="code-content" tabindex="0" aria-label="Claude Code MCP 命令"><code id="mcp-claude-command">{claudeCommand}</code></pre>
           </div>
-          <pre class="mt-2 max-w-full overflow-x-auto rounded-2xl bg-[#f5f2eb] p-4 text-xs leading-6 text-[#183c2f]" tabindex="0" aria-label="Claude Code MCP 命令"><code id="mcp-claude-command">{claudeCommand}</code></pre>
-          <a href="https://code.claude.com/docs/en/mcp" target="_blank" rel="noopener noreferrer" class="mt-3 inline-block text-xs font-medium text-[#49613d] underline underline-offset-4">Claude Code 官方 MCP 文档 ↗</a>
+          <a href="https://code.claude.com/docs/en/mcp" target="_blank" rel="noopener noreferrer" class="mt-3 inline-block text-xs font-medium text-primary underline underline-offset-4">Claude Code 官方 MCP 文档 ↗</a>
         </div>
       </details>
-      <p class="mt-4 text-xs leading-6 text-stone-500">其他客户端需要支持 Streamable HTTP 和自定义 Authorization 请求头。本接口使用固定 API Key，暂未提供 OAuth 登录。</p>
-      <p id="mcp-copy-status" role="status" aria-live="polite" class="mt-2 min-h-5 text-xs text-[#49613d]"></p>
+      <p class="mt-4 text-xs leading-6 text-muted-foreground">其他客户端需要支持 Streamable HTTP 和自定义 Authorization 请求头。本接口使用固定 API Key，暂未提供 OAuth 登录。</p>
+      <p id="mcp-copy-status" role="status" aria-live="polite" class="mt-2 min-h-5 text-xs text-primary"></p>
     </div>
 
-    <div class="min-w-0 rounded-[28px] bg-[#f0cfaa] p-5 shadow-sm sm:p-7">
+    <div class="min-w-0 rounded-[22px] border border-[#e8dfcf] bg-[#f2ece1] p-5 sm:p-7">
       <div class="flex items-center justify-between gap-3">
-        <div><p class="text-xs font-semibold uppercase tracking-[0.16em] text-[#70451f]">Just ask</p><h3 class="mt-1 text-xl font-semibold tracking-tight text-[#3f2b1a]">接好后，可以这样说</h3></div>
-        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-white/65 text-[#70451f]"><Bot className="h-5 w-5" /></span>
+        <div><p class="text-xs font-semibold uppercase tracking-[0.16em] text-[#766346]">Just ask</p><h3 class="mt-1 text-xl font-semibold tracking-tight text-foreground">接好后，可以这样说</h3></div>
+        <span class="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-card/80 text-[#766346]"><Bot className="h-5 w-5" /></span>
       </div>
       <ul class="mt-5 space-y-3">
         {MCP_EXAMPLES.map((example) => (
-          <li class="rounded-2xl bg-white/70 px-4 py-3 text-sm leading-7 text-[#3f2b1a]">“{example}”</li>
+          <li class="border-l-2 border-[#c5b496] bg-card/60 px-4 py-3 text-sm leading-7 text-foreground">“{example}”</li>
         ))}
       </ul>
-      <div class="mt-5 rounded-2xl bg-white/45 p-4">
-        <div class="flex items-center gap-2 text-sm font-semibold text-[#70451f]"><CheckCircle2 className="h-4 w-4" />让记录保持准确</div>
-        <p class="mt-2 text-xs leading-6 text-[#70451f]/85">金额单位是人民币元，体重单位是公斤，日期按北京时间理解。AI 写入会直接保存到云端；日期、金额和疫苗剂次不清楚时，应先确认再记录。</p>
+      <div class="mt-5 rounded-2xl bg-card/60 p-4">
+        <div class="flex items-center gap-2 text-sm font-semibold text-[#766346]"><CheckCircle2 className="h-4 w-4" />让记录保持准确</div>
+        <p class="mt-2 text-xs leading-6 text-[#766346]/85">金额单位是人民币元，体重单位是公斤，日期按北京时间理解。AI 写入会直接保存到云端；日期、金额和疫苗剂次不清楚时，应先确认再记录。</p>
       </div>
     </div>
   </div>
 
-  <div class="rounded-[28px] bg-white/90 p-5 shadow-sm ring-1 ring-stone-900/5 sm:p-7">
-    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-stone-400">Your toolkit</p>
-    <h3 class="mt-1 text-xl font-semibold tracking-tight text-[#183c2f]">可用的 {Object.keys(MCP_TOOLS).length} 个工具</h3>
-    <div class="mt-4 grid gap-3 sm:grid-cols-2">
+  <div class="rounded-[22px] border border-border bg-card p-5 sm:p-7">
+    <p class="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Your toolkit</p>
+    <h3 class="mt-1 text-xl font-semibold tracking-tight text-foreground">可用的 {Object.keys(MCP_TOOLS).length} 个工具</h3>
+    <div class="mt-4 grid gap-x-7 sm:grid-cols-2">
       {Object.entries(MCP_TOOLS).map(([name, tool]) => (
-        <div class="min-w-0 rounded-2xl bg-[#f5f2eb]/70 px-4 py-3.5">
+        <div class="min-w-0 border-t border-border py-4">
           <div class="flex flex-wrap items-center gap-2">
-            <h4 class="text-sm font-semibold text-stone-900">{tool.title}</h4>
-            <span class:list={['rounded-full px-2 py-0.5 text-[10px] font-medium', tool.readOnly ? 'bg-white text-stone-500' : 'bg-[#e5ebdb] text-[#49613d]']}>{tool.readOnly ? '只读' : '写入'}</span>
+            <h4 class="text-sm font-semibold text-foreground">{tool.title}</h4>
+            <span class:list={['rounded-full px-2 py-0.5 text-[10px] font-medium', tool.readOnly ? 'bg-white text-muted-foreground' : 'bg-secondary text-primary']}>{tool.readOnly ? '只读' : '写入'}</span>
           </div>
-          <code class="mt-1 block break-all text-xs text-[#49613d]">{name}</code>
-          <p class="mt-1 text-xs leading-6 text-stone-500">{tool.summary}</p>
+          <code class="mt-1 block break-all text-xs text-primary">{name}</code>
+          <p class="mt-1 text-xs leading-6 text-muted-foreground">{tool.summary}</p>
         </div>
       ))}
     </div>
-    <details class="mt-5 rounded-2xl border border-stone-200/80">
-      <summary class="cursor-pointer px-4 py-3.5 text-sm font-semibold text-[#183c2f]">连不上或保存失败时</summary>
-      <dl class="grid gap-4 border-t border-stone-100 p-4 sm:grid-cols-2">
-        <div class="sm:col-span-2"><dt class="text-sm font-medium text-stone-900">写入与重试</dt><dd class="mt-1 text-xs leading-6 text-stone-500">工具要求每次写入携带唯一 request_id，同一次操作重试保持编号和内容不变。更新账单携带 version，健康记录携带 updated_at，新健康记录使用 null。</dd></div>
+    <details class="mt-5 rounded-2xl border border-border">
+      <summary class="cursor-pointer px-4 py-3.5 text-sm font-semibold text-foreground">连不上或保存失败时</summary>
+      <dl class="grid gap-4 border-t border-border p-4 sm:grid-cols-2">
+        <div class="sm:col-span-2"><dt class="text-sm font-medium text-foreground">写入与重试</dt><dd class="mt-1 text-xs leading-6 text-muted-foreground">工具要求每次写入携带唯一 request_id，同一次操作重试保持编号和内容不变。更新账单携带 version，健康记录携带 updated_at，新健康记录使用 null。</dd></div>
         {troubleshooting.map((item) => (
-          <div><dt class="text-sm font-medium text-stone-900">{item.title}</dt><dd class="mt-1 text-xs leading-6 text-stone-500">{item.body}</dd></div>
+          <div><dt class="text-sm font-medium text-foreground">{item.title}</dt><dd class="mt-1 text-xs leading-6 text-muted-foreground">{item.body}</dd></div>
         ))}
       </dl>
     </details>

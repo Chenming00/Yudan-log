@@ -78,18 +78,18 @@ export function AddDialog({ open, onOpenChange, authToken, onAdded, onAuthorize 
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!locked && !submitting.current) onOpenChange(next); }}>
-      <DialogContent className={`w-[calc(100%-2rem)] max-w-md max-h-[90dvh] overflow-y-auto ${locked ? '[&>button:last-child]:hidden' : ''}`}>
-        <DialogHeader>
-          <DialogTitle>记一笔</DialogTitle>
+      <DialogContent className={`w-[calc(100%-2rem)] max-w-lg max-h-[90dvh] overflow-y-auto rounded-3xl ${locked ? '[&>button:last-child]:hidden' : ''}`}>
+        <DialogHeader className="border-b border-border pb-5 text-left">
+          <DialogTitle className="text-xl">记一笔</DialogTitle>
           <DialogDescription>记录商品和实付金额，方便以后查找。</DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="min-w-0 space-y-5">
           <fieldset disabled={locked} className="min-w-0 space-y-5">
-            <div className="space-y-1.5">
+            <div className="space-y-2 rounded-2xl bg-[#edf0e9] p-4">
               <Label htmlFor="add-amount">实付金额（元） *</Label>
               <Input id="add-amount" autoFocus type="number" min="0.01" step="0.01" inputMode="decimal" required
                 value={form.amount} onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
-                placeholder="0.00" className="h-14 text-3xl font-semibold text-expense" />
+                placeholder="0.00" className="h-14 border-0 bg-transparent px-0 text-3xl font-semibold text-primary shadow-none focus-visible:ring-0 sm:text-3xl" />
             </div>
             <TransactionFields form={form} onChange={setForm} />
           </fieldset>
@@ -97,7 +97,7 @@ export function AddDialog({ open, onOpenChange, authToken, onAdded, onAuthorize 
           {(needsAuth || !authToken) && <Button type="button" variant="outline" onClick={onAuthorize}>更新写入权限</Button>}
           <div className="flex gap-2">
             <Button type="button" variant="outline" disabled={locked} onClick={() => onOpenChange(false)} className="flex-1">取消</Button>
-            <Button type="submit" disabled={saving} className="flex-1 bg-expense text-expense-foreground hover:bg-expense/90">{saving ? '保存中...' : uncertain ? '重试确认保存' : '保存账单'}</Button>
+            <Button type="submit" disabled={saving} className="h-11 flex-1">{saving ? '保存中...' : uncertain ? '重试确认保存' : '保存账单'}</Button>
           </div>
         </form>
       </DialogContent>

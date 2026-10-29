@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, lazy, useState, useEffect, useCallback, useMemo } from "react";
-import { Settings, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Settings, Plus, ChevronLeft, ChevronRight, CalendarDays, LockKeyhole, WalletCards } from "lucide-react";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { isGitHubProvider, isOwnerEmail } from "@/lib/auth";
 import { getBrowserSupabaseClient } from "@/lib/supabase-browser";
@@ -37,24 +37,15 @@ interface LedgerPageProps {
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-4">
-      <Card className="p-6">
-        <Skeleton className="mb-3 h-3 w-16" />
-        <Skeleton className="mb-4 h-8 w-36" />
-        <Skeleton className="mb-4 h-px" />
-        <div className="flex justify-between">
-          <Skeleton className="h-3 w-10" />
-          <Skeleton className="h-4 w-20" />
-        </div>
-      </Card>
-      <Card className="p-5">
-        <Skeleton className="mb-4 h-3 w-20" />
-        <div className="grid grid-cols-7 gap-1">
-          {Array.from({ length: 35 }).map((_, i) => (
-            <Skeleton key={i} className="aspect-square" />
-          ))}
-        </div>
-      </Card>
+    <div aria-label="月度汇总加载中" className="space-y-5">
+      <div className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-[1.25fr_1fr_1fr]">
+        {[0, 1, 2].map((index) => <Card key={index} className={`gap-0 p-6 shadow-none ${index === 0 ? "col-span-2 xl:col-span-1" : ""}`}>
+          <Skeleton className="mb-5 h-4 w-20" />
+          <Skeleton className="mb-5 h-10 w-3/4" />
+          <Skeleton className="h-3 w-24" />
+        </Card>)}
+      </div>
+      <div className="grid gap-5 xl:grid-cols-[1.15fr_1fr]"><ChartSkeleton /><ChartSkeleton compact /></div>
     </div>
   );
 }
@@ -177,48 +168,52 @@ export default function LedgerPage({
   }, [reloadMonthly, reloadDetail]);
 
   return (
-    <main className="min-h-screen bg-background px-5 py-6" style={{ paddingBottom: "var(--nav-height)" }}>
-      <div className="mx-auto w-full max-w-2xl lg:max-w-4xl">
-        {/* 头部 */}
-        <div className="relative mb-4 pt-safe">
-          <div className="flex items-center justify-between py-2">
-            <div>
-              <h1 className="text-[26px] sm:text-3xl font-bold tracking-tight text-foreground">
-                🐟 鱼蛋小账本
-              </h1>
-              <p className="mt-1.5 text-sm text-muted-foreground">记录每一笔支出</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setSettingsOpen(true)}
-                className="bg-muted/60 text-muted-foreground"
-                aria-label="设置"
-                title={githubAuthorized ? "GitHub 已授权" : canManageTransactions ? "API Key 已授权" : "设置写入权限"}
-              >
-                <Settings className="h-[18px] w-[18px]" />
-              </Button>
-            </div>
+    <main className="page-shell">
+      <div className="w-full min-w-0">
+        <header className="mb-8 flex flex-wrap items-end justify-between gap-5">
+          <div>
+            <p className="page-eyebrow">LITTLE THINGS, EVERY DAY</p>
+            <h1 className="page-heading">鱼蛋小账本<span className="ml-3 inline-block h-2 w-2 rounded-full bg-[#d9aa78] align-middle" /></h1>
+            <p className="page-description">把每一份用心，记在生活里。</p>
           </div>
-        </div>
+          <div className="flex items-center gap-2.5">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setSettingsOpen(true)}
+              className="h-11 w-11 rounded-xl bg-card text-muted-foreground"
+              aria-label="设置"
+              title={githubAuthorized ? "GitHub 已授权" : canManageTransactions ? "API Key 已授权" : "设置写入权限"}
+            >
+              <Settings className="h-[18px] w-[18px]" />
+            </Button>
+            <Button
+              onClick={() => canManageTransactions ? setAddOpen(true) : setSettingsOpen(true)}
+              className="h-11 rounded-xl px-5"
+              aria-label={canManageTransactions ? "记一笔" : "需要登录或 API Key"}
+              title={canManageTransactions ? "记一笔" : "使用 GitHub 登录或填写 API Key 后记账"}
+            >
+              <Plus className="h-4 w-4" /> 记一笔
+            </Button>
+          </div>
+        </header>
 
         {storageNotice && <p role="status" className="mb-4 rounded-lg bg-muted p-3 text-sm text-muted-foreground">{storageNotice}</p>}
 
         {/* 视图切换 + 月份导航 */}
-        <div className="flex items-center justify-between mb-5">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-border pb-5">
           <Tabs value={activeView} onValueChange={(value) => setActiveView(value as "home" | "history")}>
-            <TabsList className="h-9 rounded-lg p-0.5">
-              <TabsTrigger value="home" className="h-8 rounded-md px-3 text-xs">
-                首页
+            <TabsList className="h-11 rounded-xl bg-[#e9ede4] p-1">
+              <TabsTrigger value="home" className="h-9 gap-2 rounded-lg px-4 text-sm">
+                <WalletCards className="h-4 w-4" /> 首页
               </TabsTrigger>
-              <TabsTrigger value="history" className="h-8 rounded-md px-3 text-xs">
-                历史
+              <TabsTrigger value="history" className="h-9 gap-2 rounded-lg px-4 text-sm">
+                <CalendarDays className="h-4 w-4" /> 历史
               </TabsTrigger>
             </TabsList>
           </Tabs>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 rounded-xl border border-border bg-card p-1">
             {!(activeView === "history" && viewAll) && (
               <>
                 <Button
@@ -250,7 +245,7 @@ export default function LedgerPage({
                 variant={viewAll ? "secondary" : "ghost"}
                 size="sm"
                 onClick={() => setViewAll((v) => !v)}
-                className={viewAll ? "h-8 bg-expense/10 text-xs text-expense" : "h-8 text-xs text-muted-foreground"}
+                className={viewAll ? "h-8 bg-primary/10 text-xs text-primary" : "h-8 text-xs text-muted-foreground"}
               >
                 {viewAll ? "按月" : "全部"}
               </Button>
@@ -261,11 +256,13 @@ export default function LedgerPage({
         {/* 内容区域 */}
         <div className="space-y-4">
           {activeView === "home" ? (
-              <div key={`home-${selectedMonth}`} className="space-y-4 animate-in fade-in-0 slide-in-from-right-2 duration-200">
+              <div key={`home-${selectedMonth}`} className="space-y-5">
                 {monthly.error && (
-                  <Card className="p-4" role="alert">
-                    <p className="text-sm text-destructive">{monthlyData ? "刷新失败：" : "月度汇总加载失败："}{monthly.error}</p>
-                    <Button variant="outline" size="sm" className="mt-3" onClick={reloadMonthly}>重试月度汇总</Button>
+                  <Card className="flex flex-col items-start gap-3 p-6 shadow-none sm:p-8" role="alert">
+                    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#f5eadc] text-[#a67c4e]"><WalletCards className="h-6 w-6" /></span>
+                    <h2 className="section-title">暂时没能翻开这个月的账本</h2>
+                    <p className="text-sm leading-6 text-muted-foreground">{monthlyData ? "刷新失败：" : "月度汇总加载失败："}{monthly.error}</p>
+                    <Button variant="outline" size="sm" className="mt-1" onClick={reloadMonthly}>重试月度汇总</Button>
                   </Card>
                 )}
                 {monthly.status === "loading" && monthlyData && <p role="status" className="text-xs text-muted-foreground">正在刷新月度汇总…</p>}
@@ -286,7 +283,7 @@ export default function LedgerPage({
                     <Suspense
                       fallback={
                         monthlyData.categoryBreakdown.length > 1 ? (
-                          <div className="grid gap-4 lg:grid-cols-2">
+                          <div className="grid min-w-0 gap-5 xl:grid-cols-[1.15fr_1fr]">
                             <ChartSkeleton />
                             <ChartSkeleton compact />
                           </div>
@@ -296,7 +293,7 @@ export default function LedgerPage({
                       }
                     >
                       {monthlyData.categoryBreakdown.length > 1 ? (
-                        <div className="grid gap-4 lg:grid-cols-2">
+                        <div className="grid min-w-0 gap-5 xl:grid-cols-[1.15fr_1fr]">
                           <TrendChart dailyExpenses={monthlyData.dailyExpenses} />
                           <CategoryBreakdown categoryBreakdown={monthlyData.categoryBreakdown} />
                         </div>
@@ -316,7 +313,7 @@ export default function LedgerPage({
                 )}
               </div>
             ) : (
-              <div key="history" className="animate-in fade-in-0 slide-in-from-bottom-2 duration-200">
+              <div key="history" className="surface-card min-w-0 p-4 sm:p-6">
                   <DetailList
                     transactions={detail.data?.data ?? []}
                     categories={detail.data?.categories ?? []}
@@ -343,28 +340,11 @@ export default function LedgerPage({
         </div>
       </div>
 
-      {/* 悬浮记账按钮 — 右下角，底部导航上方 */}
-      <div className="fixed right-5 bottom-[calc(var(--nav-height)+16px)] z-30 sm:right-8">
-        <Button
-          size="icon"
-          onClick={() => {
-            if (!canManageTransactions) {
-              setSettingsOpen(true);
-              return;
-            }
-            setAddOpen(true);
-          }}
-          className={`h-14 w-14 rounded-full shadow-lg hover:shadow-xl ${
-            canManageTransactions
-              ? "bg-expense text-expense-foreground"
-              : "bg-muted text-muted-foreground"
-          }`}
-          aria-label={canManageTransactions ? "记一笔" : "需要登录或 API Key"}
-          title={canManageTransactions ? "记一笔" : "使用 GitHub 登录或填写 API Key 后记账"}
-        >
-          <Plus className="h-6 w-6" />
-        </Button>
-      </div>
+      {!canManageTransactions && (
+        <p className="mt-6 flex items-center justify-center gap-2 text-xs leading-5 text-muted-foreground">
+          <LockKeyhole className="h-3.5 w-3.5 shrink-0" /> 当前为只读浏览，登录后就可以记录新的花费。
+        </p>
+      )}
 
       {/* 交易详情对话框 */}
       <TransactionDialog

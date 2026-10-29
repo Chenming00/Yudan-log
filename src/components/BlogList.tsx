@@ -1,8 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Calendar, Clock3, Search } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { ArrowRight, BookOpen, Clock3, Code2, Heart, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
 interface Post {
@@ -14,152 +12,120 @@ interface Post {
   tags: string[];
 }
 
-function getRelativeTime(dateStr: string): string {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+type JournalCategory = 'stories' | 'tech' | 'all';
+const technicalTags = new Set(['技术笔记', 'API 教程', '开发工具', '项目介绍', '产品日志', 'Markdown', 'AI', 'Next.js']);
+const isTechnicalPost = (post: Post) => post.tags.some((tag) => technicalTags.has(tag));
+const categories = [
+  { value: 'stories' as const, label: '成长故事', icon: Heart },
+  { value: 'tech' as const, label: '技术笔记', icon: Code2 },
+  { value: 'all' as const, label: '全部', icon: BookOpen },
+];
 
-  if (diffDays === 0) return '今天';
-  if (diffDays === 1) return '昨天';
-  if (diffDays < 7) return `${diffDays}天前`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}周前`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)}个月前`;
-  return `${Math.floor(diffDays / 365)}年前`;
+const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+
+function PostMeta({ post }: { post: Post }) {
+  return <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+    <time dateTime={post.date}>{post.date.replace(/-/g, '.')}</time>
+    <span className="flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" />{post.readingTime} 分钟阅读</span>
+  </div>;
 }
 
 export default function BlogList({ posts }: { posts: Post[] }) {
+  const [category, setCategory] = useState<JournalCategory>('stories');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-
-  const allTags = useMemo(() => {
-    const tagSet = new Set<string>();
-    posts.forEach((post) => post.tags.forEach((tag) => tagSet.add(tag)));
-    return Array.from(tagSet);
+  const counts = useMemo(() => {
+    const tech = posts.filter(isTechnicalPost).length;
+    return { stories: posts.length - tech, tech, all: posts.length };
   }, [posts]);
-
-  const filteredPosts = useMemo(() => {
-    let result = posts;
-
-    if (selectedTag) {
-      result = result.filter((post) => post.tags.includes(selectedTag));
-    }
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim();
-      result = result.filter(
-        (post) =>
-          post.title.toLowerCase().includes(query) ||
-          post.summary.toLowerCase().includes(query),
-      );
-    }
-
-    return result;
-  }, [posts, searchQuery, selectedTag]);
+  const categoryPosts = useMemo(() => posts.filter((post) => category === 'all' || isTechnicalPost(post) === (category === 'tech')), [posts, category]);
+  const allTags = useMemo(() => [...new Set(categoryPosts.flatMap((post) => post.tags))], [categoryPosts]);
+  const categoryLabel = categories.find((item) => item.value === category)!.label;
+  const filteredPosts = useMemo(() => categoryPosts.filter((post) => {
+    if (selectedTag && !post.tags.includes(selectedTag)) return false;
+    const query = searchQuery.toLowerCase().trim();
+    return !query || post.title.toLowerCase().includes(query) || post.summary.toLowerCase().includes(query);
+  }), [categoryPosts, searchQuery, selectedTag]);
+  const isFiltering = Boolean(selectedTag || searchQuery.trim());
+  const featured = !isFiltering ? filteredPosts[0] : undefined;
+  const remainingPosts = featured ? filteredPosts.slice(1) : filteredPosts;
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <header className="pt-safe pb-8">
-        <div className="relative py-4">
-          <h1 className="text-[26px] sm:text-3xl font-bold tracking-tight text-foreground">
-            🌱 成长 Log
-          </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">
-            用文字记录成长的每一步
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground/60">
-            共 {posts.length} 篇文章
-          </p>
+    <div>
+      <header className="mb-6 flex flex-wrap items-end justify-between gap-4 border-b border-border pb-6 sm:mb-8 sm:pb-8">
+        <div>
+          <p className="page-eyebrow">THE FAMILY JOURNAL</p>
+          <h1 className="page-heading">成长日志</h1>
+          <p className="page-description">把平凡的日子，写成值得珍藏的故事。</p>
+        </div>
+        <div className="flex items-center gap-3 text-primary sm:pb-1">
+          <span className="hidden h-12 w-12 place-items-center rounded-full border border-primary/20 sm:grid"><BookOpen className="h-5 w-5" strokeWidth={1.4} /></span>
+          <div><span className="text-lg font-medium tabular-nums sm:text-2xl">{posts.length}</span><span className="ml-2 text-xs text-muted-foreground">篇记录</span><p className="mt-0.5 hidden text-[10px] tracking-[0.14em] text-muted-foreground sm:block">LITTLE MOMENTS, BIG MEMORIES</p></div>
         </div>
       </header>
 
-      {allTags.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          <Button
-            size="sm"
-            variant={selectedTag === null ? 'default' : 'secondary'}
-            onClick={() => setSelectedTag(null)}
-            className="rounded-full"
-          >
-            全部
-          </Button>
-          {allTags.map((tag) => (
-            <Button
-              key={tag}
-              size="sm"
-              variant={selectedTag === tag ? 'default' : 'secondary'}
-              onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-              className="rounded-full"
-            >
-              {tag}
-            </Button>
-          ))}
-        </div>
-      )}
-
-      <div className="mb-8">
-        <div className="relative group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-          <Input
-            type="text"
-            placeholder="搜索文章..."
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            className="h-12 pl-12 pr-5 text-base shadow-sm"
-          />
+      <div className="mb-5 flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
+        <nav aria-label="日志分类" className="flex w-full gap-1 rounded-2xl bg-secondary p-1 sm:w-fit">
+          {categories.map(({ value, label, icon: Icon }) => <button
+            key={value}
+            type="button"
+            aria-label={label}
+            aria-pressed={category === value}
+            onClick={() => { setCategory(value); setSelectedTag(null); }}
+            className={`flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl px-3 text-xs font-medium transition-colors sm:flex-none sm:gap-2 sm:px-5 sm:text-sm ${category === value ? 'bg-card text-primary shadow-sm' : 'text-muted-foreground hover:text-primary'}`}
+          ><Icon className="hidden h-4 w-4 shrink-0 min-[380px]:block" /><span className="whitespace-nowrap">{label}</span><span className={`text-[10px] tabular-nums ${category === value ? 'text-primary/70' : 'text-muted-foreground/75'}`}>{counts[value]}</span></button>)}
+        </nav>
+        <div className="relative lg:w-64">
+          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input type="search" aria-label="搜索文章" placeholder={category === 'all' ? '搜索全部文章…' : `在${categoryLabel}中搜索…`} value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} className="h-11 rounded-xl border-border bg-card pl-10 pr-10 text-sm shadow-none" />
+          {searchQuery && <button type="button" aria-label="清除搜索" onClick={() => setSearchQuery('')} className="absolute right-1.5 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground hover:bg-secondary"><X className="h-3.5 w-3.5" /></button>}
         </div>
       </div>
+      <p className="mb-5 text-xs leading-6 text-muted-foreground" aria-live="polite">{category === 'stories' ? '宝宝的成长、家庭的日常，还有那些值得珍藏的小事。' : category === 'tech' ? '小站的开发记录、工具心得与使用指南。' : '成长故事与技术笔记，都收在这里。'}</p>
 
-      {filteredPosts.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {filteredPosts.map((post) => (
-            <a key={post.slug} href={`/blog/${post.slug}`}>
-              <Card className="group relative h-full cursor-pointer p-5 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99]">
-                <h2 className="text-base sm:text-lg font-semibold text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-                  {post.title}
-                </h2>
-                <p className="mt-2.5 text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                  {post.summary}
-                </p>
-
-                {post.tags.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {post.tags.slice(0, 3).map((tag) => (
-                      <Badge
-                        key={tag}
-                        variant="secondary"
-                        className="bg-primary/10 text-[11px] text-primary"
-                      >
-                        {tag}
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-
-                <div className="mt-4 flex items-center gap-4 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span>{getRelativeTime(post.date)}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Clock3 className="h-3.5 w-3.5" />
-                    <span>{post.readingTime} 分钟</span>
-                  </div>
-                </div>
-              </Card>
-            </a>
-          ))}
+      {featured && <a href={`/blog/${featured.slug}`} className="group mb-9 grid overflow-hidden rounded-[24px] border border-border bg-card transition-colors hover:border-primary/35 md:grid-cols-[1fr_240px]">
+        <div className="flex flex-col items-start p-6 sm:p-8">
+          <span className="mb-5 inline-flex items-center gap-2 text-[11px] font-semibold tracking-[0.12em] text-primary"><span className="h-1.5 w-1.5 rounded-full bg-primary" />{category === 'tech' ? '最新笔记 · LATEST NOTE' : category === 'all' ? '最新一篇 · LATEST ENTRY' : '最新故事 · LATEST STORY'}</span>
+          <h2 className="text-2xl font-semibold leading-snug tracking-tight text-foreground transition-colors group-hover:text-primary sm:text-3xl">{featured.title}</h2>
+          <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground line-clamp-3">{featured.summary}</p>
+          <div className="mt-7 flex w-full flex-wrap items-center justify-between gap-5">
+            <PostMeta post={featured} />
+            <span className="inline-flex items-center gap-2 text-sm font-medium text-primary">翻开这一篇<ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" /></span>
+          </div>
         </div>
-      ) : (
-        <div className="mt-10 rounded-2xl bg-card border border-dashed border-border/50 p-10 text-center">
-          <p className="font-medium text-foreground text-sm">
-            {searchQuery || selectedTag ? '没有找到匹配的文章' : '还没有文章'}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {searchQuery || selectedTag ? '试试换个关键词或标签' : '去写第一篇成长日志吧'}
-          </p>
+        <div className="relative hidden flex-col justify-between border-l border-border bg-[#eee7d9] p-8 text-[#766346] md:flex" aria-hidden="true">
+          <span className="text-[11px] tracking-[0.18em]">A PAGE OF OUR LIFE</span>
+          <div><p className="font-serif text-[88px] leading-none tracking-[-0.06em]">{featured.date.slice(8, 10)}</p><p className="mt-2 border-t border-[#766346]/20 pt-3 text-sm tracking-[0.2em]">{months[Number(featured.date.slice(5, 7)) - 1]} / {featured.date.slice(0, 4)}</p></div>
+          <span className="mt-6 text-xs">{featured.tags[0] || '生活记录'}</span>
         </div>
-      )}
+      </a>}
+
+      <section aria-label="浏览成长日志">
+        <div className="mb-5 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-3"><h2 className="section-title">{isFiltering ? '查找结果' : category === 'stories' ? '成长故事' : category === 'tech' ? '技术笔记' : '全部记录'}</h2><span className="rounded-full bg-secondary px-2.5 py-1 text-xs text-muted-foreground" aria-live="polite">{filteredPosts.length} 篇</span></div>
+        </div>
+        {allTags.length > 0 && <div className="mb-6 flex gap-2 overflow-x-auto pb-2 scrollbar-hide" aria-label="按标签筛选">
+          {[null, ...allTags].map((tag) => <button key={tag || 'all'} type="button" onClick={() => setSelectedTag(tag === selectedTag ? null : tag)} aria-pressed={selectedTag === tag} className={`shrink-0 rounded-full border px-3.5 py-2 text-xs font-medium transition-colors ${selectedTag === tag ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-transparent text-muted-foreground hover:border-primary/40 hover:text-primary'}`}>{tag || '全部标签'}</button>)}
+        </div>}
+
+        {filteredPosts.length > 0 ? <div className="grid gap-x-7 sm:grid-cols-2">
+          {remainingPosts.map((post, index) => <a key={post.slug} href={`/blog/${post.slug}`} className="group flex flex-col border-t border-border py-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <span className="text-[11px] font-medium text-primary">{post.tags[0] || '生活记录'}</span>
+              <span className="font-mono text-[10px] text-muted-foreground/65">{String(index + (featured ? 2 : 1)).padStart(2, '0')}</span>
+            </div>
+            <h3 className="text-lg font-semibold leading-relaxed tracking-tight text-foreground transition-colors group-hover:text-primary line-clamp-2">{post.title}</h3>
+            <p className="mt-3 mb-6 text-sm leading-7 text-muted-foreground line-clamp-2">{post.summary}</p>
+            <div className="mt-auto flex items-center justify-between gap-2"><PostMeta post={post} /><ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" /></div>
+          </a>)}
+        </div> : <div className="rounded-2xl border border-dashed border-border bg-card px-6 py-14 text-center">
+          <BookOpen className="mx-auto mb-4 h-8 w-8 text-primary/45" strokeWidth={1.3} />
+          <p className="font-medium text-foreground">{isFiltering ? '没有找到匹配的文章' : '故事，正要开始'}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{isFiltering ? `试试另一个关键词，或清除${category === 'all' ? '当前' : categoryLabel + '的'}筛选。` : '第一篇成长日志，值得慢慢写。'}</p>
+          {isFiltering && <Button variant="outline" className="mt-5" onClick={() => { setSearchQuery(''); setSelectedTag(null); }}><X className="h-4 w-4" />清除筛选</Button>}
+        </div>}
+      </section>
+      <p className="mt-10 border-t border-border pt-6 text-center text-xs tracking-wide text-muted-foreground">日子很长，值得一页一页记下来。</p>
     </div>
   );
 }

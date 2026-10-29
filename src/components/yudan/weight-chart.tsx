@@ -78,29 +78,24 @@ export default function WeightChart({ data, id }: WeightChartProps) {
 
   return (
     <svg
+      id={`${id}-chart`}
       className="h-full w-full touch-manipulation"
       viewBox={`0 0 ${width} ${height}`}
       role="group"
       aria-label="体重趋势图，点按图表可查看最近数据点的日期和体重"
       onClick={handleChartClick}
     >
-      <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="5%" stopColor="#0284c7" stopOpacity="0.24" />
-          <stop offset="95%" stopColor="#0284c7" stopOpacity="0.02" />
-        </linearGradient>
-      </defs>
       {gridValues.map((value) => {
         const gridY = y(value);
         return (
           <g key={value}>
-            <line x1={padding.left} x2={padding.left + plotWidth} y1={gridY} y2={gridY} stroke="#e7e5e4" strokeDasharray="4 4" />
-            <text x={padding.left - 9} y={gridY + 4} textAnchor="end" fontSize="11" fill="#78716c">{value.toFixed(1)}</text>
+            <line x1={padding.left} x2={padding.left + plotWidth} y1={gridY} y2={gridY} stroke="#e6ebe0" strokeDasharray="4 4" />
+            <text x={padding.left - 9} y={gridY + 4} textAnchor="end" fontSize="11" fill="#82917b">{value.toFixed(1)}</text>
           </g>
         );
       })}
-      <polygon points={areaPoints} fill={`url(#${id})`} />
-      <polyline points={points} fill="none" stroke="#0284c7" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      <polygon points={areaPoints} fill="#edf3e7" />
+      <polyline points={points} fill="none" stroke="#527a54" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
       {data.map((item, index) => (
         <g key={`${item.date}-${item.weight}`}>
           <circle
@@ -123,7 +118,7 @@ export default function WeightChart({ data, id }: WeightChartProps) {
             cy={y(item.weight)}
             r={activeIndex === index ? "5" : "3.5"}
             fill="#ffffff"
-            stroke="#0284c7"
+            stroke="#527a54"
             strokeWidth={activeIndex === index ? "3" : "2"}
             vectorEffect="non-scaling-stroke"
             pointerEvents="none"
@@ -137,7 +132,7 @@ export default function WeightChart({ data, id }: WeightChartProps) {
             x2={activeX}
             y1={activeY + 8}
             y2={padding.top + plotHeight}
-            stroke="#7dd3fc"
+            stroke="#9aaf87"
             strokeWidth="1"
             strokeDasharray="3 4"
           />
@@ -147,9 +142,9 @@ export default function WeightChart({ data, id }: WeightChartProps) {
             width={tooltipWidth}
             height={tooltipHeight}
             rx="10"
-            fill="#0c4a6e"
+            fill="#315b46"
           />
-          <text x={tooltipX + 12} y={tooltipY + 20} fontSize="11" fill="#bae6fd">
+          <text x={tooltipX + 12} y={tooltipY + 20} fontSize="11" fill="#d4e2cd">
             {activeItem.date}
           </text>
           <text x={tooltipX + 12} y={tooltipY + 40} fontSize="14" fontWeight="700" fill="#ffffff">
@@ -158,7 +153,7 @@ export default function WeightChart({ data, id }: WeightChartProps) {
         </g>
       )}
       {labelIndexes.map((index) => (
-        <text key={data[index].date} x={x(index)} y={height - 10} textAnchor={index === 0 ? "start" : index === data.length - 1 ? "end" : "middle"} fontSize="11" fill="#78716c">
+        <text key={data[index].date} x={x(index)} y={height - 10} textAnchor={index === 0 ? "start" : index === data.length - 1 ? "end" : "middle"} fontSize="11" fill="#82917b">
           {data[index].date.slice(5)}
         </text>
       ))}

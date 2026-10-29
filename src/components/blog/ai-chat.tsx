@@ -126,15 +126,15 @@ export function AiChat({ slug }: { slug: string }) {
   };
 
   return (
-    <div className="mt-12 sm:mt-16 pt-8 sm:pt-10 border-t border-border/40 max-w-full sm:max-w-3xl">
-      <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} aria-controls={`article-chat-${slug}`} className="px-0 hover:bg-transparent hover:text-primary">
+    <div className="mt-10 rounded-2xl border border-border bg-background/60 p-4 sm:p-5">
+      <Button variant="ghost" size="sm" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} aria-controls={`article-chat-${slug}`} className="h-auto w-full justify-between px-0 py-1 text-foreground hover:bg-transparent hover:text-primary">
         <MessageCircle className="h-4 w-4" />文章问答
         {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
       </Button>
       {expanded && (
-        <Card id={`article-chat-${slug}`} className="mt-4 p-4 sm:p-5">
+        <Card id={`article-chat-${slug}`} className="mt-4 border-0 bg-transparent p-0 shadow-none">
           <div className="space-y-3 mb-4 max-h-96 overflow-y-auto" aria-label="文章问答记录" role="log" aria-live="polite" aria-busy={loading}>
-            {messages.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">对文章内容有疑问？在这里向 AI 提问</p>}
+            {messages.length === 0 && <p className="text-sm text-muted-foreground py-6 text-center">关于这一篇，还有想了解的？在这里向 AI 提问。</p>}
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[85%] break-words rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted/80 text-foreground'}`}>

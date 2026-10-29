@@ -124,3 +124,37 @@ test('failed monthly requests show an error and can be retried', async ({ page }
   await expect(page.getByText('本月支出', { exact: true })).toBeVisible();
   await expect(page.getByText('¥209.00', { exact: true })).toBeVisible();
 });
+
+for (const width of [360, 1440]) {
+  test(`ledger overview and daily dialog fit a ${width}px viewport`, async ({ page }, testInfo) => {
+    await page.setViewportSize({ width, height: 960 });
+    await installReadFixtures(page);
+    await page.route('**/api/monthly?**', (route) => {
+      const result = summary(9);
+      result.data.totalExpense = 2269;
+      result.data.categoryBreakdown = [
+        { category: '喂养用品', amount: 1269, count: 20 },
+        { category: '日常护理', amount: 600, count: 10 },
+        { category: '玩具绘本', amount: 400, count: 6 },
+      ];
+      result.data.calendarData = { 1: 209, 7: 600, 12: 860, 18: 200, 22: 400 };
+      result.data.dailyExpenses = result.data.dailyExpenses.map((day, index) => ({ ...day, amount: result.data.calendarData[index + 1] || 0 }));
+      return route.fulfill({ json: result });
+    });
+    await page.route('**/api/daily?**', (route) => route.fulfill({ json: { success: true, data: [rows[0]], hasMore: false, nextCursor: null } }));
+    await page.goto('/ledger');
+    await expect(page.getByRole('paragraph').filter({ hasText: /^支出分类$/ })).toBeVisible();
+    await expect(page.getByText('¥2,269.00', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '支出日历' })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`ledger-overview-${width}.png`), fullPage: true });
+    await page.getByRole('button', { name: '2026年9月1日，支出209元', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText('测试品牌 · 日常用品0', { exact: true })).toBeVisible();
+    const bounds = await dialog.boundingBox();
+    expect(bounds.x).toBeGreaterThanOrEqual(0);
+    expect(bounds.x + bounds.width).toBeLessThanOrEqual(width);
+    await page.getByRole('button', { name: 'Close', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+  });
+}
