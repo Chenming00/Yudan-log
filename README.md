@@ -44,10 +44,10 @@
 - 复用 `API_KEY` 认证，所有工具均需 `Authorization: Bearer <API_KEY>`
 - 提供账单查询、月度汇总、新增/编辑/删除账单，以及健康档案、疫苗计划、儿保安排和体重/接种登记共 10 个工具
 - 写入复用现有 API 校验、幂等回执和并发版本检查，不需要额外数据库迁移
-- 在[关于页的 MCP 指南](https://cost.ykn.cm/about#mcp)查看 Cursor、Claude Code 配置、对话示例和排错说明；本地指南在 `http://localhost:4321/about#mcp`
+- 在独立的 [MCP 接入指南](https://cost.ykn.cm/mcp)查看 Cursor、Claude Code 配置、对话示例和排错说明；本地指南在 `http://localhost:4321/mcp`。原 `/about#mcp` 入口保留并指向新页面。
 - 当前为固定 API Key 接入，客户端需要支持自定义 HTTP 请求头；尚未提供 OAuth
 
-部署时沿用本文的环境变量与数据库迁移步骤即可。本地启动后，MCP 地址是 `http://localhost:4321/api/mcp`；部署后的地址使用对应域名。直接用浏览器打开端点不会建立 MCP 连接。
+正式 MCP 连接地址是 `https://cost.ykn.cm/api/mcp`，介绍页中的复制按钮和客户端配置均使用此地址。部署时沿用本文的环境变量与数据库迁移步骤即可；开发者调试本地服务时，可手动将连接地址改为 `http://localhost:4321/api/mcp`。直接用浏览器打开端点不会建立 MCP 连接，浏览使用说明请访问 `/mcp`。
 
 ## 权限模型
 

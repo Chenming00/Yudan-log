@@ -1,9 +1,9 @@
 ---
-import { Bot, CheckCircle2, Copy, PlugZap } from 'lucide-react';
+import { ArrowDown, ArrowRight, Bot, CheckCircle2, Copy, PlugZap } from 'lucide-react';
 import { MCP_EXAMPLES, MCP_TOOLS } from '../lib/mcp-guide';
 import '../styles/code.css';
 
-const endpoint = new URL('/api/mcp', Astro.url.origin).href;
+const endpoint = 'https://cost.ykn.cm/api/mcp';
 const cursorConfig = JSON.stringify({
   mcpServers: {
     'yudan-log': { url: endpoint, headers: { Authorization: 'Bearer YOUR_API_KEY' } },
@@ -11,8 +11,8 @@ const cursorConfig = JSON.stringify({
 }, null, 2);
 const claudeCommand = `claude mcp add --transport http --scope user --header "Authorization: Bearer YOUR_API_KEY" yudan-log ${endpoint}`;
 const troubleshooting = [
-  { title: '401 · Key 不正确', body: '检查是否已将 YOUR_API_KEY 替换为维护者提供的 API Key，并保留 Bearer 后面的空格。服务端也需要配置 API_KEY。' },
-  { title: '405 · 浏览器直接打开', body: '这是 MCP 端点，需要用 Streamable HTTP 客户端发送 POST 请求。直接在浏览器打开地址会返回 405，这是正常行为。' },
+  { title: '401 · Key 未提供或不正确', body: '检查是否已将 YOUR_API_KEY 替换为维护者提供的 API Key，并保留 Bearer 后面的空格。浏览器地址栏通常不会附带 Authorization 请求头，直接打开接口通常先返回 401。服务端也需要配置 API_KEY。' },
+  { title: '405 · 请求方法不支持', body: '通过 Key 鉴权后，非 POST 请求会返回 405。请使用支持 Streamable HTTP 的 MCP 客户端连接；服务端会先验证 Key，再检查请求方法。' },
   { title: '409 · 记录已经变化', body: '重新查询当前记录，让 AI 展示差异，确认后再保存。不要让 AI 自动用新版本覆盖。' },
   { title: '500 / 503 · 服务未就绪', body: '请维护者检查 Supabase 服务端配置和数据库迁移。写入结果不明确时，保留原请求编号重试，避免重复记账。' },
 ];
@@ -37,20 +37,25 @@ const troubleshooting = [
     </p>
     <div class="mt-5 flex min-w-0 items-start gap-3 rounded-2xl bg-card/80 p-4 sm:items-center">
       <div class="min-w-0 flex-1">
-        <p class="text-xs font-medium text-muted-foreground">当前站点的 MCP 地址</p>
+        <p class="text-xs font-medium text-muted-foreground">正式 MCP 连接地址</p>
         <code id="mcp-endpoint" class="mt-1 block break-all text-sm font-semibold text-foreground">{endpoint}</code>
       </div>
       <button type="button" data-mcp-copy="mcp-endpoint" aria-label="复制 MCP 地址" class="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-primary px-3 text-xs font-semibold text-white transition hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
-        <Copy className="h-3.5 w-3.5" />复制
+        <Copy className="h-3.5 w-3.5" /><span data-copy-label>复制地址</span>
       </button>
     </div>
     <p class="mt-3 text-xs leading-6 text-primary/80">
-      本地调试使用本地地址；部署后使用部署域名下的 /api/mcp。所有工具都需要 Key，真实健康记录只在通过认证后返回。
+      当前 <code class="font-mono">/mcp</code> 页面用于阅读指南；配置 AI 客户端时，填写上方以 <code class="font-mono">/api/mcp</code> 结尾的正式连接地址。所有工具都需要 API Key，真实健康记录只在通过认证后返回。
     </p>
+    <div class="mt-5 flex flex-wrap items-center gap-3">
+      <a href="#quick-start" class="inline-flex h-11 items-center gap-2 rounded-xl bg-primary px-4 text-xs font-medium text-primary-foreground transition hover:bg-primary/90">快速开始<ArrowDown className="h-3.5 w-3.5" /></a>
+      <a href="#mcp-tools" class="inline-flex h-11 items-center gap-2 rounded-xl px-3 text-xs font-medium text-primary transition hover:bg-white/60">查看 {Object.keys(MCP_TOOLS).length} 个工具<ArrowRight className="h-3.5 w-3.5" /></a>
+    </div>
+    <p id="mcp-copy-status" role="status" aria-live="polite" class="mt-2 min-h-5 text-xs text-primary"></p>
   </div>
 
   <div class="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-    <div class="min-w-0 rounded-[22px] border border-border bg-card p-5 sm:p-7">
+    <div id="quick-start" class="min-w-0 scroll-mt-28 rounded-[22px] border border-border bg-card p-5 sm:p-7">
       <p class="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Getting started</p>
       <h3 class="mt-1 text-xl font-semibold tracking-tight text-foreground">三步开始使用</h3>
       <ol class="mt-5 space-y-5 text-sm leading-7 text-muted-foreground">
@@ -64,7 +69,7 @@ const troubleshooting = [
         <div class="min-w-0 border-t border-border px-4 pb-4">
           <p class="mt-3 text-xs leading-6 text-muted-foreground">合并到个人配置 ~/.cursor/mcp.json 的 mcpServers 中，保存后在 MCP 设置里启用服务。</p>
           <div class="code-block">
-            <div class="code-toolbar"><span class="code-language">JSON</span><button type="button" data-mcp-copy="mcp-cursor-config" class="code-copy"><Copy className="h-3.5 w-3.5" />复制配置</button></div>
+            <div class="code-toolbar"><span class="code-language">JSON</span><button type="button" data-mcp-copy="mcp-cursor-config" aria-label="复制配置" class="code-copy"><Copy className="h-3.5 w-3.5" /><span data-copy-label>复制配置</span></button></div>
             <pre class="code-content" tabindex="0" aria-label="Cursor MCP 配置"><code id="mcp-cursor-config">{cursorConfig}</code></pre>
           </div>
           <a href="https://cursor.com/docs/mcp" target="_blank" rel="noopener noreferrer" class="mt-3 inline-block text-xs font-medium text-primary underline underline-offset-4">Cursor 官方 MCP 文档 ↗</a>
@@ -76,14 +81,13 @@ const troubleshooting = [
         <div class="min-w-0 border-t border-border px-4 pb-4">
           <p class="mt-3 text-xs leading-6 text-muted-foreground">替换 Key 后在终端运行，在 Claude Code 内用 /mcp 查看连接状态。该命令会保存到当前用户的 MCP 配置。</p>
           <div class="code-block">
-            <div class="code-toolbar"><span class="code-language">Shell</span><button type="button" data-mcp-copy="mcp-claude-command" class="code-copy"><Copy className="h-3.5 w-3.5" />复制命令</button></div>
+            <div class="code-toolbar"><span class="code-language">Shell</span><button type="button" data-mcp-copy="mcp-claude-command" aria-label="复制命令" class="code-copy"><Copy className="h-3.5 w-3.5" /><span data-copy-label>复制命令</span></button></div>
             <pre class="code-content" tabindex="0" aria-label="Claude Code MCP 命令"><code id="mcp-claude-command">{claudeCommand}</code></pre>
           </div>
           <a href="https://code.claude.com/docs/en/mcp" target="_blank" rel="noopener noreferrer" class="mt-3 inline-block text-xs font-medium text-primary underline underline-offset-4">Claude Code 官方 MCP 文档 ↗</a>
         </div>
       </details>
       <p class="mt-4 text-xs leading-6 text-muted-foreground">其他客户端需要支持 Streamable HTTP 和自定义 Authorization 请求头。本接口使用固定 API Key，暂未提供 OAuth 登录。</p>
-      <p id="mcp-copy-status" role="status" aria-live="polite" class="mt-2 min-h-5 text-xs text-primary"></p>
     </div>
 
     <div class="min-w-0 rounded-[22px] border border-[#e8dfcf] bg-[#f2ece1] p-5 sm:p-7">
@@ -103,7 +107,7 @@ const troubleshooting = [
     </div>
   </div>
 
-  <div class="rounded-[22px] border border-border bg-card p-5 sm:p-7">
+  <div id="mcp-tools" class="scroll-mt-28 rounded-[22px] border border-border bg-card p-5 sm:p-7">
     <p class="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Your toolkit</p>
     <h3 class="mt-1 text-xl font-semibold tracking-tight text-foreground">可用的 {Object.keys(MCP_TOOLS).length} 个工具</h3>
     <div class="mt-4 grid gap-x-7 sm:grid-cols-2">
@@ -132,16 +136,29 @@ const troubleshooting = [
 
 <script>
   document.querySelectorAll<HTMLButtonElement>('[data-mcp-copy]').forEach((button) => {
+    const label = button.querySelector<HTMLElement>('[data-copy-label]');
+    const originalLabel = label?.textContent || '';
+    let resetTimer: ReturnType<typeof setTimeout> | undefined;
     button.addEventListener('click', async () => {
+      clearTimeout(resetTimer);
       const target = document.getElementById(button.dataset.mcpCopy || '');
       const status = document.getElementById('mcp-copy-status');
       if (!target || !status) return;
+      status.textContent = '';
       try {
         await navigator.clipboard.writeText(target.textContent || '');
+        button.dataset.state = 'copied';
+        if (label) label.textContent = '已复制';
         status.textContent = '已复制，请在客户端中粘贴。';
       } catch {
-        status.textContent = '复制失败，请手动选择上方内容复制。';
+        button.dataset.state = 'error';
+        if (label) label.textContent = '复制失败';
+        status.textContent = '复制失败，请手动选择对应内容复制。';
       }
+      resetTimer = setTimeout(() => {
+        delete button.dataset.state;
+        if (label) label.textContent = originalLabel;
+      }, 2500);
     });
   });
 </script>

@@ -312,11 +312,11 @@ export default function YudanDashboard({
                 <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
                   <section className="min-w-0 rounded-[22px] border border-border bg-white p-5 sm:p-6">
                     <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div><h2 className="section-title">体重成长曲线</h2><p className="mt-1.5 text-xs text-muted-foreground">每一次测量，都串起成长的轨迹</p></div>
+                      <div><h2 className="section-title">体重成长曲线</h2><p className="mt-1.5 text-xs text-muted-foreground">实测体重与同龄男童标准对照</p></div>
                       {canEdit ? <Button onClick={() => setWeightDialogOpen(true)}><Plus className="h-4 w-4" />记录体重</Button> : <Button variant="outline" onClick={() => void handleLogin()}><CircleUserRound className="h-4 w-4" />登录后记录</Button>}
                     </div>
-                    <div className="mt-6 h-56 sm:h-72">{chartData.length ? <WeightChart data={chartData} id="healthWeight" /> : <EmptyState text="还没有体重记录" />}</div>
-                    <p className="mt-3 flex items-center gap-2 text-xs text-muted-foreground"><span className="h-2 w-2 rounded-full bg-primary" />体重（kg）<span className="ml-auto">共 {sortedGrowth.length} 次测量</span></p>
+                    <div className="mt-6">{chartData.length ? <WeightChart data={chartData} birthday={data.birthday} id="healthWeight" /> : <EmptyState text="还没有体重记录" />}</div>
+                    <p className="mt-3 text-right text-xs text-muted-foreground">共 {sortedGrowth.length} 次测量</p>
                   </section>
                   <section className="rounded-[22px] border border-[#dce5d4] bg-[#edf2e7] p-5 sm:p-6">
                     <div className="flex items-center gap-2 text-xs font-medium text-[#66775a]"><Weight className="h-4 w-4" />最新体重</div>
@@ -471,10 +471,10 @@ function DashboardLayout({
       <section className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
         <section className="min-w-0 rounded-[22px] border border-border bg-white p-5 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div><h2 className="section-title">一点一滴，长大的轨迹</h2><p className="mt-1.5 text-xs text-muted-foreground">体重成长曲线 · 点按数据点查看测量详情</p></div>
+            <div><h2 className="section-title">一点一滴，长大的轨迹</h2><p className="mt-1.5 text-xs text-muted-foreground">体重成长曲线 · 对照 WHO 与中国 WS/T 标准</p></div>
             <a href="/health?tab=weight" className="inline-flex items-center gap-1.5 text-xs font-medium text-primary hover:underline">完整档案 <ArrowRight className="h-3.5 w-3.5" /></a>
           </div>
-          <div className="mt-6 h-52 sm:h-64">{chartData.length ? <WeightChart data={chartData} id="dashboardWeight" /> : <EmptyState text="记录第一次体重后，这里会出现成长曲线" />}</div>
+          <div className="mt-6">{chartData.length ? <WeightChart data={chartData} birthday={birthday} id="dashboardWeight" /> : <EmptyState text="记录第一次体重后，这里会出现成长曲线" />}</div>
           {weightAssessments.length > 0 && <WeightStandardComparison assessments={weightAssessments} />}
         </section>
 
@@ -635,7 +635,7 @@ function WeightStandardComparison({
               <p className="text-xl font-semibold text-foreground">{assessment.percentileLabel}</p>
               <p className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium", assessment.position.includes("低于") || assessment.position === "下" ? "bg-rose-50 text-rose-700" : assessment.position.includes("高于") || assessment.position === "上" ? "bg-amber-50 text-amber-700" : "bg-[#eaf0e2] text-primary")}>{assessment.position}</p>
             </div>
-            <p className="mt-1 text-[11px] leading-5 text-muted-foreground">参考范围 {assessment.low.toFixed(1)}–{assessment.high.toFixed(1)} kg · 中位 {assessment.median.toFixed(1)} kg</p>
+            <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{assessment.source === 'WHO' ? '±2 SD 范围' : 'P3–P97 范围'} {assessment.low.toFixed(1)}–{assessment.high.toFixed(1)} kg · 中位 {assessment.median.toFixed(1)} kg</p>
           </div>
         ))}
       </div>

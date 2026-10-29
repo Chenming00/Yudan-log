@@ -1,4 +1,11 @@
-import whoMaleWeightRows from "@/src/data/who-wfa-boys-0-2.json";
+import whoMaleWeightRows from "../data/who-wfa-boys-0-2.json";
+
+/** Weight in kilograms at the named percentiles. */
+export type WeightReference = {
+  p3: number;
+  p50: number;
+  p97: number;
+};
 
 export type WeightAssessment = {
   source: "WHO" | "CN";
@@ -64,13 +71,21 @@ const CHINA_MALE_WEIGHT: ChinaWeightRow[] = [
 
 const PERCENTILES = [3, 10, 25, 50, 75, 90, 97];
 
-function parseDate(value: string) {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day));
+function parseDate(value: string): number | null {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  const timestamp = date.getTime();
+  // Date normalizes impossible dates such as 2026-02-29; reject that rollover.
+  return Number.isFinite(timestamp) && date.toISOString().slice(0, 10) === value
+    ? timestamp
+    : null;
 }
 
-function ageInDays(birthday: string, measuredAt: string) {
-  return Math.floor((parseDate(measuredAt).getTime() - parseDate(birthday).getTime()) / 86_400_000);
+function ageInDays(birthday: string, measuredAt: string): number | null {
+  const birth = parseDate(birthday);
+  const measurement = parseDate(measuredAt);
+  if (birth === null || measurement === null) return null;
+  return Math.floor((measurement - birth) / 86_400_000);
 }
 
 function normalCdf(z: number) {
@@ -87,12 +102,13 @@ function percentileLabel(percentile: number) {
   return `P${Math.round(percentile)}`;
 }
 
-function whoPosition(percentile: number) {
-  if (percentile < 2.3) return "低于参考区间";
+function whoPosition(percentile: number, weight: number, low: number, high: number) {
+  // Match the displayed ±2 SD bounds, which the source table rounds to 0.001 kg.
+  if (weight < low) return "低于参考区间";
+  if (weight > high) return "高于参考区间";
   if (percentile < 15.9) return "偏低位置";
   if (percentile <= 84.1) return "中间位置";
-  if (percentile <= 97.7) return "偏高位置";
-  return "高于参考区间";
+  return "偏高位置";
 }
 
 function chinaPosition(percentile: number) {
@@ -118,7 +134,7 @@ function interpolatePercentile(weight: number, values: number[]) {
 }
 
 function getChinaRow(ageMonths: number) {
-  if (ageMonths < 0 || ageMonths > 81) return null;
+  if (!Number.isFinite(ageMonths) || ageMonths < 0 || ageMonths > 81) return null;
   const nextIndex = CHINA_MALE_WEIGHT.findIndex((row) => row[0] >= ageMonths);
   if (nextIndex <= 0) return CHINA_MALE_WEIGHT[0];
   const next = CHINA_MALE_WEIGHT[nextIndex];
@@ -131,9 +147,45 @@ function getChinaRow(ageMonths: number) {
   ] as ChinaWeightRow;
 }
 
+const WHO_P97_Z = 1.8807936081512509;
+
+function weightFromLms(l: number, m: number, s: number, z: number) {
+  return Math.abs(l) < 0.000001
+    ? m * Math.exp(s * z)
+    : m * Math.pow(1 + l * s * z, 1 / l);
+}
+
+/**
+ * Male weight-for-age chart references, in kg. Dates must be real YYYY-MM-DD
+ * calendar dates. Invalid dates and dates before birth have no references.
+ * Each source independently returns null outside the locally available data.
+ *
+ * WHO: daily LMS, with P3/P97 from z = ±1.8807936081512509 and P50 = M.
+ * These bounds are intentionally distinct from the existing ±2 SD assessment.
+ * CN: approximate months = days / 30.4375, interpolating the existing WS/T
+ * percentile table (rounded to 0.001 kg), consistent with the assessment below.
+ */
+export function getMaleWeightReferences(
+  birthday: string,
+  measuredAt: string,
+): { WHO: WeightReference | null; CN: WeightReference | null } {
+  const days = ageInDays(birthday, measuredAt);
+  if (days === null || days < 0) return { WHO: null, CN: null };
+
+  const whoRow = days < whoMaleWeightRows.length ? whoMaleWeightRows[days] : null;
+  const chinaRow = getChinaRow(days / 30.4375);
+  const WHO = whoRow ? {
+    p3: weightFromLms(whoRow[0], whoRow[1], whoRow[2], -WHO_P97_Z),
+    p50: whoRow[1],
+    p97: weightFromLms(whoRow[0], whoRow[1], whoRow[2], WHO_P97_Z),
+  } : null;
+  const CN = chinaRow ? { p3: chinaRow[1], p50: chinaRow[4], p97: chinaRow[7] } : null;
+  return { WHO, CN };
+}
+
 export function getWhoMaleWeightAssessment(birthday: string, measuredAt: string, weight: number): WeightAssessment | null {
   const days = ageInDays(birthday, measuredAt);
-  if (days < 0 || days >= whoMaleWeightRows.length || !Number.isFinite(weight) || weight <= 0) return null;
+  if (days === null || days < 0 || days >= whoMaleWeightRows.length || !Number.isFinite(weight) || weight <= 0) return null;
   const [l, m, s, low, median, high] = whoMaleWeightRows[days] as number[];
   const z = Math.abs(l) < 0.000001 ? Math.log(weight / m) / s : (Math.pow(weight / m, l) - 1) / (s * l);
   const percentile = Math.min(99.9, Math.max(0.1, normalCdf(z) * 100));
@@ -147,13 +199,14 @@ export function getWhoMaleWeightAssessment(birthday: string, measuredAt: string,
     low,
     median,
     high,
-    position: whoPosition(percentile),
+    position: whoPosition(percentile, weight, low, high),
     sourceUrl: "https://www.who.int/toolkits/child-growth-standards/standards/weight-for-age",
   };
 }
 
 export function getChinaMaleWeightAssessment(birthday: string, measuredAt: string, weight: number): WeightAssessment | null {
   const days = ageInDays(birthday, measuredAt);
+  if (days === null) return null;
   const ageMonths = days / 30.4375;
   const row = getChinaRow(ageMonths);
   if (!row || !Number.isFinite(weight) || weight <= 0) return null;
@@ -163,9 +216,9 @@ export function getChinaMaleWeightAssessment(birthday: string, measuredAt: strin
   return {
     source: "CN",
     sourceLabel: "中国 WS/T 423—2022",
-    ageLabel: days < 60 ? `${days} 天` : `${Math.floor(ageMonths)} 月龄`,
+    ageLabel: days < 60 ? `${days} 天` : `约${ageMonths.toFixed(1)}月龄`,
     percentile,
-    percentileLabel: percentileLabel(percentile),
+    percentileLabel: weight < values[0] ? "P<3" : weight > values[6] ? "P>97" : `约${percentileLabel(percentile)}`,
     low: values[0],
     median: values[3],
     high: values[6],

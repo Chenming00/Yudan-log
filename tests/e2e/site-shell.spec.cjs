@@ -8,6 +8,7 @@ const routes = [
   { path: '/ledger', title: '鱼蛋小账本', section: '/ledger' },
   { path: '/blog', title: '成长日志', section: '/blog' },
   { path: '/blog/yudan-birth-story', title: birthStoryTitle, section: '/blog' },
+  { path: '/mcp', title: 'MCP 接入指南', section: null },
   { path: '/about', title: '关于鱼蛋看板', section: '/about' },
 ];
 
@@ -61,8 +62,8 @@ async function expectActiveNavigation(page, width, href) {
   const navigation = page.getByRole('navigation', { name: width < 1024 ? '底部导航' : '主导航', exact: true });
   await expect(navigation).toBeVisible();
   const active = navigation.locator('a[aria-current="page"]');
-  await expect(active).toHaveCount(1);
-  await expect(active).toHaveAttribute('href', href);
+  await expect(active).toHaveCount(href ? 1 : 0);
+  if (href) await expect(active).toHaveAttribute('href', href);
 }
 
 for (const width of [360, 1440]) {

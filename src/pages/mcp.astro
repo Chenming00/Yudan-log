@@ -1,0 +1,19 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import McpGuide from '../components/McpGuide.astro';
+---
+
+<BaseLayout
+  title="MCP 接入指南"
+  description="连接鱼蛋看板 MCP 服务，让 AI 帮你查询账单、记录花费与维护健康档案。查看正式连接地址、Cursor 和 Claude Code 配置，以及工具使用示例。"
+  canonical="/mcp"
+>
+  <main class="page-shell">
+    <header class="mb-7 border-b border-border pb-6 sm:mb-8 sm:pb-7">
+      <p class="page-eyebrow">SMALL RECORDS, CONNECTED</p>
+      <h1 class="page-heading">MCP 接入指南</h1>
+      <p class="page-description">把日常记录连到你的 AI 助手，让查询与记一笔都更顺手。</p>
+    </header>
+    <McpGuide />
+  </main>
+</BaseLayout>

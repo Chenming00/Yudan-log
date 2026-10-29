@@ -5,6 +5,7 @@ const { activePath } = Astro.props;
 const section = activePath.startsWith('/health') ? '保健档案'
   : activePath.startsWith('/ledger') ? '鱼蛋小账本'
   : activePath.startsWith('/blog') ? '成长日志'
+  : activePath === '/mcp' || activePath.startsWith('/mcp/') ? 'MCP 接入'
   : activePath.startsWith('/about') ? '关于小站' : '成长看板';
 const date = new Intl.DateTimeFormat('zh-CN', { timeZone: 'Asia/Shanghai', month: 'long', day: 'numeric', weekday: 'long' }).format(new Date());
 ---

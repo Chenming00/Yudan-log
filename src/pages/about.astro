@@ -11,13 +11,13 @@ import {
   GitPullRequest,
   HeartPulse,
   NotebookPen,
+  PlugZap,
   Rocket,
   Search,
   ShieldCheck,
   WalletCards,
 } from 'lucide-react';
 import BaseLayout from '../layouts/BaseLayout.astro';
-import McpGuide from '../components/McpGuide.astro';
 
 const repoFacts = [
   { label: 'framework', value: 'Astro + React' },
@@ -180,7 +180,7 @@ const roadmap = [
 
 <BaseLayout
   title="鱼蛋看板开发日记"
-  description="鱼蛋看板 MCP 接入指南、AI 记账与健康记录工具使用说明，以及主要开发变化。"
+  description="认识鱼蛋看板这个家庭项目，了解小站的功能、开发历程和成长记录。"
   canonical="/about"
 >
   <main class="page-shell">
@@ -195,7 +195,7 @@ const roadmap = [
         <h2 class="text-3xl font-semibold leading-[1.5] tracking-tight text-foreground sm:text-[38px]">生活慢慢记录，<br /><span class="text-primary">小站慢慢长大。</span></h2>
         <p class="mt-5 max-w-2xl text-sm leading-8 text-muted-foreground">从一笔日常开销，到鱼蛋的体重、疫苗和成长文章。这里保存着一家人的生活，也记下这个小站一路发生的变化。</p>
         <div class="mt-6 flex flex-wrap items-center gap-3">
-          <a href="#mcp" class="inline-flex h-11 items-center gap-3 rounded-xl bg-primary px-4 text-xs font-medium text-primary-foreground transition hover:bg-primary/90">MCP 接入指南 ↓<ArrowRight className="h-4 w-4" /></a>
+          <a href="/mcp" class="inline-flex h-11 items-center gap-3 rounded-xl bg-primary px-4 text-xs font-medium text-primary-foreground transition hover:bg-primary/90">MCP 接入指南<ArrowRight className="h-4 w-4" /></a>
           <a href="#development-log" class="inline-flex h-11 items-center gap-2 rounded-xl px-3 text-xs font-medium text-primary transition hover:bg-secondary">翻翻开发日记<GitCommitHorizontal className="h-4 w-4" /></a>
         </div>
       </div>
@@ -216,7 +216,16 @@ const roadmap = [
       })}
     </section>
 
-    <McpGuide />
+    <section id="mcp" aria-labelledby="mcp-intro-title" class="scroll-mt-28 rounded-[22px] border border-[#dce3d5] bg-[#eaf0e3] p-5 sm:p-7">
+      <div class="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p class="mb-3 flex items-center gap-2 text-xs font-medium text-primary"><PlugZap className="h-4 w-4" />CONNECT YOUR AI</p>
+          <h2 id="mcp-intro-title" class="text-xl font-semibold text-foreground">让 AI 帮你记账和整理成长记录</h2>
+          <p class="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">MCP 已有独立介绍页，连接地址、客户端配置、10 个工具和使用示例都整理在那里。</p>
+        </div>
+        <a href="/mcp" class="inline-flex h-11 shrink-0 items-center justify-center gap-2 self-start rounded-xl bg-primary px-4 text-xs font-semibold text-white transition hover:bg-primary/90 sm:self-center">查看完整接入指南<ArrowRight className="h-4 w-4" /></a>
+      </div>
+    </section>
 
     <section id="development-log" class="mt-12 scroll-mt-28 border-t border-border pt-9">
       <div class="mb-8 grid gap-4 lg:grid-cols-[230px_minmax(0,1fr)] lg:gap-8">
