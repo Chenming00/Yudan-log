@@ -10,6 +10,28 @@
 `yudan_weight_records` 的独立行，每次接种保存于 `yudan_vaccine_records` 的独立行，
 不再把记录数组存入 JSONB 字段。
 
+## MCP 接入
+
+`POST /api/mcp` 提供无状态 Streamable HTTP MCP 服务（官方 TypeScript SDK），复用本指南中的业务接口和数据库权限。每次请求都需要 `Authorization: Bearer <API_KEY>`，包括初始化和工具列表查询。健康记录不会匿名返回；不接受 URL 查询参数中的 Key，也不提供 OAuth 登录。
+
+用户操作步骤、可复制的 Cursor 配置与 Claude Code 命令见[关于页 MCP 指南](https://cost.ykn.cm/about#mcp)。本地使用 `http://localhost:4321/api/mcp`。
+
+| MCP 工具 | 复用接口 |
+| --- | --- |
+| `list_transactions` | `GET /api/list` |
+| `get_monthly_summary` | `GET /api/monthly` |
+| `add_transaction` | `POST /api/add` |
+| `edit_transaction` | `PATCH /api/edit` |
+| `delete_transaction` | `DELETE /api/delete` |
+| `get_dashboard` | `GET /api/yudan` |
+| `get_vaccine_schedule` | `GET /api/yudan/vaccines` |
+| `get_care_schedule` | `GET /api/yudan/care` |
+| `save_weight`、`save_vaccination` | `POST /api/yudan/records` |
+
+MCP 写入必须提供 UUID `request_id`；不明确的失败应复用原编号和内容重试。编辑/删除账单必须携带账单行的 `expected_version`。体重/接种保存必须先读取 `get_dashboard`，已有记录传 `expected_updated_at`，新记录传 `null`；疫苗同时先查询计划，使用返回的 `plan_id`。版本冲突以工具结果的 `isError: true` 和 `status: 409` 返回，不自动覆盖。
+
+正常结果同时提供文本 JSON 与 `structuredContent`。业务错误以 `isError: true` 返回，保留可操作的校验/冲突信息；服务端错误隐藏内部详情，账本错误保留错误码及追踪编号。HTTP 层缺少 Key 返回 `401`、不允许的 `Origin` 返回 `403`、非 `POST` 返回 `405`、请求体超过 64 KiB 返回 `413`。原生客户端可以不发送 `Origin`；浏览器请求仅允许与 MCP 端点同源，不开放跨域访问。
+
 ## 数据库前置条件
 
 新建与升级统一按照 [README 的数据库顺序](README.md#3-初始化和升级数据库) 执行，包括品牌/商品迁移和下面四个必需迁移：

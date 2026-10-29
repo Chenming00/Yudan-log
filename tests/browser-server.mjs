@@ -1,5 +1,10 @@
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { mock } from 'node:test';
+
+// Match the browser clock in the ledger fixtures so SSR and hydration use the same month.
+// Only Date is fixed; network, startup and shutdown timers continue to run normally.
+mock.timers.enable({ apis: ['Date'], now: new Date('2026-09-24T04:00:00Z') });
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let stopping = false;

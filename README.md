@@ -38,6 +38,17 @@
 - 支持 GFM、代码高亮和文章详情页
 - 按日期倒序展示家庭与成长记录
 
+### AI 工具接入 `/api/mcp`
+
+- 使用官方 MCP TypeScript SDK 提供无状态 Streamable HTTP 接口，适合 Vercel 部署
+- 复用 `API_KEY` 认证，所有工具均需 `Authorization: Bearer <API_KEY>`
+- 提供账单查询、月度汇总、新增/编辑/删除账单，以及健康档案、疫苗计划、儿保安排和体重/接种登记共 10 个工具
+- 写入复用现有 API 校验、幂等回执和并发版本检查，不需要额外数据库迁移
+- 在[关于页的 MCP 指南](https://cost.ykn.cm/about#mcp)查看 Cursor、Claude Code 配置、对话示例和排错说明；本地指南在 `http://localhost:4321/about#mcp`
+- 当前为固定 API Key 接入，客户端需要支持自定义 HTTP 请求头；尚未提供 OAuth
+
+部署时沿用本文的环境变量与数据库迁移步骤即可。本地启动后，MCP 地址是 `http://localhost:4321/api/mcp`；部署后的地址使用对应域名。直接用浏览器打开端点不会建立 MCP 连接。
+
 ## 权限模型
 
 站点默认使用 Supabase GitHub OAuth。
